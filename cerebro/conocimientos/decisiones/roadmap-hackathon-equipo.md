@@ -83,7 +83,7 @@ No tenemos datos ERP/CRM. El MVP funciona sin esos sistemas: chat pegado/cargado
 - Germán conecta y estabiliza el frontend; Miguel conecta captura y servicios; Andrés controla persistencia y cálculo. Cada frontera tiene una única fórmula y un contrato compartido.
 - Cada persona prueba su módulo. Andrés coordina QA integrado; no queda como único responsable de encontrar errores ajenos.
 - Cada checkpoint dura como máximo 10 minutos: avance verificable, bloqueo y siguiente dependencia. Los cambios de alcance se resuelven en conjunto, sin convertir a Isabella en PM de tiempo completo.
-- Trabajar en ramas propias y dividir archivos. En un checkout compartido, evitar escritores simultáneos sobre el mismo archivo. El código se desarrolla en un repo de aplicación separado del cerebro; esta documentación no crea ese repo.
+- Trabajar en ramas propias y dividir archivos. En un checkout compartido, evitar escritores simultáneos sobre el mismo archivo. Por D-005, el trabajo de Miguel usa Backend/ de este checkout y cerebro/ conserva documentos; BD/ es diseño de Andrés, Frontend/ el trabajo frontend. No crear otro repo.
 
 **Fundamento de roles:** [contexto del equipo](../fuentes/contexto-equipo-hackathon-2026.md), USR-EQUIPO-002. Las tareas concretas son una propuesta de este roadmap.
 

@@ -17,14 +17,15 @@ def digest(data):
 
 
 def source_files(repo):
+    source_root = repo / "cerebro" if (repo / "cerebro" / "conocimientos" / "INDICE.md").is_file() else repo
     result = {}
     for folder, extensions in (("conocimientos", {".md"}),
                                ("diagramas", {".md", ".excalidraw", ".png"})):
-        for path in sorted((repo / folder).rglob("*")):
+        for path in sorted((source_root / folder).rglob("*")):
             if path.is_file() and path.suffix.lower() in extensions:
                 if path.is_symlink() or not path.resolve().is_relative_to(repo):
                     raise ValueError(f"Fuente fuera del repo o enlace simbólico: {path}")
-                result[path.relative_to(repo).as_posix()] = path.read_bytes()
+                result[path.relative_to(source_root).as_posix()] = path.read_bytes()
     if "conocimientos/INDICE.md" not in result:
         raise ValueError("La ruta no contiene conocimientos/INDICE.md")
     return result
@@ -100,7 +101,8 @@ def sync(repo, preserve_historical_diagrams=False):
         if target.is_symlink() or not target.resolve().is_relative_to(DEST.resolve()):
             raise ValueError(f"Destino fuera del paquete: {target}")
         target.write_bytes(data)
-    uncommitted = git_output(repo, ["status", "--porcelain", "--", "conocimientos", "diagramas"])
+    source_prefix = "cerebro/" if (repo / "cerebro/conocimientos/INDICE.md").is_file() else ""
+    uncommitted = git_output(repo, ["status", "--porcelain", "--", source_prefix + "conocimientos", source_prefix + "diagramas"])
     metadata = {
         "schema_version": 1,
         "source_repository": "https://github.com/rod14x/KeptAI",
@@ -125,7 +127,7 @@ def main():
                         help="Conservar diagramas sin fuente solo si su hash coincide con el manifiesto previo")
     args = parser.parse_args()
     repo = args.repo.resolve() if args.repo else SKILL.parents[2]
-    if not (repo / "conocimientos" / "INDICE.md").is_file():
+    if not ((repo / "conocimientos" / "INDICE.md").is_file() or (repo / "cerebro/conocimientos/INDICE.md").is_file()):
         if args.repo or not args.check:
             parser.error("Indicar --repo con la raíz del cerebro; no se encontró conocimientos/INDICE.md")
         repo = None

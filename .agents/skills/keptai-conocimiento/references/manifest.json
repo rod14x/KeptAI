@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "171817374472764ea0ea138722a4e08f32634d92",
+  "source_head_at_generation": "70021638915193f4ea2491132d55603b4633251d",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -10,21 +10,11 @@
     "diagramas/keptai-roadmap-fuentes.md"
   ],
   "source_changes_at_generation": [
-    "M diagramas/README.md",
-    "?? diagramas/keptai-base-datos-spring-v1-3.excalidraw",
-    "?? diagramas/keptai-base-datos-spring-v1-3.png",
-    "?? diagramas/keptai-flujo-completo.excalidraw",
-    "?? diagramas/keptai-flujo-completo.png",
-    "?? diagramas/keptai-roadmap-arquitectura-spring-v1-3.excalidraw",
-    "?? diagramas/keptai-roadmap-arquitectura-spring-v1-3.png",
-    "?? diagramas/keptai-roadmap-arquitectura.excalidraw",
-    "?? diagramas/keptai-roadmap-dependencias-spring-v1-3.excalidraw",
-    "?? diagramas/keptai-roadmap-dependencias-spring-v1-3.png",
-    "?? diagramas/keptai-roadmap-dependencias.excalidraw",
-    "?? diagramas/keptai-roadmap-equipo-spring-v1-3.excalidraw",
-    "?? diagramas/keptai-roadmap-equipo-spring-v1-3.png",
-    "?? diagramas/keptai-roadmap-equipo.excalidraw",
-    "?? diagramas/keptai-roadmap-fuentes-spring-v1-3.md"
+    "M cerebro/conocimientos/INDICE.md",
+    " M cerebro/conocimientos/decisiones/decisiones-del-proyecto.md",
+    " M cerebro/conocimientos/decisiones/infraestructura-desarrollo-mvp.md",
+    " M cerebro/conocimientos/decisiones/roadmap-hackathon-equipo.md",
+    "?? cerebro/conocimientos/desarrollo/"
   ],
   "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
   "interview_ids": [
@@ -75,18 +65,18 @@
   "files": [
     {
       "path": "conocimientos/INDICE.md",
-      "bytes": 3581,
-      "sha256": "a20c02171e0d7a8c46e06d58cacf38aeefbed2c01010b283af74bd1e31ca26c4"
+      "bytes": 4148,
+      "sha256": "620a0c3f124145472659f6cb62d37222f06beb588790a716330f42b7347e12ee"
     },
     {
       "path": "conocimientos/decisiones/decisiones-del-proyecto.md",
-      "bytes": 31846,
-      "sha256": "dfe708e38e667d21846337a8293c41e2be77a498fb63295fa99338cee1d0c6cc"
+      "bytes": 32530,
+      "sha256": "73d12440326f38a30821f6577f52d948030566e8927259ddae97e57f82db6118"
     },
     {
       "path": "conocimientos/decisiones/infraestructura-desarrollo-mvp.md",
-      "bytes": 25832,
-      "sha256": "e500548400c3ea6a4b288f6f377a4fc1728bbb715af4229972b3f6296a2ca990"
+      "bytes": 25969,
+      "sha256": "5b62da94c73a4bf3a556e17dda2574a02d3ed522c83177433d189e73050984a2"
     },
     {
       "path": "conocimientos/decisiones/modelo-base-datos-mvp.md",
@@ -110,13 +100,48 @@
     },
     {
       "path": "conocimientos/decisiones/roadmap-hackathon-equipo.md",
-      "bytes": 34559,
-      "sha256": "e6aa21c79e4324cee785b72a5fae9c40cdabf0aa9cdbb297fdf587084ddd4b5a"
+      "bytes": 34620,
+      "sha256": "8b91cfc257f894424701fae84fc49f985ce934933e62d4a1847f1d531c851a2a"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/estado.md",
+      "bytes": 13750,
+      "sha256": "8610d791c7d9fa575fb83b209b64fe6b0a62705351b9e0b44f3cfe1857f51038"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
+      "bytes": 5054,
+      "sha256": "a330836d823078e998a7a20b601a36a357e26d6166ae48e8ced668f46a897be9"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/plan-implementacion.md",
+      "bytes": 6436,
+      "sha256": "6bf6d2ed7cbf4e6e96dc3dff071c5ac091922078a9c80845dc599d67427243f3"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/prompt-claude.md",
+      "bytes": 2614,
+      "sha256": "260d9c48cf06264d10558b1f143ec78e334c6f98a0309a70493a5f9b1b19e6e4"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/tarea-general.md",
+      "bytes": 7756,
+      "sha256": "540ed4ce7ed85ea0899e4f4a1fde6e64832bc18eec1cbee8b35236fc61364a39"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/tareas.md",
+      "bytes": 8384,
+      "sha256": "c156114971d15822b7f65950e6c88a5ec83f8009ff30a90ba1f22c592caa02b5"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/traspaso-opencode.md",
+      "bytes": 2182,
+      "sha256": "9580bfb1904a0187e4a476e07bd97b11a76d7b3902c81a9d0b6edc860da889f4"
     },
     {
       "path": "conocimientos/empresa/descripcion.md",
-      "bytes": 9206,
-      "sha256": "1f07c61d225ca74e004bdce260aa65c5c150cde8c2634b7a37d2f04d8c472240"
+      "bytes": 9070,
+      "sha256": "50f043e6869a6bca288eb47b7daf9a92a4ff0e57d7e761c9cedc788193a7db81"
     },
     {
       "path": "conocimientos/empresa/idea-negocio-replanteada.md",
@@ -125,8 +150,8 @@
     },
     {
       "path": "conocimientos/empresa/objetivos.md",
-      "bytes": 13235,
-      "sha256": "d6ab8cba43e68b447e69147f8ee2c900cb77f6e3e69547cc0dba2a7698ee1c08"
+      "bytes": 13061,
+      "sha256": "5923d4763a9071859ef7ea6209303105cf30209bc59b954e25268970954d3b9f"
     },
     {
       "path": "conocimientos/fuentes/contexto-equipo-hackathon-2026.md",
@@ -140,8 +165,8 @@
     },
     {
       "path": "conocimientos/procesos/atencion-cliente.md",
-      "bytes": 15088,
-      "sha256": "27762791fb1e49779f3ab796647b34953de49875bd879d327bd08dc6121af7bf"
+      "bytes": 14833,
+      "sha256": "808d9fac29fbb2efa59b1fb4d672e252061bb87d6fa796d987cb7da167971837"
     },
     {
       "path": "conocimientos/procesos/flujo-cliente-empresa.md",
@@ -155,13 +180,13 @@
     },
     {
       "path": "conocimientos/procesos/ventas.md",
-      "bytes": 19215,
-      "sha256": "33d1d5ab5624175e92356e2a176bd6a0414defde6b08d9b33eec367773ec20a0"
+      "bytes": 18912,
+      "sha256": "8d96a9d9692ebf846ac5bcecaa6061245932bc415bc447baec904da8e09c433d"
     },
     {
       "path": "conocimientos/productos/catalogo.md",
-      "bytes": 7268,
-      "sha256": "6400aa306296186527959e7c6d9fa2285dd540739d8de475df1ffb73127cb216"
+      "bytes": 7140,
+      "sha256": "989c66965605a671cf7840332039143fab56c2a45b51fb879801c833fbdb2071"
     },
     {
       "path": "diagramas/README.md",

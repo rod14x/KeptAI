@@ -66,3 +66,7 @@ Ejemplos: `ventas.md, A02-Q04, 02:17–02:38`; `idea-negocio-replanteada.md, El 
 - D-004/USR-EQUIPO-003: Spring Boot; no datos ni conectores ERP/CRM. Los diagramas preservados describen versiones anteriores y deben regenerarse con el prompt vigente.
 
 La regeneración con `--preserve-historical-diagrams` conserva únicamente diagramas sin fuente local cuyo hash coincide con el manifiesto previo; nunca conserva documentos de negocio retirados ni diagramas modificados sin revisar. El manifiesto identifica esos antecedentes.
+
+## Preparación y ejecución de Miguel
+
+D-005/USR-DEV-MIGUEL-001/002: [plan](cerebro/conocimientos/desarrollo/miguel/plan-implementacion.md), [entregables](cerebro/conocimientos/desarrollo/miguel/tarea-general.md), [tareas](cerebro/conocimientos/desarrollo/miguel/tareas.md), [guía/prompts](cerebro/conocimientos/desarrollo/miguel/guia-trabajo.md) y [estado](cerebro/conocimientos/desarrollo/miguel/estado.md). Claude coordina delegación, Miguel prompts/Git; resumen AGENTS y bitácora detallada. OpenCode recibe handoff explícito, incluso si el principal queda parcial por límites. Las fuentes locales ahora viven en cerebro/conocimientos y cerebro/diagramas; el paquete conserva nombres lógicos compatibles.

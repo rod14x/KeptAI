@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: keptai-backend
+  profiles:
+    default: dev
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    # Las migraciones (Andrés) se ejecutan como paso de release con rol migrador, no al arrancar la API.
+    enabled: false
+server:
+  port: ${PORT:8080}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+      probes:
+        enabled: true

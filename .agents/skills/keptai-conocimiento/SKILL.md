@@ -11,11 +11,11 @@ Utiliza las fuentes incluidas para trabajar en español sobre KeptAI, cuya empre
 
 ## Comenzar una tarea
 
-1. Lee el [índice](references/cerebro/conocimientos/INDICE.md), la [idea principal](references/cerebro/conocimientos/empresa/idea-negocio-replanteada.md) y D-003/D-004 en [decisiones](references/cerebro/conocimientos/decisiones/decisiones-del-proyecto.md).
+1. Lee el [índice](references/cerebro/conocimientos/INDICE.md), la [idea principal](references/cerebro/conocimientos/empresa/idea-negocio-replanteada.md) y D-003/D-004/D-005 en [decisiones](references/cerebro/conocimientos/decisiones/decisiones-del-proyecto.md).
 2. Consulta la [guía de fuentes](references/mapa-fuentes.md) y los documentos completos pertinentes. Para resolver diferencias con propuestas anteriores, lee [precedencia y pendientes](references/precedencia-y-pendientes.md). No hace falta cargar todos los anexos para cada pregunta: toda la información está disponible para consulta.
 3. Sustenta las afirmaciones y requisitos con archivo, sección e ID cuando exista. Para entrevistas, consulta la respuesta completa, su tiempo y sus limitaciones. Identifica lo que sigue siendo propuesta o dato pendiente.
 
-Si trabajas en el repositorio original y sus fuentes difieren de la copia incluida, usa los documentos originales vigentes y comunica que el paquete necesita regenerarse. En otro proyecto, usa la copia incluida y su [manifiesto](references/manifest.json); no busques una ruta absoluta del autor. La skill no actualiza Git automáticamente.
+Si trabajas en el repositorio original y sus fuentes difieren de la copia incluida, usa los documentos originales vigentes y comunica que el paquete necesita regenerarse. En este checkout reorganizado usa cerebro/conocimientos/ como fuente viva; el script reconoce esta estructura. Para Miguel leer desarrollo/miguel/plan-implementacion.md, tareas.md y estado.md; Claude delega tareas acotadas, resume en AGENTS y entrega handoff. En otro proyecto, usa la copia incluida y su [manifiesto](references/manifest.json); no busques una ruta absoluta del autor. La skill no actualiza Git automáticamente.
 
 ## Dirección vigente del producto
 

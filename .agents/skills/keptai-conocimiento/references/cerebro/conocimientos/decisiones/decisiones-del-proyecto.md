@@ -12,6 +12,12 @@
 
 ## Dirección expresada por el equipo
 
+### D-005 — Preparación de Miguel, delegación y bitácora
+
+**Fecha:** 10 de octubre de 2026. **Responsable:** usuario Miguel. **Estado:** dirección de trabajo actual, no acredita código terminado. **Fuente:** USR-DEV-MIGUEL-001/002. Usar el entorno/repositorio actual, Claude Code para desarrollo principal y delegación de tareas pequeñas; Miguel envía prompts por etapas. Documentar resumen de avance en AGENTS.md y detalle en bitácora; OpenCode recibe handoff posterior o continúa pendientes si Claude alcanza límite de uso.
+
+Se prepara Backend/ en este checkout con cerebro/ como documentación, según reorganización remota y entorno solicitado; sustituye para este trabajo las referencias anteriores a crear un repo de app aparte. Andrés mantiene DB/motor; Miguel API/IA. Solo agentes con tareas/archivos delimitados, sin escritores simultáneos ni publicación Git automática. [Plan](../desarrollo/miguel/plan-implementacion.md), [guía](../desarrollo/miguel/guia-trabajo.md), [estado](../desarrollo/miguel/estado.md).
+
 ### D-004 — Spring Boot, entradas propias y responsabilidades vigentes
 
 **Fecha:** 10 de octubre de 2026. **Responsable:** usuario del proyecto. **Estado:** dirección vigente del equipo; no acredita implementación. **Fuente:** USR-EQUIPO-003 y USR-DESIGN-001. El usuario confirma que Miguel y Andrés saben Spring y lo han manejado, pide cambiar a ese enfoque y declara que no hay datos ERP/CRM para este MVP.
