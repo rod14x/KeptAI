@@ -1,6 +1,6 @@
 # Roadmap de desarrollo KeptAI — equipo y dependencias
 
-> ID: PROP-ROADMAP-001. Versión: 1.0. Fecha: 10 de octubre de 2026.
+> ID: PROP-ROADMAP-001. Versión: 1.2. Fecha: 10 de octubre de 2026.
 > Estado: plan de ejecución propuesto; no acredita tareas hechas ni un stack aprobado.
 > Roles: distribución vigente indicada por el usuario en USR-EQUIPO-002.
 > Ventana de referencia: sábado 10, 15:30, a domingo 11, 09:30; zona America/Lima. Son 18 horas restantes del esquema de 24 horas aportado, no 24 horas adicionales. Confirmar entrega y horarios con la organización.
@@ -55,7 +55,7 @@ La demostración de referencia utiliza **3 vouchers y un chat**. Además debe ha
 - Conservar origen y campos ausentes; los importes no se inventan cuando una evidencia no es legible.
 - Implementar los servicios de pedidos, consulta de conciliación, estados de cuenta, autorización pendiente y acceso a resultados financieros.
 - Integrar el motor de Andrés: el endpoint orquesta la operación, pero no vuelve a calcular saldos con una segunda fórmula.
-- Configurar y desplegar las funciones o backend elegido; mantener claves de IA y claves privilegiadas del lado del servidor.
+- Configurar y desplegar la API FastAPI elegida; mantener claves de IA y claves privilegiadas del lado del servidor.
 
 **Entregables:** API documentada, captura real, validación de borradores y servicios disponibles para frontend. **Depende de:** esquema y motor de Andrés; reglas funcionales de Isabella. **Aceptación:** texto o voucher se procesa, se corrige y se guarda con evidencia, y la misma llamada repetida no duplica la operación de negocio.
 
@@ -101,15 +101,34 @@ Margen del pedido y agrupaciones, producción propia/tercerizada, centro product
 
 **Isabella:** comprensión de indicadores. **Germán:** componentes conectados y exportación. **Miguel:** acceso de API a resultados. **Andrés:** cálculos, agregados y reporte.
 
-### Stack propuesto para decidir en el primer bloque
+### Infraestructura recomendada para empezar
 
-**Opción base:** React + TypeScript en frontend; Supabase con PostgreSQL, autenticación y almacenamiento; un único backend de funciones TypeScript en Supabase Edge Functions. Esto concentra lenguajes y reduce componentes de infraestructura, sujeto a una prueba de acceso y despliegue que Miguel y Andrés deben completar antes de fijarlo.
+La base propuesta queda definida: **React + TypeScript + Vite en Cloudflare Workers Static Assets; FastAPI/Python en Render como único backend; Supabase para PostgreSQL, Auth y Storage privado; Gemini API para captura; GitHub Actions y pruebas para integrar.** FastAPI se elige por el alcance de API/captura y entrega temprana de contratos; Spring Boot se reconsidera si el equipo acredita mayor dominio Java. No se ha confirmado esa experiencia. Es la recomendación para este equipo y ventana de desarrollo, pendiente de una prueba de acceso y despliegue; no acredita servicios ya contratados.
 
-Supabase documenta funciones de servidor TypeScript y control de datos mediante RLS. Las claves privilegiadas e IA permanecen en servidor y los permisos se prueban; usar un BaaS no elimina los controles de la aplicación. [Edge Functions](https://supabase.com/docs/guides/functions), [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [secrets](https://supabase.com/docs/guides/functions/secrets).
+- **Germán:** frontend técnico, configuración SPA/HTTPS, sesión, cliente de API y hosting web.
+- **Isabella:** interfaz, reglas funcionales y validación de cómo se muestran revisión, saldo, margen y caja.
+- **Miguel:** backend FastAPI/Python en Render, captura Gemini, validación de entradas, secretos y despliegue de API.
+- **Andrés:** PostgreSQL, migraciones, RLS, Storage autorizado y operación transaccional para pagos; motor de resultados y alertas.
 
-Si el equipo ya tiene un backend Laravel o Spring que puede desplegar más rápido dentro de las reglas del evento, elegir **uno** en el primer bloque y mantenerlo. No desarrollar dos backends. El proveedor de IA y alojamiento frontend se eligen por acceso efectivo y una prueba mínima, no por una cuenta supuesta.
+**Detalle para implementar:** [Infraestructura y tecnologías del MVP](infraestructura-desarrollo-mvp.md), PROP-INFRA-001. Incluye estructura de repo, variables, entornos, orden de puesta en marcha, CI, backups, límites, recuperación y criterios de infraestructura lista. Consultarlo antes de crear la app.
 
-Web adaptable al móvil obligatoria en el objetivo; instalación PWA solo si sobra tiempo. Kafka, Jenkins, Pinecone, Kotlin, microservicios, contabilidad fiscal propia y un nuevo CRM no son necesarios para este recorrido. n8n solo entra si ya está disponible y sustituye un trabajo concreto; no es una tarea asignada a Isabella.
+#### Componentes concretos
+
+1. **Web:** React/TypeScript con Vite y Node 24 LTS para desarrollo/build. Cloudflare aloja los assets y fallback SPA; el backend no se duplica en Cloudflare. [Static Assets](https://developers.cloudflare.com/workers/static-assets/).
+2. **API:** FastAPI/Python, Pydantic, Uvicorn y OpenAPI; Render Web Service; JWT verificado y claves IA solo en servidor. [FastAPI](https://fastapi.tiangolo.com/features/), [Render](https://render.com/docs/deploy-fastapi).
+3. **Base:** PostgreSQL con SQLAlchemy 2/psycopg 3, migraciones Alembic y RLS/grants por organización; contexto de organización verificado por FastAPI, rol runtime limitado y esquema de negocio no expuesto a Data API. Pago, aplicación y auditoría se confirman en una transacción SQLAlchemy/PostgreSQL, no en llamadas independientes del navegador. [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security).
+4. **Evidencias:** Storage privado con rutas por organización y enlaces autorizados; no publicar fotos de vouchers. [Storage](https://supabase.com/docs/guides/storage/buckets/fundamentals).
+5. **IA:** Gemini API, modelo inicial configurable `gemini-3.5-flash-lite`, JSON validado y confirmación humana. Probar texto/imagen/audio antes de fijar configuración. La IA no confirma fondos ni calcula el saldo. [Modelo](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite).
+6. **Alertas:** reglas y trabajos persistidos en PostgreSQL; Render Cron Job ejecutando el mismo código Python al estabilizar vencimientos, sin worker largo en memoria. Los envíos reales dependen de canal autorizado. [Cron](https://render.com/docs/cronjobs).
+7. **QA y CI:** Vitest para frontend, pytest/HTTPX y PostgreSQL para API y transacciones y Playwright para el recorrido móvil; GitHub Actions ejecuta typecheck, pruebas y build.
+
+#### Entornos y despliegue
+
+Desarrollo local y proyecto remoto de **demo con datos ficticios**. El piloto real va en un proyecto separado. Frontend y backend tienen variables diferentes: URL de API y URL/clave pública Supabase en el navegador; DATABASE_URL, secretos IA y credenciales controladas en Render/CI. Germán configura retorno de Auth y origen frontend; Miguel autoriza llamadas; Andrés verifica acceso a datos y archivos.
+
+Antes de H1 deben estar desplegados una página, una API FastAPI autenticada y un pedido persistente. El primer recorrido de infraestructura es **sesión → carga privada → extracción revisable → pedido consultable**. Si falla, se resuelve antes de sumar funcionalidades. Migraciones y lockfile se versionan; backups de base y evidencias se tratan por separado antes de datos reales.
+
+Web móvil forma parte del objetivo. Instalación PWA, n8n, Kafka, Jenkins, Pinecone, Kotlin y servidores adicionales quedan fuera de la base inicial. Si un servicio recomendado no puede desplegarse en la prueba del primer bloque, documentar una única alternativa disponible; no construir dos plataformas a la vez.
 
 ### Fronteras de backend
 
@@ -130,7 +149,7 @@ Si alguno de estos horarios ya pasó, empezar en el primer checkpoint no satisfe
 - **Miguel:** proponer contrato y probar captura con el proveedor de IA disponible; comprobar despliegue backend y secretos.
 - **Andrés:** definir esquema, aplicaciones de pagos y casos numéricos; acordar unidades monetarias y fechas.
 
-**Salida conjunta:** contratos, esquema inicial, proveedor y stack elegidos, casos de demo identificados y responsabilidades acordadas. Miguel y Andrés entregan ejemplos de respuesta para que frontend avance sin esperar todos los endpoints.
+**Salida conjunta:** contratos, esquema inicial, acceso Supabase/Gemini, API FastAPI en Render y despliegue Cloudflare comprobados, configuración de infraestructura acordada, casos de demo identificados y responsabilidades acordadas. Miguel y Andrés entregan ejemplos de respuesta para que frontend avance sin esperar todos los endpoints.
 
 ### B1 — 16:30–18:00: primera conexión persistente
 
@@ -139,7 +158,7 @@ Si alguno de estos horarios ya pasó, empezar en el primer checkpoint no satisfe
 - **Miguel:** implementar ingreso de evidencia y confirmación de borradores; desplegar endpoints base.
 - **Andrés:** crear tablas, restricciones y semilla; entregar primer saldo y costo/margen del pedido.
 
-**H1, 18:00:** crear o confirmar un pedido, guardarlo y consultarlo en la web desplegada. Las respuestas simuladas del contrato se distinguen de las reales y empiezan a reemplazarse. Costos y vencimientos ya tienen un formato estable.
+**H1, 18:00:** URL HTTPS con rutas SPA, sesión real, evidencia privada y API FastAPI autenticada; crear o confirmar un pedido, guardarlo y consultarlo en la web desplegada. Las respuestas simuladas del contrato se distinguen de las reales y empiezan a reemplazarse. Costos y vencimientos ya tienen un formato estable.
 
 ### B2 — 18:00–20:00: recorrido básico de los cuatro módulos
 
@@ -166,7 +185,7 @@ Si alguno de estos horarios ya pasó, empezar en el primer checkpoint no satisfe
 - **Miguel:** finalizar captura multimodal, validación de campos y servicios de resultados; registrar auditoría básica.
 - **Andrés:** completar centro productivo, agregados por línea/marca, cuatro semanas y reporte; probar idempotencia y permisos de organización.
 
-**H4, 01:00:** lista C-01 a C-07 con evidencia o brecha explícita; recorrido completo reproducible. Regenerar el reporte al cambiar un pago demuestra automatización del cálculo, no una entrega programada por correo ya implementada.
+**H4, 01:00:** migraciones versionadas, permisos de datos/archivos probados y build verificado; lista C-01 a C-07 con evidencia o brecha explícita; recorrido completo reproducible. Regenerar el reporte al cambiar un pago demuestra automatización del cálculo, no una entrega programada por correo ya implementada.
 
 ### B5 — 01:00–03:00: resolver defectos críticos y congelar alcance
 
@@ -189,7 +208,7 @@ Esta rotación asegura cobertura por especialidad, pero no soporte completo de a
 - **Miguel:** resolver fallos de captura/API y comprobar secretos y respuestas.
 - **Andrés:** coordinar QA de conciliación, financiero, persistencia y aislamiento; reiniciar la semilla y repetir el recorrido.
 
-**H6, 07:00:** URL funcional, datos de demo reproducibles, exportación verificada y ausencia de defectos críticos abiertos. Si no se cumple, todo el equipo prioriza ese bloqueo.
+**H6, 07:00:** URL funcional, acceso backend y logs comprobados, datos de demo reproducibles, exportación verificada y ausencia de defectos críticos abiertos. Si no se cumple, todo el equipo prioriza ese bloqueo.
 
 ### B8 — 07:00–09:30: margen de entrega técnica
 
@@ -300,6 +319,8 @@ Sin fechas comerciales comprometidas, proponer tres incrementos posteriores:
 No se agenda pitch en estos incrementos. Sus tiempos dependen de validación y recursos disponibles.
 
 ## 10. Fuentes y alcance de la documentación
+
+- [Infraestructura recomendada](infraestructura-desarrollo-mvp.md), PROP-INFRA-001: componentes, configuración y despliegue para iniciar desarrollo.
 
 - [Contexto del equipo y aclaración vigente](../fuentes/contexto-equipo-hackathon-2026.md), USR-EQUIPO-001/002: habilidades, esquema horario y roles corregidos.
 - [Idea de negocio](../empresa/idea-negocio-replanteada.md), USR-IDEA-001: cuatro módulos, fases y demostración.

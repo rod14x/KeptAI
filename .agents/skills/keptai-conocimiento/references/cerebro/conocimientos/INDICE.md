@@ -23,6 +23,7 @@ La [idea de negocio replanteada](empresa/idea-negocio-replanteada.md) define el 
 ## Roadmap y equipo
 
 - [Roadmap por miembro y dependencias](decisiones/roadmap-hackathon-equipo.md): plan propuesto; Miguel y Andrés backend, Germán e Isabella frontend; sin tareas de pitch.
+- [Infraestructura y tecnologías para iniciar](decisiones/infraestructura-desarrollo-mvp.md): hosting, backend, base, IA, entornos, secretos y responsables.
 - [Prompt para diagramas en Claude/Excalidraw](decisiones/prompt-claude-diagramas-roadmap.md).
 - [Contexto recibido y roles vigentes](fuentes/contexto-equipo-hackathon-2026.md), USR-EQUIPO-001/002.
 

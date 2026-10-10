@@ -14,7 +14,8 @@ Lee primero:
 - conocimientos/decisiones/decisiones-del-proyecto.md, especialmente D-003.
 - conocimientos/fuentes/contexto-equipo-hackathon-2026.md, especialmente
   USR-EQUIPO-002, que sustituye los roles sugeridos del adjunto.
-- conocimientos/decisiones/roadmap-hackathon-equipo.md completo.
+- conocimientos/decisiones/roadmap-hackathon-equipo.md completo, versión 1.2.
+- conocimientos/decisiones/infraestructura-desarrollo-mvp.md, PROP-INFRA-001.
 - conocimientos/decisiones/reto-6-corpotex-conciliacion-y-rentabilidad.md,
   especialmente C-01 a C-07.
 
@@ -64,8 +65,16 @@ El voucher recibido no reduce saldo. Duplicado, huérfano y diferencia son
 ramas de excepción. Pago aplicado actualiza saldo, alertas, caja y reporte.
 Los costos alimentan margen; cobros y egresos alimentan caja a cuatro semanas.
 Muestra centro productivo y eliminación de cargos internos al consolidar.
-Representa React/TypeScript + Supabase/PostgreSQL + Edge Functions como
-STACK PROPUESTO, sujeto a decisión, y claves IA solamente del lado servidor.
+Representa React/TypeScript/Vite en Cloudflare Workers Static Assets;
+FastAPI/Python en Render Web Service, Pydantic/OpenAPI y SQLAlchemy/Alembic;
+Supabase Auth, PostgreSQL/RLS y Storage privado;
+Gemini API configurable; Render Cron Job ejecutando comandos Python acotados y GitHub Actions
+para pruebas/build. Todo es infraestructura recomendada, no implementación
+acreditada. Muestra Node 24 como herramienta de desarrollo y Python 3.12 como runtime
+backend; no incluir Edge Functions como segundo backend. Claves IA solamente en servidor; pago/aplicación/auditoría en una
+transacción SQLAlchemy/PostgreSQL con rol limitado y contexto por organización. Distingue entorno demo ficticio y piloto posterior.
+Conserva los mapas previos como antecedentes; indica que la infraestructura
+de la versión 1.2 del roadmap prevalece sobre su stack incompleto anterior.
 Kommo, ERP y WhatsApp vivo son conectores pendientes: líneas discontinuas,
 sin afirmar que están integrados. Diferencia organización, entidad y marca.
 
