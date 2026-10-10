@@ -1,10 +1,14 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "ebf9e044bff01b0b43861bce5930d3a7c6dbd17c",
+  "source_head_at_generation": "460cc347cb12143fb7c299f0f55629b4e8295310",
   "source_basis": "working_tree",
   "source_changes_at_generation": [
-    "M diagramas/README.md",
+    "M conocimientos/INDICE.md",
+    " M diagramas/README.md",
+    "?? conocimientos/decisiones/prompt-claude-diagramas-roadmap.md",
+    "?? conocimientos/decisiones/roadmap-hackathon-equipo.md",
+    "?? conocimientos/fuentes/",
     "?? diagramas/keptai-flujo-completo.excalidraw",
     "?? diagramas/keptai-flujo-completo.png"
   ],
@@ -57,8 +61,8 @@
   "files": [
     {
       "path": "conocimientos/INDICE.md",
-      "bytes": 2452,
-      "sha256": "9c890edbafe987e91375497b58c3653320cc2e7afb45af441cb958fedf244cea"
+      "bytes": 2844,
+      "sha256": "896e78ecd32f43d10f4ba83a60510b81664edf5e50cdaad73351600d6c4cbb7c"
     },
     {
       "path": "conocimientos/decisiones/decisiones-del-proyecto.md",
@@ -66,9 +70,19 @@
       "sha256": "5af5a0a443469eea5a133968f2c0d20c96536a12c673027b417156d75de0aa40"
     },
     {
+      "path": "conocimientos/decisiones/prompt-claude-diagramas-roadmap.md",
+      "bytes": 6641,
+      "sha256": "5784e1c7be73ae4094fa08dd67835031e3d807629ea896b22068a9281a3b4a97"
+    },
+    {
       "path": "conocimientos/decisiones/reto-6-corpotex-conciliacion-y-rentabilidad.md",
       "bytes": 14116,
       "sha256": "dfb9dd4d8448c6eb328e644f7773728603ed453a714c67702821adc70ea18da9"
+    },
+    {
+      "path": "conocimientos/decisiones/roadmap-hackathon-equipo.md",
+      "bytes": 29316,
+      "sha256": "47159c0b130ca3433b6b14e40c04eddf573b0104612c06aaf1efa1c5b6f452ed"
     },
     {
       "path": "conocimientos/empresa/descripcion.md",
@@ -84,6 +98,11 @@
       "path": "conocimientos/empresa/objetivos.md",
       "bytes": 13235,
       "sha256": "d6ab8cba43e68b447e69147f8ee2c900cb77f6e3e69547cc0dba2a7698ee1c08"
+    },
+    {
+      "path": "conocimientos/fuentes/contexto-equipo-hackathon-2026.md",
+      "bytes": 7967,
+      "sha256": "3fc9fc7d5d7c5935fc79e563c27cef52286e80b5a459959b32ff5d2ce9176c71"
     },
     {
       "path": "conocimientos/procesos/atencion-cliente.md",

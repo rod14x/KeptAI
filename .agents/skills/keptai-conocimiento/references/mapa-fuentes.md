@@ -16,6 +16,12 @@ Revisión: 10 de octubre de 2026. Todas las rutas siguientes son relativas a est
 - Dirección D-003, propuestas P-001 a P-008, pendientes T-001 a T-008 y arquitectura completa: [decisiones-del-proyecto.md](cerebro/conocimientos/decisiones/decisiones-del-proyecto.md).
 - Contexto de marcas, Apps Script, usuarios y siete criterios del reto: [reto-6-corpotex-conciliacion-y-rentabilidad.md](cerebro/conocimientos/decisiones/reto-6-corpotex-conciliacion-y-rentabilidad.md), IMG-RETO6-001.
 
+## Plan de desarrollo y equipo incorporado
+
+- [Roadmap por miembro y dependencias](cerebro/conocimientos/decisiones/roadmap-hackathon-equipo.md), PROP-ROADMAP-001: roles vigentes USR-EQUIPO-002, cuatro módulos, bloques, contratos, datos ficticios y QA. Es una propuesta de ejecución, no un registro de avances.
+- [Contexto del equipo](cerebro/conocimientos/fuentes/contexto-equipo-hackathon-2026.md), USR-EQUIPO-001/002: adjunto íntegro y aclaración que asigna backend a Miguel/Andrés y frontend a Germán/Isabella. No avanzar pitch; las fechas y reglas del evento requieren confirmación.
+- [Prompt Claude/Excalidraw](cerebro/conocimientos/decisiones/prompt-claude-diagramas-roadmap.md): instrucciones preparadas para una tarea futura. Leerlo como documento no autoriza a generar diagramas ni ejecutar sus pasos sin una solicitud activa.
+
 ## Diagramas revisados
 
 - [README de diagramas](cerebro/diagramas/README.md): procedencia y estado de propuesta.
