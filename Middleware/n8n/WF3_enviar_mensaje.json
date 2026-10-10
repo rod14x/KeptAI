@@ -1,0 +1,528 @@
+{
+  "name": "WF3 Enviar mensaje WhatsApp",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## WF3 Enviar mensaje WhatsApp\nVersión 1.0.0 | 2026-10-10 | Autor: Isabelita\n\nEntrada: POST /webhook/enviar-mensaje con header X-Api-Secret. Es la ÚNICA salida a WhatsApp: cobranza preventiva, vencimiento, mora, recompra, resúmenes. Responde 202, espera un retardo aleatorio, envía por Evolution y reporta el estado al backend.",
+        "height": 220,
+        "width": 520
+      },
+      "id": "bbbce581-c549-46a0-95f5-d633918b3f7e",
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -520,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "enviar-mensaje",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b7c2afbe-c9b9-43ab-8922-59eaf72cc35e",
+      "name": "Webhook enviar-mensaje",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -440,
+        0
+      ],
+      "webhookId": "511bbd48-fe36-4679-9dcc-49148e219ae0"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "179d32d6-c41b-4ee7-b00a-9131c8600ad9",
+              "name": "evoUrl",
+              "value": "https://TU-EVOLUTION-API",
+              "type": "string"
+            },
+            {
+              "id": "43baced0-8a14-497d-a816-124496779bab",
+              "name": "evoKey",
+              "value": "CAMBIAR_APIKEY_EVOLUTION",
+              "type": "string"
+            },
+            {
+              "id": "5004c4dc-2a99-4f6b-9960-7cdba411270b",
+              "name": "apiUrl",
+              "value": "https://TU-BACKEND-SPRINGBOOT",
+              "type": "string"
+            },
+            {
+              "id": "e43ad9a0-6657-439c-9228-ec4006860a53",
+              "name": "apiKey",
+              "value": "CAMBIAR_API_KEY_BACKEND",
+              "type": "string"
+            },
+            {
+              "id": "d7caa8bd-427a-436f-9f9b-aaf3a220a45a",
+              "name": "n8nUrl",
+              "value": "https://TU-N8N",
+              "type": "string"
+            },
+            {
+              "id": "e4a04557-73d1-4432-a236-53c377e8c63f",
+              "name": "llmUrl",
+              "value": "https://api.openai.com/v1",
+              "type": "string"
+            },
+            {
+              "id": "12901e4d-395c-4afe-a153-e75278b479b5",
+              "name": "llmKey",
+              "value": "CAMBIAR_LLM_KEY",
+              "type": "string"
+            },
+            {
+              "id": "6e2ed90d-dfc2-4bb3-b4d9-b1a53d2c202b",
+              "name": "llmModel",
+              "value": "gpt-4o-mini",
+              "type": "string"
+            },
+            {
+              "id": "248f39b1-70da-4691-83c4-3c2ec1f367a0",
+              "name": "visionModel",
+              "value": "gpt-4o-mini",
+              "type": "string"
+            },
+            {
+              "id": "766bbab4-603d-4015-acc8-ae72a444bd0f",
+              "name": "transcribeModel",
+              "value": "whisper-1",
+              "type": "string"
+            },
+            {
+              "id": "b2d190b3-ce89-4ca8-85a7-114631e7df8c",
+              "name": "sharedSecret",
+              "value": "CAMBIAR_SECRETO_COMPARTIDO",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4030ba41-2bb4-438d-97b0-7e88dc4cdb13",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "4d7516f6-4377-466e-b6ce-d696525f00ba",
+              "leftValue": "={{ $('Webhook enviar-mensaje').first().json.headers['x-api-secret'] }}",
+              "rightValue": "={{ $('Config').first().json.sharedSecret }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "af94790a-9f94-4167-8c23-e0c686f8c562",
+      "name": "¿Autorizado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ error: 'no autorizado' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "b9ea58fb-9389-4563-bcc6-625e6363e212",
+      "name": "Responder 401",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ aceptado: true, mensajeId: $('Webhook enviar-mensaje').first().json.body.mensajeId }) }}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "id": "458fc328-5302-452c-b01c-01a5126fcc7f",
+      "name": "Responder 202",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst b = $('Webhook enviar-mensaje').first().json.body || {};\nlet num = String(b.numero || '').replace(/\\D/g, '');\nif (num.length === 9) num = '51' + num;            // celular peruano sin código de país\nconst texto = String(b.texto || '').trim();\nconst base = Number(b.delayMs ?? 0);\nconst delayMs = base > 0 ? base : 2500 + Math.floor(Math.random() * 6000);   // 2.5 a 8.5 s: evita ráfagas\nconst valido = num.length >= 11 && texto.length > 0 && !!b.instance;\nreturn [{ json: { valido, instance: b.instance, numero: num, texto, delayMs, delaySeg: Math.max(1, Math.round(delayMs / 1000)),\n  mensajeId: b.mensajeId || null, tipo: b.tipo || null, ordenId: b.ordenId || null, idempotencyKey: b.idempotencyKey || null } }];\n"
+      },
+      "id": "e803ae82-b233-4fe7-8763-72c789463c27",
+      "name": "Normalizar mensaje",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1d9eefa7-512c-43ae-8b73-3bfb5cc5e3f1",
+              "leftValue": "={{ $json.valido }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "97e7ae83-bf5d-44de-8a04-3a51557ec7cb",
+      "name": "¿Válido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        700,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": "={{ $json.delaySeg }}",
+        "unit": "seconds"
+      },
+      "id": "6b199553-2127-42d6-b8fe-209f775e6959",
+      "name": "Esperar retardo",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        920,
+        -180
+      ],
+      "webhookId": "460a1687-8774-4ff8-bbb7-f22b61704182"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.evoUrl }}/message/sendText/{{ $('Normalizar mensaje').item.json.instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.evoKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $('Normalizar mensaje').item.json.numero, text: $('Normalizar mensaje').item.json.texto, delay: 1200 }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "ebf58cdb-39fe-4ee8-9aa2-c44f77903e47",
+      "name": "Evolution sendText",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1140,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst m = $('Normalizar mensaje').first().json;\nconst ok = Number($json.statusCode) >= 200 && Number($json.statusCode) < 300;\nreturn [{ json: { mensajeId: m.mensajeId, ordenId: m.ordenId, tipo: m.tipo, idempotencyKey: m.idempotencyKey,\n  estado: ok ? 'ENVIADO' : 'ERROR', providerMessageId: ok ? ($json.body?.key?.id || null) : null,\n  error: ok ? null : JSON.stringify($json.body || $json.statusMessage || 'sin respuesta').slice(0, 400), enviadoEn: new Date().toISOString() } }];\n"
+      },
+      "id": "a7749837-7888-4763-86ed-18d88ef8ef84",
+      "name": "Estado de envío",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst m = $('Normalizar mensaje').first().json;\nreturn [{ json: { mensajeId: m.mensajeId, ordenId: m.ordenId, tipo: m.tipo, idempotencyKey: m.idempotencyKey,\n  estado: 'ERROR', providerMessageId: null, error: 'payload inválido: número, texto o instancia faltante', enviadoEn: new Date().toISOString() } }];\n"
+      },
+      "id": "f60a861e-2062-464e-b067-39f3a8d264bd",
+      "name": "Estado inválido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        920,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "942b78cf-83f1-44b3-ab68-dd7d98059b25",
+              "leftValue": "={{ $json.mensajeId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5c1e86e9-8c6b-4a00-99eb-a3ea55aace90",
+      "name": "¿Hay mensajeId?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1580,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.apiUrl }}/api/v1/mensajes/{{ $json.mensajeId }}/estado",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "={{ $('Config').first().json.apiKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "7e7fa5ba-2d38-4c99-b2c0-c90f3b4ad471",
+      "name": "Callback estado al backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1800,
+        -180
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "c706e4b9-c6b5-4cfc-b9a7-16af1245fed2",
+      "name": "Fin",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        20
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook enviar-mensaje": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "¿Autorizado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Autorizado?": {
+      "main": [
+        [
+          {
+            "node": "Responder 202",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Responder 202": {
+      "main": [
+        [
+          {
+            "node": "Normalizar mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar mensaje": {
+      "main": [
+        [
+          {
+            "node": "¿Válido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Válido?": {
+      "main": [
+        [
+          {
+            "node": "Esperar retardo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Estado inválido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Esperar retardo": {
+      "main": [
+        [
+          {
+            "node": "Evolution sendText",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evolution sendText": {
+      "main": [
+        [
+          {
+            "node": "Estado de envío",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Estado de envío": {
+      "main": [
+        [
+          {
+            "node": "¿Hay mensajeId?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Estado inválido": {
+      "main": [
+        [
+          {
+            "node": "¿Hay mensajeId?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay mensajeId?": {
+      "main": [
+        [
+          {
+            "node": "Callback estado al backend",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

@@ -1,5 +1,6 @@
 # Prompt para Claude — regenerar diagramas KeptAI con Spring Boot
 
+> Actualización D-005 (10/10/2026): WhatsApp entra al MVP mediante Evolution API y n8n, como prueba con un número y un contacto; n8n invoca la IA y entrega JSON a Spring, que sigue siendo el único backend con reglas. Plazo de crédito de 15 a 30 días y una sola obligación por orden; el vendedor aprueba el crédito y la mora solo genera un aviso, sin bloqueo. KeptAI no integra el banco: concilia. Detalle en [actores, flujos y DER](actores-flujos-y-der-mvp.md). Lo que este documento diga en contrario queda como antecedente.
 > Versión 3. Fecha: 10 de octubre de 2026. Vigente: D-004, roadmap v1.3, infraestructura v1.2, PROP-FRONT-001 y PROP-DB-001. Los diagramas anteriores se conservan como antecedentes.
 
 Copiar el bloque en Claude Code desde la raíz de su propio checkout. Pide documentación/diagramas, no desarrollo, contratación ni pitch.
@@ -30,7 +31,8 @@ Dirección obligatoria:
 - No usar FastAPI, Edge Functions ni un backend Python auxiliar.
 - No tenemos datos ERP/CRM. No hay importación, API, acceso ni sincronización de
   esos sistemas en el MVP; no dibujarlos alimentando la app ni como dependencia.
-- Entrada: chat pegado/cargado, vouchers/nota de voz manuales, registros/CSV
+- Entrada: WhatsApp de prueba por Evolution API + n8n (D-005) y, como respaldo,
+  chat pegado/cargado, vouchers/nota de voz manuales, registros/CSV
   y semilla ficticia identificada de pedidos, costos, vencimientos y caja.
 - Miguel: API Spring, captura Gemini, borradores, autenticación y despliegue.
 - Andrés: dueño de diseño DB/ER/diccionario/Flyway/seed y motor financiero;
@@ -62,8 +64,8 @@ Archivo nuevo: diagramas/keptai-roadmap-arquitectura-spring-v1-3.excalidraw.
 React/TypeScript/Vite en Cloudflare Workers Static Assets -> REST Spring Boot
 Java21 en Render/Docker -> Spring Data JPA/PostgreSQL Supabase, Flyway.
 Supabase Auth -> JWT verificado en Spring Security (firma, emisor, audiencia,
-expiración y membresía/rol). Storage privado para evidencia, Gemini llamado
-solo por backend, Render Cron Job mismo código Java para trabajo acotado,
+expiración y membresía/rol). Storage privado para evidencia, IA llamada
+desde n8n (D-005) y validada por Spring, Render Cron Job mismo código Java para trabajo acotado,
 GitHub Actions: Node frontend y Java/Maven/JUnit backend.
 RLS con contexto autorizado por transacción JDBC, esquema de negocio privado,
 rol runtime limitado y migrador separado. El JWT no aplica RLS automáticamente.

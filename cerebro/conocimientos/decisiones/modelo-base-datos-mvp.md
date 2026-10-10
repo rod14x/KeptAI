@@ -2,6 +2,8 @@
 
 > ID: PROP-DB-001. Versión 1.0. Fecha: 10 de octubre de 2026. Dirección USR-EQUIPO-003/D-004; modelo propuesto, aún no implementado. Andrés define la base; Miguel revisa contratos/API, Isabella valida significado y Germán consume DTOs.
 
+> Actualización (10/10/2026): las entidades de este documento se fusionaron con el DER de Isabel en [actores, flujos y DER](actores-flujos-y-der-mvp.md), PROP-FLUJO-DER-001, con tabla de equivalencias. Invariantes, transacción de pago, semilla y aceptación de este documento siguen vigentes.
+
 ## Entregable temprano B0/B1
 
 Andrés entrega diagrama entidad-relación, diccionario con PK/FK/nulabilidad/moneda, migración Flyway inicial, restricciones/índices y semilla ficticia reiniciable. Miguel revisa antes de cerrar DTOs. No leer datos del ERP/CRM ni diseñar una migración desde sistemas sin acceso. Fuente operativa del MVP: base propia, entrada manual/CSV y evidencia revisada; no implica sustituir el registro oficial empresarial.
