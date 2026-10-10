@@ -2,6 +2,8 @@
 
 > Actualización de alcance del MVP (10/10/2026): [D-004](../decisiones/decisiones-del-proyecto.md) elige Spring Boot y excluye uso de datos ERP/CRM por falta de acceso. El texto original conserva la visión del producto; las integraciones descritas no son tareas ni dependencias del MVP vigente.
 
+> Actualización D-005 (10/10/2026): WhatsApp entra al MVP con Evolution API y n8n en modo prueba; plazo de 15 a 30 días con una sola obligación por orden; el vendedor aprueba el crédito y la mora solo genera un aviso. Ver [actores, flujos y DER](../decisiones/actores-flujos-y-der-mvp.md).
+
 > Fecha de incorporación: 10 de octubre de 2026. Referencia: USR-IDEA-001.
 > Fuente: texto aportado por el usuario en esta conversación. Responsable de la dirección: usuario del proyecto.
 > Estado: definición principal vigente del producto por indicación expresa del usuario. Las cifras, capacidades de integración y resultados comerciales todavía requieren validación; no son hechos verificados por este documento.

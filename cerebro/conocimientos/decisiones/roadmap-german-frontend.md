@@ -1,5 +1,6 @@
 # Roadmap técnico de Germán y prompt Claude Design vigente
 
+> Actualización D-005 (10/10/2026): WhatsApp entra al MVP mediante Evolution API y n8n, como prueba con un número y un contacto; n8n invoca la IA y entrega JSON a Spring, que sigue siendo el único backend con reglas. Plazo de crédito de 15 a 30 días y una sola obligación por orden; el vendedor aprueba el crédito y la mora solo genera un aviso, sin bloqueo. KeptAI no integra el banco: concilia. Detalle en [actores, flujos y DER](actores-flujos-y-der-mvp.md). Lo que este documento diga en contrario queda como antecedente.
 > ID: PROP-FRONT-001. Versión 1.0. Fecha: 10 de octubre de 2026. Fuente: USR-DESIGN-001 y aclaración USR-EQUIPO-003. Plan de desarrollo; no acredita interfaz implementada.
 
 ## Responsabilidad y coordinación
@@ -34,7 +35,7 @@ El [prompt original](../fuentes/prompt-claude-design-recibido.md) se conserva í
 > Alineado con: D-003 (capa de caja), PROP-ROADMAP-001 (§3 y §6), Reto 6 (C-01 a C-07). Versión 2, 10/10/2026.
 
 ## 1. Rol y objetivo
-Actúa como diseñador de producto senior (UX/UI) para software financiero-operativo. Diseña la interfaz de **KeptAI**, una capa de caja autónoma en el MVP: no tenemos datos ERP/CRM ni conectores a esos sistemas; las entradas son chat, imagen/audio y registros/CSV manuales con datos ficticios identificados. El diseño será **implementado en 18 horas** por un equipo de 4 en **React + TypeScript** (backend Spring Boot/Java + PostgreSQL), así que: **solo 3 pantallas**, componentes simples y reutilizables, sin interacciones que no se puedan construir rápido. Idioma **español (Perú)**, moneda **soles (S/, PEN)**, fechas dd/mm/aaaa, zona America/Lima.
+Actúa como diseñador de producto senior (UX/UI) para software financiero-operativo. Diseña la interfaz de **KeptAI**, una capa de caja autónoma en el MVP: no tenemos datos ERP/CRM ni conectores a esos sistemas; las entradas llegan por WhatsApp de prueba (Evolution API + n8n, D-005) o por carga manual de chat, imagen/audio y registros/CSV, con datos ficticios identificados. El diseño será **implementado en 18 horas** por un equipo de 4 en **React + TypeScript** (backend Spring Boot/Java + PostgreSQL), así que: **solo 3 pantallas**, componentes simples y reutilizables, sin interacciones que no se puedan construir rápido. Idioma **español (Perú)**, moneda **soles (S/, PEN)**, fechas dd/mm/aaaa, zona America/Lima.
 
 Idea visible: "Ordena lo que cobras, lo que ganas y la caja que viene, con evidencias y revisión humana". No preparar pitch.
 
@@ -42,7 +43,7 @@ Idea visible: "Ordena lo que cobras, lo que ganas y la caja que viene, con evide
 - **Corpotex**: confeccionista de Piura. Marcas: **Corpotex** (uniformes corporativos/industriales) y **Unicrack** (Sport y Uniformes escolares). Producción propia (taller) y talleres de terceros. Vende por WhatsApp, un vendedor por marca.
 - **Datos pendientes:** 80% a crédito y 30% conservan su condición de no verificados; el 30% no tiene significado/denominador confirmado. No mostrarlos como KPIs operativos de la demo ni como pérdida real.
 - **Escenarios:** `factor_mora` puede existir como supuesto editable con valor inicial 0%, jamás precargado desde el 30% empresarial. No incluir botón "Aplicar 30% (dato empresa)". Si el usuario introduce 30%, la fuente es "Supuesto de escenario", independiente de esa afirmación no validada.
-- **Plazos configurables** (demo: 15 y 30 días; la entrevista menciona 30/45). El **evento que inicia el plazo** (entrega / confirmación) también es configurable.
+- **Plazo de crédito de 15 a 30 días** por orden, con una sola obligación y sin cuotas. El **evento que inicia el plazo** es el despacho. El vendedor aprueba el crédito; si el cliente está en mora solo se muestra un aviso ("está en mora, ¿quieres volver a darle crédito?"), sin bloqueo.
 - **Distinguir tres conceptos que no son lo mismo**: *organización* (cliente de KeptAI, aislamiento de datos), *entidad* (RUC/empresa del grupo) y *marca*.
 
 ## 3. Alcance (dirección vigente)
@@ -92,7 +93,7 @@ Vendedores, administración/registro de pagos y gerencia; el **cliente corporati
 Sobrio, financiero, confiable; sin look de plantilla genérica. Primero **tokens**: color de marca, neutros, semáforo semántico (ok / por vencer / vencido / riesgo / info), tipografía con **cifras tabulares**, espaciado 4/8, radios y sombras mínimos; modo claro. Estado = **color + icono + texto**; contraste AA; objetivos táctiles ≥ 44 px. Separar visualmente **evidencia recibida** de **dato validado**. Componentes: tarjeta de borrador, stepper de pago, chip de estado, tabla con rangos, KPI, línea de alertas, selector de entidad, gráfico semanal. Estados de cada pantalla: cargando, vacío, error, sin permiso.
 
 ## 8. Restricciones de honestidad
-- No afirmar integraciones activas con Kommo, ERP, bancos ni WhatsApp: mostrarlas como "Cargar archivo"; no incluir pantallas ni botones de conectar ERP/CRM en este MVP. Alertas **dentro de la app**, sin envío real.
+- No afirmar integraciones activas con Kommo, ERP ni bancos: mostrarlas como "Cargar archivo"; no incluir pantallas ni botones de conectar ERP/CRM en este MVP. WhatsApp está conectado en modo prueba (D-005): órdenes y vouchers pueden llegar desde el chat y la cobranza se envía al contacto de prueba. Las alertas internas siguen **dentro de la app**.
 - No inventar cifras reales de Corpotex; 80% y 30% son afirmaciones pendientes de verificar, no métricas calculadas; todas las cifras operativas de la demo son ficticias.
 - Una regla de negocio pendiente se rotula **"Propuesta"**; no inventar política de crédito.
 
