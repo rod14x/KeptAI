@@ -1,6 +1,10 @@
 # Índice del cerebro KeptAI
 
-Lectura inicial: [Descripción](empresa/descripcion.md), [Objetivos](empresa/objetivos.md) y [Decisiones](decisiones/decisiones-del-proyecto.md).
+Lectura inicial: [Idea de negocio vigente](empresa/idea-negocio-replanteada.md), [Decisiones](decisiones/decisiones-del-proyecto.md), [Objetivos](empresa/objetivos.md) y [Descripción](empresa/descripcion.md).
+
+## Definición principal vigente
+
+La [idea de negocio replanteada](empresa/idea-negocio-replanteada.md) define el producto por indicación del usuario (USR-IDEA-001, 10 de octubre de 2026). Primera fase: captura, conciliación, cobranza y visibilidad de rentabilidad y caja a 4 semanas. Segunda fase: stock, cotizaciones y recompra. Esta prioridad prevalece sobre propuestas iniciales; el 80% a crédito y el significado del 30% siguen pendientes de verificación.
 
 ## Documentos por tarea
 - Comprender Corpotex: [descripción](empresa/descripcion.md).

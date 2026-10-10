@@ -1,7 +1,22 @@
 # Objetivos de la empresa y del proyecto
 
-> Corte documental: 10 de octubre de 2026. Versión: 1.0.
+> Corte documental: 10 de octubre de 2026. Versión: 1.1.
 > Fuente empresarial: entrevistas transcritas automáticamente y editadas sin verificación humana por escucha. Las recomendaciones de diseño permanecen identificadas como propuestas.
+
+## Dirección vigente — definición principal del producto
+
+**Fuente:** [Idea de negocio replanteada](idea-negocio-replanteada.md), USR-IDEA-001. **Fecha:** 10 de octubre de 2026. **Responsable:** usuario del proyecto. **Estado:** dirección vigente del equipo.
+
+Construir una capa de caja conectada a los sistemas existentes que permita conocer cuánto se cobra, cuánto se gana por pedido y cuánta liquidez se espera durante las próximas 4 semanas.
+
+1. Capturar pedidos y pagos desde chats y vouchers, con confirmación humana.
+2. Conciliar pagos con pedidos y resolver parciales, duplicados, huérfanos y diferencias.
+3. Estructurar vencimientos, alertas, estados de cuenta y autorización de crédito cuando exista saldo.
+4. Mostrar margen por pedido, línea y marca, producción como centro de resultados y caja proyectada a 4 semanas.
+
+Stock, cotizaciones y recordatorios de recompra quedan en segunda fase. Corpotex es el piloto previsto; el producto debe reutilizarse en otras empresas que venden por WhatsApp a crédito. No hay metas económicas verificadas ni precios acordados. Las cifras del 80% y 30% y los plazos efectivos requieren validación.
+
+Las necesidades de entrevista y propuestas iniciales siguientes se conservan como antecedentes; no modifican esta prioridad.
 
 ## Necesidades expresadas en la entrevista
 
@@ -13,7 +28,7 @@ La referencia a gestión de clientes del audio breve termina incompleta y no per
 
 Las alertas de stock y cobranza y los avisos de renovación aparecen como propuestas de la conversación. Su aprobación e implementación no están acreditadas. [A02-Q19] 02_ventas_produccion_cobranza.md, 09:23–09:43 [A02-Q27] 02_ventas_produccion_cobranza.md, 14:56–15:39 [A02-Q35] 02_ventas_produccion_cobranza.md, 19:26–19:41
 
-## Dirección explícita del equipo
+## Dirección inicial del equipo — antecedente
 
 **Estado: requisitos aportados por el usuario para el proyecto.**
 
@@ -24,11 +39,11 @@ Las alertas de stock y cobranza y los avisos de renovación aparecen como propue
 - Vender la solución a Corpotex como cliente inicial y hacerla reutilizable en el sector.
 - Considerar sostenibilidad económica, operativa y material.
 
-## Objetivo general propuesto
+## Objetivo general inicial propuesto — antecedente
 
 Seguir cada pedido desde confirmación hasta producción, entrega, cobro y recompra, relacionando información, responsables y próximas acciones. La definición ampliada de postventa procede del documento de arquitectura.
 
-## Objetivos específicos propuestos
+## Objetivos específicos iniciales propuestos — antecedentes
 
 1. Dar a administración una vista del estado, responsable y próxima acción por pedido.
 2. Dar a producción especificaciones aprobadas, fechas y materiales pendientes.

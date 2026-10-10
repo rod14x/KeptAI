@@ -1,6 +1,6 @@
 # Decisiones, propuestas y arquitectura del proyecto
 
-> Corte documental: 10 de octubre de 2026. Versión: 1.0.
+> Corte documental: 10 de octubre de 2026. Versión: 1.1.
 > Este registro distingue instrucciones del usuario, recomendaciones de diseño y decisiones pendientes. La organización de documentos no acredita aprobación empresarial de la arquitectura.
 
 ## Estados documentales
@@ -11,6 +11,18 @@
 - Implementado: exige evidencia de ejecución; estos documentos no acreditan implementación del software.
 
 ## Dirección expresada por el equipo
+
+### D-003 — Capa de caja como definición principal vigente
+
+**Fecha:** 10 de octubre de 2026. **Responsable:** usuario del proyecto. **Estado:** dirección vigente del equipo. **Fundamento:** indicación expresa de que la [idea de negocio replanteada](../empresa/idea-negocio-replanteada.md), USR-IDEA-001, es lo más importante del sistema y define todo.
+
+El núcleo del producto comprende captura con validación humana, conciliación, cobranza y visibilidad financiera: margen por pedido, línea y marca, producción como centro de resultados y caja a 4 semanas. Stock, cotizaciones y recompra quedan en segunda fase. Se busca complementar Kommo y el ERP, sujeto a identificar sistemas y validar acceso.
+
+Esta dirección actualiza la prioridad de D-001 y sustituye el alcance inicial de P-007: rentabilidad entra en primera fase. El modelo comercial vigente como hipótesis es mensualidad por empresa más porcentaje de recuperación, actualizando P-008. No hay aprobación empresarial de precios ni arquitectura técnica.
+
+El 80% a crédito requiere verificación; el 30% no tiene significado confirmado y no debe tratarse como incobrable. Los plazos de 15 y 30 días se validarán frente a la política real antes de automatizar cobranza. La demo de 3 vouchers y un chat requiere datos de costos y vencimientos adicionales para mostrar margen y caja.
+
+Los registros anteriores quedan como antecedentes. Las propuestas técnicas siguientes siguen pendientes de aprobación y deben ajustarse al núcleo de cuatro funciones.
 
 ### D-001 — Herramienta postventa y trazabilidad
 
@@ -50,11 +62,11 @@ La estructura conserva empresa/descripcion.md, empresa/objetivos.md, procesos/ve
 
 **Estado:** propuesta. Separar usuarios, datos, archivos, conectores y trabajos por empresa. Configurar etapas, unidades, mínimos, plazos y avisos. Comprobar el aislamiento usando una segunda empresa de demostración.
 
-### P-007 — MVP acotado
+### P-007 — MVP inicial — alcance sustituido por D-003
 
 **Estado:** propuesta. Completar pedido, producción, stock, entrega, cobro y seguimiento antes de ampliar a predicción, contabilidad, emisión fiscal, rentabilidad integral o un nuevo bot comercial.
 
-### P-008 — Sostenibilidad comercial
+### P-008 — Sostenibilidad comercial — hipótesis actualizada por D-003
 
 **Estado:** hipótesis. Suscripción por empresa y posible incorporación según complejidad. Precio, disposición de pago y ahorros necesitan validación. Véase [objetivos](../empresa/objetivos.md).
 
