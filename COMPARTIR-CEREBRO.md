@@ -4,7 +4,7 @@
 
 Skill: **keptai-conocimiento**, en [.agents/skills/keptai-conocimiento/SKILL.md](.agents/skills/keptai-conocimiento/SKILL.md), dentro del mismo repo [rod14x/KeptAI](https://github.com/rod14x/KeptAI).
 
-Incluye los 14 Markdown de negocio y planificación completos, sus anexos con los 43 registros de entrevista, los dos diagramas editables y sus PNG, y el README de diagramas. La entrada explica cómo consultar las fuentes, respetar la idea vigente y tratar las contradicciones. El [mapa de fuentes](.agents/skills/keptai-conocimiento/references/mapa-fuentes.md) documenta cobertura y exclusiones; el manifiesto registra hashes.
+Incluye los 15 Markdown de negocio y planificación completos, sus anexos con los 43 registros de entrevista, los diagramas editables disponibles y sus PNG, y el README de diagramas. La entrada explica cómo consultar las fuentes, respetar la idea vigente y tratar las contradicciones. El [mapa de fuentes](.agents/skills/keptai-conocimiento/references/mapa-fuentes.md) documenta cobertura y exclusiones; el manifiesto registra hashes.
 
 La documentación oficial de OpenAI indica que Codex descubre skills compartidas en `.agents/skills` del repo y permite invocarlas con `$nombre`. Por eso el equipo puede usar esta entrega directamente desde su checkout. [Guía oficial de skills](https://learn.chatgpt.com/docs/build-skills).
 

@@ -70,6 +70,12 @@ La estructura conserva empresa/descripcion.md, empresa/objetivos.md, procesos/ve
 
 **Estado:** hipótesis. Suscripción por empresa y posible incorporación según complejidad. Precio, disposición de pago y ahorros necesitan validación. Véase [objetivos](../empresa/objetivos.md).
 
+### P-009 — Infraestructura recomendada para el MVP
+
+**Estado:** recomendación técnica, pendiente de comprobar acceso y despliegue; no acredita contratación o implementación. **Fecha:** 10 de octubre de 2026. **Responsable de la propuesta:** agente documental, por solicitud del usuario. **Fundamento:** completar el roadmap con tecnologías para comenzar sin cambiar D-003 ni USR-EQUIPO-002.
+
+Base recomendada: React/TypeScript/Vite y Cloudflare Workers Static Assets; Supabase PostgreSQL, Auth, Storage privado y Edge Functions; Gemini API; trabajos persistidos/Cron y GitHub Actions. Germán frontend/hosting, Isabella interfaz/reglas funcionales, Miguel API/IA, Andrés datos y motor financiero. Detalle en [infraestructura](infraestructura-desarrollo-mvp.md), PROP-INFRA-001, y [roadmap v1.1](roadmap-hackathon-equipo.md). Un solo backend; cuentas, presupuesto y configuración deben comprobarse antes de contratar o prometer integración.
+
 ## Decisiones abiertas y condiciones de cierre
 
 - T-001: identificar sistemas, planes, propietarios y permisos con evidencia del administrador.

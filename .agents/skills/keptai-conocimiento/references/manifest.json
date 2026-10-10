@@ -1,16 +1,24 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "460cc347cb12143fb7c299f0f55629b4e8295310",
+  "source_head_at_generation": "bf03fde69973be43e5c6be799a4d47fabb21873c",
   "source_basis": "working_tree",
   "source_changes_at_generation": [
     "M conocimientos/INDICE.md",
+    " M conocimientos/decisiones/decisiones-del-proyecto.md",
+    " M conocimientos/decisiones/prompt-claude-diagramas-roadmap.md",
+    " M conocimientos/decisiones/roadmap-hackathon-equipo.md",
     " M diagramas/README.md",
-    "?? conocimientos/decisiones/prompt-claude-diagramas-roadmap.md",
-    "?? conocimientos/decisiones/roadmap-hackathon-equipo.md",
-    "?? conocimientos/fuentes/",
+    "?? conocimientos/decisiones/infraestructura-desarrollo-mvp.md",
     "?? diagramas/keptai-flujo-completo.excalidraw",
-    "?? diagramas/keptai-flujo-completo.png"
+    "?? diagramas/keptai-flujo-completo.png",
+    "?? diagramas/keptai-roadmap-arquitectura.excalidraw",
+    "?? diagramas/keptai-roadmap-arquitectura.png",
+    "?? diagramas/keptai-roadmap-dependencias.excalidraw",
+    "?? diagramas/keptai-roadmap-dependencias.png",
+    "?? diagramas/keptai-roadmap-equipo.excalidraw",
+    "?? diagramas/keptai-roadmap-equipo.png",
+    "?? diagramas/keptai-roadmap-fuentes.md"
   ],
   "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
   "interview_ids": [
@@ -61,18 +69,23 @@
   "files": [
     {
       "path": "conocimientos/INDICE.md",
-      "bytes": 2844,
-      "sha256": "896e78ecd32f43d10f4ba83a60510b81664edf5e50cdaad73351600d6c4cbb7c"
+      "bytes": 3002,
+      "sha256": "1f28eb2876a6df3698809a77153c0e0b45ad96e837271e1ef69bbca265b4ad1b"
     },
     {
       "path": "conocimientos/decisiones/decisiones-del-proyecto.md",
-      "bytes": 27902,
-      "sha256": "5af5a0a443469eea5a133968f2c0d20c96536a12c673027b417156d75de0aa40"
+      "bytes": 28860,
+      "sha256": "4024f82cff89dba6c80b8aeff7fb63f6770a3c9f8d7d7b191c073c9fd91aeced"
+    },
+    {
+      "path": "conocimientos/decisiones/infraestructura-desarrollo-mvp.md",
+      "bytes": 19889,
+      "sha256": "47bc936cba4dfa020658b3655663c0df80155607bd333606712a4dd3ed76e88b"
     },
     {
       "path": "conocimientos/decisiones/prompt-claude-diagramas-roadmap.md",
-      "bytes": 6641,
-      "sha256": "5784e1c7be73ae4094fa08dd67835031e3d807629ea896b22068a9281a3b4a97"
+      "bytes": 7267,
+      "sha256": "01dbc6463208286a4749c285f7331e7df58528a1ff65c8b3722069c905320db7"
     },
     {
       "path": "conocimientos/decisiones/reto-6-corpotex-conciliacion-y-rentabilidad.md",
@@ -81,8 +94,8 @@
     },
     {
       "path": "conocimientos/decisiones/roadmap-hackathon-equipo.md",
-      "bytes": 29316,
-      "sha256": "47159c0b130ca3433b6b14e40c04eddf573b0104612c06aaf1efa1c5b6f452ed"
+      "bytes": 32183,
+      "sha256": "217a1e86eae39d2a3e096f8dd85f8d38272ef0b35be950729dfe1673f262b310"
     },
     {
       "path": "conocimientos/empresa/descripcion.md",
@@ -153,6 +166,41 @@
       "path": "diagramas/keptai-mapa-inicial.png",
       "bytes": 87861,
       "sha256": "31d0b24e0f034bf89b7bea5288b467450a140dbf51061643f9ade69c36eca501"
+    },
+    {
+      "path": "diagramas/keptai-roadmap-arquitectura.excalidraw",
+      "bytes": 113088,
+      "sha256": "f4d7e793b5206ed7cf34c1c25e517d7c16cecd14e1b5d182d106b0d7b91ea862"
+    },
+    {
+      "path": "diagramas/keptai-roadmap-arquitectura.png",
+      "bytes": 453871,
+      "sha256": "ade8526366bf42eb054187b535614e99bb2f9ff4ba6a4849956e3bf647a6f6d0"
+    },
+    {
+      "path": "diagramas/keptai-roadmap-dependencias.excalidraw",
+      "bytes": 84794,
+      "sha256": "549ba9ae3cb5a560988e726629a2ce0a43577c68cc8edca5c5a6a284cb8e41a4"
+    },
+    {
+      "path": "diagramas/keptai-roadmap-dependencias.png",
+      "bytes": 357567,
+      "sha256": "d7761e645ed8634d7e5dd67f8674be2cd43da70923f7e8944e93bdd2ff923c64"
+    },
+    {
+      "path": "diagramas/keptai-roadmap-equipo.excalidraw",
+      "bytes": 124773,
+      "sha256": "652de5e6d98664376095edfa6429f3df804fcd6716d6630e7a2edc742e2eee59"
+    },
+    {
+      "path": "diagramas/keptai-roadmap-equipo.png",
+      "bytes": 547508,
+      "sha256": "4a042251b052a7ad937ca5650b1994350397e67e697610b83f31be307faaf0ab"
+    },
+    {
+      "path": "diagramas/keptai-roadmap-fuentes.md",
+      "bytes": 3819,
+      "sha256": "2c54a9392f3f91c62123d04975cc5cda6ef0f34c2c81f34a28afdbd4319948b0"
     }
   ]
 }

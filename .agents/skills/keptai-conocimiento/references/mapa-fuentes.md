@@ -18,6 +18,8 @@ Revisión: 10 de octubre de 2026. Todas las rutas siguientes son relativas a est
 
 ## Plan de desarrollo y equipo incorporado
 
+- [Infraestructura de desarrollo](cerebro/conocimientos/decisiones/infraestructura-desarrollo-mvp.md), PROP-INFRA-001: recomendación concreta de servicios, responsables y configuración; amplía el roadmap v1.1. Leer para crear, integrar o desplegar la app.
+
 - [Roadmap por miembro y dependencias](cerebro/conocimientos/decisiones/roadmap-hackathon-equipo.md), PROP-ROADMAP-001: roles vigentes USR-EQUIPO-002, cuatro módulos, bloques, contratos, datos ficticios y QA. Es una propuesta de ejecución, no un registro de avances.
 - [Contexto del equipo](cerebro/conocimientos/fuentes/contexto-equipo-hackathon-2026.md), USR-EQUIPO-001/002: adjunto íntegro y aclaración que asigna backend a Miguel/Andrés y frontend a Germán/Isabella. No avanzar pitch; las fechas y reglas del evento requieren confirmación.
 - [Prompt Claude/Excalidraw](cerebro/conocimientos/decisiones/prompt-claude-diagramas-roadmap.md): instrucciones preparadas para una tarea futura. Leerlo como documento no autoriza a generar diagramas ni ejecutar sus pasos sin una solicitud activa.
@@ -29,6 +31,10 @@ Revisión: 10 de octubre de 2026. Todas las rutas siguientes son relativas a est
 - [Flujo completo editable](cerebro/diagramas/keptai-flujo-completo.excalidraw) y [PNG](cerebro/diagramas/keptai-flujo-completo.png).
 
 Se preservan como antecedentes sin redibujarlos. El flujo completo dice que rentabilidad queda fuera del MVP; esa exclusión fue sustituida por D-003. Ninguno acredita integración ni funcionamiento de software. Los archivos de flujo completo estaban sin seguimiento en Git durante la revisión; este paquete incluye su copia leída, sin modificar ni publicar los archivos originales pendientes.
+
+### Diagramas del roadmap disponibles como antecedentes
+
+La copia incluye `keptai-roadmap-equipo`, `keptai-roadmap-dependencias` y `keptai-roadmap-arquitectura` en formato Excalidraw/PNG, además de `keptai-roadmap-fuentes.md`. Se conservan las versiones locales existentes sin redibujarlas. Su documento de fuentes cita roadmap v1.0 y proveedor IA pendiente; la infraestructura de PROP-INFRA-001 y roadmap v1.1 es la referencia vigente y debe usarse al actualizar esos diagramas.
 
 ## Registros completos de entrevistas
 
