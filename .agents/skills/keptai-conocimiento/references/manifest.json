@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "source_repository": "https://github.com/rod14x/KeptAI",
+  "source_head_at_generation": "ebf9e044bff01b0b43861bce5930d3a7c6dbd17c",
+  "source_basis": "working_tree",
+  "source_changes_at_generation": [
+    "M diagramas/README.md",
+    "?? diagramas/keptai-flujo-completo.excalidraw",
+    "?? diagramas/keptai-flujo-completo.png"
+  ],
+  "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
+  "interview_ids": [
+    "A01-Q01",
+    "A01-Q02",
+    "A01-Q03",
+    "A01-Q04",
+    "A01-Q05",
+    "A01-Q06",
+    "A01-Q07",
+    "A01-Q08",
+    "A02-Q01",
+    "A02-Q02",
+    "A02-Q03",
+    "A02-Q04",
+    "A02-Q05",
+    "A02-Q06",
+    "A02-Q07",
+    "A02-Q08",
+    "A02-Q09",
+    "A02-Q10",
+    "A02-Q11",
+    "A02-Q12",
+    "A02-Q13",
+    "A02-Q14",
+    "A02-Q15",
+    "A02-Q16",
+    "A02-Q17",
+    "A02-Q18",
+    "A02-Q19",
+    "A02-Q20",
+    "A02-Q21",
+    "A02-Q22",
+    "A02-Q23",
+    "A02-Q24",
+    "A02-Q25",
+    "A02-Q26",
+    "A02-Q27",
+    "A02-Q28",
+    "A02-Q29",
+    "A02-Q30",
+    "A02-Q31",
+    "A02-Q32",
+    "A02-Q33",
+    "A02-Q34",
+    "A02-Q35"
+  ],
+  "files": [
+    {
+      "path": "conocimientos/INDICE.md",
+      "bytes": 2452,
+      "sha256": "9c890edbafe987e91375497b58c3653320cc2e7afb45af441cb958fedf244cea"
+    },
+    {
+      "path": "conocimientos/decisiones/decisiones-del-proyecto.md",
+      "bytes": 27902,
+      "sha256": "5af5a0a443469eea5a133968f2c0d20c96536a12c673027b417156d75de0aa40"
+    },
+    {
+      "path": "conocimientos/decisiones/reto-6-corpotex-conciliacion-y-rentabilidad.md",
+      "bytes": 14116,
+      "sha256": "dfb9dd4d8448c6eb328e644f7773728603ed453a714c67702821adc70ea18da9"
+    },
+    {
+      "path": "conocimientos/empresa/descripcion.md",
+      "bytes": 9206,
+      "sha256": "1f07c61d225ca74e004bdce260aa65c5c150cde8c2634b7a37d2f04d8c472240"
+    },
+    {
+      "path": "conocimientos/empresa/idea-negocio-replanteada.md",
+      "bytes": 6952,
+      "sha256": "90b10c0ac65ad82cabb4773f6d2aa606744a1104a9a411fbf7fa7171b3cae939"
+    },
+    {
+      "path": "conocimientos/empresa/objetivos.md",
+      "bytes": 13235,
+      "sha256": "d6ab8cba43e68b447e69147f8ee2c900cb77f6e3e69547cc0dba2a7698ee1c08"
+    },
+    {
+      "path": "conocimientos/procesos/atencion-cliente.md",
+      "bytes": 15088,
+      "sha256": "27762791fb1e49779f3ab796647b34953de49875bd879d327bd08dc6121af7bf"
+    },
+    {
+      "path": "conocimientos/procesos/flujo-cliente-empresa.md",
+      "bytes": 5600,
+      "sha256": "006358f5e0b42b35bd2829966d56a195604d707948d2efdb81b01819aab5895c"
+    },
+    {
+      "path": "conocimientos/procesos/rediseno-procesos-credito-y-cobranza.md",
+      "bytes": 13299,
+      "sha256": "ca11d75d0f65d0f9171810107a62246b6396b92a4bdff50ac538e0f365e5847d"
+    },
+    {
+      "path": "conocimientos/procesos/ventas.md",
+      "bytes": 19215,
+      "sha256": "33d1d5ab5624175e92356e2a176bd6a0414defde6b08d9b33eec367773ec20a0"
+    },
+    {
+      "path": "conocimientos/productos/catalogo.md",
+      "bytes": 7268,
+      "sha256": "6400aa306296186527959e7c6d9fa2285dd540739d8de475df1ffb73127cb216"
+    },
+    {
+      "path": "diagramas/README.md",
+      "bytes": 1947,
+      "sha256": "908e457465b8583de5f015e76a140d289b43dd7df0961f8969e79d165dfd166d"
+    },
+    {
+      "path": "diagramas/keptai-flujo-completo.excalidraw",
+      "bytes": 107328,
+      "sha256": "172e2b418db57c34a49ae6a800ec96c0845f987488a03e85cc25e5f05acb2e2e"
+    },
+    {
+      "path": "diagramas/keptai-flujo-completo.png",
+      "bytes": 313765,
+      "sha256": "834782ac449e410ba73daf81a1ee826d6f89db21bb180e005570831f54f28785"
+    },
+    {
+      "path": "diagramas/keptai-mapa-inicial.excalidraw",
+      "bytes": 17271,
+      "sha256": "58330ccf36612f40c16b369c2cb2a7b7e9409adf6170fb644d4e5efcdc6e8e65"
+    },
+    {
+      "path": "diagramas/keptai-mapa-inicial.png",
+      "bytes": 87861,
+      "sha256": "31d0b24e0f034bf89b7bea5288b467450a140dbf51061643f9ade69c36eca501"
+    }
+  ]
+}

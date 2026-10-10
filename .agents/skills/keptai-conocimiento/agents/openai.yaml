@@ -1,0 +1,6 @@
+interface:
+  display_name: "KeptAI · Cerebro de conocimiento"
+  short_description: "Fuentes completas, alcance y decisiones de KeptAI"
+  default_prompt: "Usa $keptai-conocimiento para resolver esta tarea con las fuentes del cerebro y distinguir requisitos vigentes de propuestas y datos pendientes."
+policy:
+  allow_implicit_invocation: true
