@@ -1,9 +1,9 @@
 # PROMPT PARA CLAUDE DESIGN — KeptAI (3 pantallas, prototipo funcional Reto 6 Corpotex)
 
-> Alineado con: D-003 (capa de caja), PROP-ROADMAP-001 (§3 y §6), Reto 6 (C-01 a C-07). Versión 2, 10/10/2026.
+> Alineado con: D-003 (capa de caja), PROP-ROADMAP-001 (§3 y §6), Reto 6 (C-01 a C-07). Versión 3, 10/10/2026 (stack: PROP-INFRA-001 v1.1).
 
 ## 1. Rol y objetivo
-Actúa como diseñador de producto senior (UX/UI) para software financiero-operativo. Diseña la interfaz de **KeptAI**, una **capa de caja** que se coloca entre el CRM (Kommo, por confirmar) y el ERP/facturación ("Factura Ya", por confirmar) de una empresa que vende por WhatsApp a crédito. El diseño será **implementado en 18 horas** por un equipo de 4 en **React + TypeScript** (backend Supabase/PostgreSQL), así que: **solo 3 pantallas**, componentes simples y reutilizables, sin interacciones que no se puedan construir rápido. Idioma **español (Perú)**, moneda **soles (S/, PEN)**, fechas dd/mm/aaaa, zona America/Lima.
+Actúa como diseñador de producto senior (UX/UI) para software financiero-operativo. Diseña la interfaz de **KeptAI**, una **capa de caja** que se coloca entre el CRM (Kommo, por confirmar) y el ERP/facturación ("Factura Ya", por confirmar) de una empresa que vende por WhatsApp a crédito. El diseño será **implementado en 18 horas** por un equipo de 4 en **React + TypeScript + Vite** (hosting Cloudflare), con backend **FastAPI** (Python, Render) y Supabase (PostgreSQL, Auth, Storage privado) e IA Gemini, así que: **solo 3 pantallas**, componentes simples y reutilizables, sin interacciones que no se puedan construir rápido. Idioma **español (Perú)**, moneda **soles (S/, PEN)**, fechas dd/mm/aaaa, zona America/Lima.
 
 Idea a hacer evidente en la UI: *"Corpotex ya tiene su CRM y su ERP. Lo que no tiene es lo que pasa entre los dos: la plata que se cobra, la que se gana y la que viene."*
 
@@ -19,8 +19,10 @@ Idea a hacer evidente en la UI: *"Corpotex ya tiene su CRM y su ERP. Lo que no t
 **Fuera (fase 2) — no diseñar:** stock, cotizaciones, recompra, kanban de taller, check-in de estaciones, pitch/slides.
 Costos de insumos, mano de obra y terceros entran solo como **datos ya cargados** para calcular margen.
 
-## 4. Usuarios y filtros globales
-Vendedores, administración/registro de pagos y gerencia; el **cliente corporativo** consulta su estado de cuenta (vista pública de solo lectura dentro de Pantalla 2). **Selector global persistente**: `Corpotex | Unicrack | Consolidado` (el consolidado requiere acceso autorizado). Toda cifra muestra **fecha de corte** y su **fuente** (dato empresa / demostración / supuesto configurable). Responsivo real: móvil y escritorio (C-01).
+## 4. Usuarios, acceso y filtros globales
+**Acceso:** pantalla mínima de **inicio de sesión** (email y contraseña, cuentas de prueba precreadas; no cuenta como una de las 3 pantallas) y menú de usuario con cerrar sesión. Roles mínimos: *revisión* (captura y confirmación) y *administración* (verificar, aplicar, ver resultados). Cada acción no permitida muestra el estado "sin permiso" con mensaje claro, sin ocultar silenciosamente la información.
+
+Usuarios: vendedores, administración/registro de pagos y gerencia. El **cliente corporativo** consulta su estado de cuenta mediante un **enlace firmado de vida corta** (vista de solo lectura dentro de Pantalla 2; si el enlace expiró, mostrar "Enlace vencido, solicita uno nuevo"). **Selector global persistente**: `Corpotex | Unicrack | Consolidado` (el consolidado requiere acceso autorizado). Toda cifra muestra **fecha de corte** y su **fuente** (dato empresa / demostración / supuesto configurable). Responsivo real: móvil y escritorio (C-01).
 
 ## 5. Las 3 pantallas
 
@@ -29,12 +31,15 @@ Vendedores, administración/registro de pagos y gerencia; el **cliente corporati
 - Panel de **borrador estructurado** junto a la **evidencia original** (burbuja de chat, miniatura del voucher, audio con transcripción). Campos: cliente, marca, entidad, prenda/cantidad/tallas, monto, banco/billetera, N.° de operación, fecha-hora. **Confianza por campo**; ilegible o ausente = chip ámbar "Pendiente" (nunca inventar importes).
 - Acciones: editar campo, **Confirmar borrador** (validación humana), Descartar, Pedir dato. Se guarda quién corrigió qué.
 - Estados de la evidencia: *borrador → revisado → comprobante pendiente*. Estados UI: vacío, procesando, error de lectura/IA (con opción de **edición manual**, rotulada como limitación).
+- **Reglas de carga (propuestas):** imágenes hasta 5 MB y audio hasta 10 MB; formatos no admitidos o archivos grandes muestran error claro antes de enviar. Las evidencias son **privadas**: se ven con acceso autenticado, nunca con una URL pública.
+- **Extracción asíncrona:** puede tardar o quedar como trabajo en curso. Mostrar estado *En cola / Procesando / Listo / Falló* con reintento, y en los errores un **ID de solicitud** copiable para soporte.
+- Rotular los valores de la IA como **"Sugerido por IA"** hasta que una persona los confirme; la IA nunca calcula saldos ni aprueba crédito.
 - Mensaje fijo: **"Comprobante recibido ≠ pago verificado: aún no reduce el saldo."**
 
 ### Pantalla 2 — Pedido, pagos y cobranza (móvil + escritorio)
 - Cabecera de pedido: cliente, organización/entidad/marca, línea, modalidad (**propia/tercerizada**), precio, costo, vencimiento, saldo, estado.
 - **Conciliación**: sugerencia de pedido para cada voucher con puntaje, y excepciones con chip de color + icono + texto: **Coincide, Parcial, Duplicado, Huérfano (sin pedido), Monto no cuadra**.
-- **Tres acciones separadas y con confirmación**: ① *Validar evidencia* → ② *Registrar verificación de fondos* (responsable y hora; "verificación simulada" en el demo, no conexión a un banco) → ③ *Aplicar pago*. Stepper visible: *Comprobante pendiente → Pago verificado → Pago aplicado*, más estados *Pago duplicado*, *Saldo pendiente*, *Alerta resuelta*. Aplicar dos veces o reintentar no duplica el pago (botón deshabilitado + mensaje).
+- **Tres acciones separadas y con confirmación**: ① *Validar evidencia* → ② *Registrar verificación de fondos* (responsable y hora; "verificación simulada" en el demo, no conexión a un banco) → ③ *Aplicar pago*. Stepper visible: *Comprobante pendiente → Pago verificado → Pago aplicado*, más estados *Pago duplicado*, *Saldo pendiente*, *Alerta resuelta*. Aplicar dos veces o reintentar no duplica el pago (botón deshabilitado mientras la solicitud está en curso, mensaje "ya aplicado" si el servidor lo rechaza por idempotencia). Un error de red nunca debe mostrarse como éxito: mostrar "No se pudo confirmar, reintenta" y recargar el estado real.
 - **Autorización de crédito**: si el cliente ya tiene saldo, banner "Cliente con saldo S/ X" y estado **Autorización pendiente** con responsable y motivo; no se aprueba solo desde la UI (el servidor decide).
 - **Cobranza**: línea de tiempo de alertas (3 días antes, el día, 3 días después, escalamiento), alerta interna con responsable, cancelada al aplicarse el pago completo. Lista de cuentas por cobrar con rangos: por vencer, vence hoy, vencido.
 - **Estado de cuenta del cliente** (subvista móvil, enlace sin login): saldo vigente, próximo vencimiento, pedidos, abonos aplicados, "actualizado al dd/mm hh:mm". Sin jerga interna.
@@ -66,7 +71,7 @@ Sobrio, financiero, confiable; sin look de plantilla genérica. Primero **tokens
 - Una regla de negocio pendiente se rotula **"Propuesta"**; no inventar política de crédito.
 
 ## 9. Entregables y aceptación
-**Entregables:** tokens y componentes; las 3 pantallas (móvil y escritorio donde se indica); recorrido clicable del demo; mini-panel de configuración (plazos, evento que inicia el plazo, `factor_mora`, precio de transferencia); notas de handoff por componente (props, estados) pensadas para React/TypeScript.
+**Entregables:** tokens y componentes (CSS y componentes accesibles simples, **sin depender de Next.js ni de otra librería de UI pesada**); las 3 pantallas (móvil y escritorio donde se indica); recorrido clicable del demo; mini-panel de configuración (plazos, evento que inicia el plazo, `factor_mora`, precio de transferencia); notas de handoff por componente (props, estados) pensadas para React/TypeScript; los montos se muestran formateados pero se asumen **enteros en centavos** en la API, y los campos de formulario se validan con Zod en el cliente (la autoridad de saldo y margen es el servidor).
 **Aceptación:**
 1. El recorrido **3 vouchers + 1 chat** se hace sin salir del prototipo: captura → conciliación (V-003 duplicado) → saldo S/400 → alerta → P-001 con −S/40 → caja actualizada.
 2. Se distingue *comprobante recibido*, *pago verificado* y *pago aplicado*.
