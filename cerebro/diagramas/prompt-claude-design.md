@@ -1,9 +1,10 @@
 # PROMPT PARA CLAUDE DESIGN — KeptAI (3 pantallas, prototipo funcional Reto 6 Corpotex)
 
+> Actualización D-005 (10/10/2026): WhatsApp entra al MVP mediante Evolution API y n8n, como prueba con un número y un contacto; n8n invoca la IA y entrega JSON a Spring, que sigue siendo el único backend con reglas. Plazo de crédito de 15 a 30 días y una sola obligación por orden; el vendedor aprueba el crédito y la mora solo genera un aviso, sin bloqueo. KeptAI no integra el banco: concilia. Detalle en [actores, flujos y DER](../conocimientos/decisiones/actores-flujos-y-der-mvp.md). Lo que este documento diga en contrario queda como antecedente.
 > Alineado con: D-003 (capa de caja), PROP-ROADMAP-001 (§3 y §6), Reto 6 (C-01 a C-07). Versión 4, 10/10/2026 (D-004; PROP-INFRA-001 v1.2; roadmap v1.3).
 
 ## 1. Rol y objetivo
-Actúa como diseñador de producto senior (UX/UI) para software financiero-operativo. Diseña la interfaz de **KeptAI**, una **capa de caja** cuyo MVP no usa datos ni integraciones ERP/CRM: entradas manuales de chat/vouchers/audio, registros/CSV y semilla ficticia. El diseño será **implementado en 18 horas** por un equipo de 4 en **React + TypeScript + Vite** (hosting Cloudflare), con backend **Spring Boot** (Java 21, Render/Docker) y Supabase (PostgreSQL, Auth, Storage privado) e IA Gemini, así que: **solo 3 pantallas**, componentes simples y reutilizables, sin interacciones que no se puedan construir rápido. Idioma **español (Perú)**, moneda **soles (S/, PEN)**, fechas dd/mm/aaaa, zona America/Lima.
+Actúa como diseñador de producto senior (UX/UI) para software financiero-operativo. Diseña la interfaz de **KeptAI**, una **capa de caja** cuyo MVP no usa datos ni integraciones ERP/CRM: entradas por WhatsApp de prueba (Evolution API + n8n, D-005) y, como respaldo, carga manual de chat/vouchers/audio, registros/CSV y semilla ficticia. El diseño será **implementado en 18 horas** por un equipo de 4 en **React + TypeScript + Vite** (hosting Cloudflare), con backend **Spring Boot** (Java 21, Render/Docker) y Supabase (PostgreSQL, Auth, Storage privado) e IA Gemini, así que: **solo 3 pantallas**, componentes simples y reutilizables, sin interacciones que no se puedan construir rápido. Idioma **español (Perú)**, moneda **soles (S/, PEN)**, fechas dd/mm/aaaa, zona America/Lima.
 
 Idea visible: "Ordena lo que cobras, lo que ganas y la caja que viene, con evidencias y revisión humana". Sin pitch.
 
@@ -11,7 +12,7 @@ Idea visible: "Ordena lo que cobras, lo que ganas y la caja que viene, con evide
 - **Corpotex**: confeccionista de Piura. Marcas: **Corpotex** (uniformes corporativos/industriales) y **Unicrack** (Sport y Uniformes escolares). Producción propia (taller) y talleres de terceros. Vende por WhatsApp, un vendedor por marca.
 - **Datos pendientes:** 80% a crédito y 30% no están verificados; el significado/denominador del 30% no está confirmado. No usarlos como KPI operativo ni pérdida real.
 - **Escenarios:** `factor_mora` editable como supuesto, valor inicial 0%; sin botón "Aplicar 30% (dato empresa)". Un valor introducido por usuario es escenario hipotético independiente de aquella afirmación.
-- **Plazos configurables** (demo: 15 y 30 días; la entrevista menciona 30/45). El **evento que inicia el plazo** (entrega / confirmación) también es configurable.
+- **Plazo de crédito de 15 a 30 días** por orden, con una sola obligación y sin cuotas. El **evento que inicia el plazo** es el despacho. El vendedor aprueba el crédito; si el cliente está en mora solo se muestra un aviso ("está en mora, ¿quieres volver a darle crédito?"), sin bloqueo.
 - **Distinguir tres conceptos que no son lo mismo**: *organización* (cliente de KeptAI, aislamiento de datos), *entidad* (RUC/empresa del grupo) y *marca*.
 
 ## 3. Alcance (dirección vigente)
@@ -66,7 +67,7 @@ Usuarios: vendedores, administración/registro de pagos y gerencia. El **cliente
 Sobrio, financiero, confiable; sin look de plantilla genérica. Primero **tokens**: color de marca, neutros, semáforo semántico (ok / por vencer / vencido / riesgo / info), tipografía con **cifras tabulares**, espaciado 4/8, radios y sombras mínimos; modo claro. Estado = **color + icono + texto**; contraste AA; objetivos táctiles ≥ 44 px. Separar visualmente **evidencia recibida** de **dato validado**. Componentes: tarjeta de borrador, stepper de pago, chip de estado, tabla con rangos, KPI, línea de alertas, selector de entidad, gráfico semanal. Estados de cada pantalla: cargando, vacío, error, sin permiso.
 
 ## 8. Restricciones de honestidad
-- No afirmar integraciones activas con Kommo, ERP, bancos ni WhatsApp: mostrarlas como "Cargar archivo"; no añadir conexión ERP/CRM en este MVP. Alertas **dentro de la app**, sin envío real.
+- No afirmar integraciones activas con Kommo, ERP ni bancos: mostrarlas como "Cargar archivo"; no añadir conexión ERP/CRM en este MVP. WhatsApp está conectado en modo prueba (D-005): órdenes y vouchers pueden llegar desde el chat y la cobranza se envía al contacto de prueba. Las alertas internas siguen **dentro de la app**.
 - No inventar cifras reales de Corpotex; 80% y 30% son afirmaciones pendientes, no métricas auditadas de la demo.
 - Una regla de negocio pendiente se rotula **"Propuesta"**; no inventar política de crédito.
 

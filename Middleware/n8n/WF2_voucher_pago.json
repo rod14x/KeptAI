@@ -1,0 +1,362 @@
+{
+  "name": "WF2 Voucher a pago",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## WF2 Voucher a pago\nVersión 1.0.0 | 2026-10-10 | Autor: Isabelita\n\nEntrada: POST /webhook/voucher {instance, remoteJid, messageId}. Descarga la imagen, la lee con un modelo de visión (Yape, Plin, transferencia, depósito) y envía los datos al backend, que concilia con deterministas y avisa por WF3.",
+        "height": 220,
+        "width": 520
+      },
+      "id": "7c3fd9db-2cc8-4df9-9d59-9a78ef5722e0",
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -520,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "voucher",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "7da03457-3a69-4027-a6a4-de3ca199af84",
+      "name": "Webhook voucher",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -440,
+        0
+      ],
+      "webhookId": "25fefd93-d66b-4306-bfbc-2a21dbc96c16"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b4b30e41-bd0e-489f-9304-7f37d5a718b6",
+              "name": "evoUrl",
+              "value": "https://TU-EVOLUTION-API",
+              "type": "string"
+            },
+            {
+              "id": "d508c1ea-b452-418a-af61-4c70611b1e6d",
+              "name": "evoKey",
+              "value": "CAMBIAR_APIKEY_EVOLUTION",
+              "type": "string"
+            },
+            {
+              "id": "562eb5b0-3275-4ebf-8049-16ea61adac43",
+              "name": "apiUrl",
+              "value": "https://TU-BACKEND-SPRINGBOOT",
+              "type": "string"
+            },
+            {
+              "id": "1c13f507-0cd6-4df6-9f10-388459b439bd",
+              "name": "apiKey",
+              "value": "CAMBIAR_API_KEY_BACKEND",
+              "type": "string"
+            },
+            {
+              "id": "5e8e1374-e23a-4225-9689-8bd690ff4864",
+              "name": "n8nUrl",
+              "value": "https://TU-N8N",
+              "type": "string"
+            },
+            {
+              "id": "c2785251-501d-4091-8236-8bd775ce445f",
+              "name": "llmUrl",
+              "value": "https://api.openai.com/v1",
+              "type": "string"
+            },
+            {
+              "id": "5ce30480-e30a-4b41-856e-954499070427",
+              "name": "llmKey",
+              "value": "CAMBIAR_LLM_KEY",
+              "type": "string"
+            },
+            {
+              "id": "694d192f-4e1d-43e9-a7b6-86b6cf0de749",
+              "name": "llmModel",
+              "value": "gpt-4o-mini",
+              "type": "string"
+            },
+            {
+              "id": "9caabf3f-94ca-4000-99f9-c051fa577535",
+              "name": "visionModel",
+              "value": "gpt-4o-mini",
+              "type": "string"
+            },
+            {
+              "id": "c163c44b-06cb-4b93-856b-ba872876d056",
+              "name": "transcribeModel",
+              "value": "whisper-1",
+              "type": "string"
+            },
+            {
+              "id": "8a699925-677a-472b-a27d-1fa94a2fd253",
+              "name": "sharedSecret",
+              "value": "CAMBIAR_SECRETO_COMPARTIDO",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "596de49b-23f2-45b6-a541-58c698c961f9",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.evoUrl }}/chat/getBase64FromMediaMessage/{{ $('Webhook voucher').first().json.body.instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.evoKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ message: { key: { id: $('Webhook voucher').first().json.body.messageId } }, convertToMp4: false }) }}",
+        "options": {}
+      },
+      "id": "b38edd08-c44f-4a72-9e90-fa8d74909c5f",
+      "name": "Evolution base64 imagen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst cfg = $('Config').first().json;\nconst b64 = $json.base64 ?? $json.data?.base64 ?? '';\nconst mime = $json.mimetype ?? $json.data?.mimetype ?? 'image/jpeg';\nconst prompt = `Lee este comprobante de pago peruano (Yape, Plin, transferencia bancaria, depósito) y devuelve SOLO un JSON válido:\n{\"es_voucher\":boolean,\"tipo\":\"YAPE\"|\"PLIN\"|\"TRANSFERENCIA\"|\"DEPOSITO\"|\"OTRO\"|null,\"banco\":string|null,\"monto\":number|null,\"moneda\":\"PEN\"|\"USD\"|null,\n\"fecha\":\"YYYY-MM-DD\"|null,\"hora\":\"HH:MM\"|null,\"codigo_operacion\":string|null,\"remitente\":string|null,\"destinatario\":string|null,\"confianza\":number}\nNo inventes: si un dato no se ve, usa null. Si la imagen NO es un comprobante, es_voucher=false.`;\nconst body = { model: cfg.visionModel, temperature: 0, response_format: { type: 'json_object' },\n  messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: `data:${mime};base64,${b64}` } }] }] };\nreturn [{ json: { llmBody: body } }];\n"
+      },
+      "id": "d3cc3bbf-0143-45f4-a70e-985c21b09d56",
+      "name": "Preparar visión",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.llmUrl }}/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.llmKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.llmBody) }}",
+        "options": {}
+      },
+      "id": "5ad72a0c-50aa-40c7-90e6-c487cae8b21f",
+      "name": "LLM leer voucher",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst b = $('Webhook voucher').first().json.body || {};\nlet raw = $json.choices?.[0]?.message?.content || '{}';\nraw = raw.replace(/^```json\\s*|```$/g, '').trim();\nlet ex; try { ex = JSON.parse(raw); } catch (e) { ex = { es_voucher: false, confianza: 0, error_parseo: String(e) }; }\nreturn [{ json: { instancia: b.instance, chatId: b.remoteJid, clienteJid: b.remoteJid, mensajeId: b.messageId,\n  pushName: b.pushName || '', recibidoEn: new Date().toISOString(), extraccion: ex } }];\n"
+      },
+      "id": "0747bad5-af66-44db-9cdd-2306e2741ee8",
+      "name": "Parsear voucher",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "8763dd1d-d95c-4158-9422-312e314e1a8f",
+              "leftValue": "={{ $json.extraccion.es_voucher }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "264d7a84-1a6b-425d-b58c-5640a07e148c",
+      "name": "¿Es voucher legible?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.apiUrl }}/api/v1/pagos/voucher",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "={{ $('Config').first().json.apiKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "569d508f-4b58-47a8-8090-40e75a4136b8",
+      "name": "Enviar pago al backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        -60
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "c5aad631-d7f4-4e57-9abb-812bb8225e02",
+      "name": "Ignorar imagen",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        100
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook voucher": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Evolution base64 imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evolution base64 imagen": {
+      "main": [
+        [
+          {
+            "node": "Preparar visión",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar visión": {
+      "main": [
+        [
+          {
+            "node": "LLM leer voucher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM leer voucher": {
+      "main": [
+        [
+          {
+            "node": "Parsear voucher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear voucher": {
+      "main": [
+        [
+          {
+            "node": "¿Es voucher legible?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es voucher legible?": {
+      "main": [
+        [
+          {
+            "node": "Enviar pago al backend",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignorar imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

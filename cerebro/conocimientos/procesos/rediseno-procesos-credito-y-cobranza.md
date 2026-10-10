@@ -4,6 +4,7 @@
 > Fuente: texto adjunto proporcionado por el usuario, `Texto pegado.txt`.
 > Incorporación al cerebro KeptAI: 10 de octubre de 2026.
 > Estado: diagnóstico y rediseño propuestos por el equipo, pendientes de validación operativa y aprobación de sus reglas.
+> Actualización D-005 (10/10/2026): WhatsApp entra al MVP mediante Evolution API y n8n, como prueba con un número y un contacto; n8n invoca la IA y entrega JSON a Spring, que sigue siendo el único backend con reglas. Plazo de crédito de 15 a 30 días y una sola obligación por orden; el vendedor aprueba el crédito y la mora solo genera un aviso, sin bloqueo. KeptAI no integra el banco: concilia. Detalle en [actores, flujos y DER](../decisiones/actores-flujos-y-der-mvp.md). Lo que este documento diga en contrario queda como antecedente.
 > SHA-256 del archivo recibido: `53d34a81d3d2ecce1c568f0239d7660794313afb0fe01969a328cfb26cf3cc34`.
 
 ## Procedencia y tratamiento editorial
@@ -132,9 +133,9 @@ Por tanto, el factor de castigo que el macroproceso 6 denomina “30% histórico
 
 ### Política crediticia y vencimiento
 
-Los bloqueos automáticos por mora o disputa y la restricción de nuevas órdenes son reglas propuestas, no decisiones aprobadas. Falta acordar autoridad de aprobación, excepciones, tratamiento de disputas y condiciones comerciales.
+Definido por Isabel (10/10/2026): no hay bloqueo automático; el sistema avisa de la mora y el vendedor decide si vuelve a dar crédito. Los bloqueos automáticos por mora o disputa y la restricción de nuevas órdenes del texto recibido quedan como antecedente. Falta acordar autoridad de aprobación, excepciones, tratamiento de disputas y condiciones comerciales.
 
-Los plazos de 30 o 45 días necesitan confirmación por caso. La entrevista los menciona con limitaciones: [A02-Q32] 02_ventas_produccion_cobranza.md, 17:34–17:44, en [ventas](ventas.md).
+Definido por Isabel (10/10/2026): el plazo es de 15 a 30 días, con una sola obligación por orden. Los plazos de 30 o 45 días del texto recibido quedan como antecedente. La entrevista los menciona con limitaciones: [A02-Q32] 02_ventas_produccion_cobranza.md, 17:34–17:44, en [ventas](ventas.md).
 
 El macroproceso 1 propone comunicar una fecha exacta de vencimiento y el macroproceso 3 propone iniciar el plazo al entregar. Acordar qué evento inicia el plazo y cómo se actualiza o confirma esa fecha, incluidas entregas parciales. No convertir el cierre operativo en disparador universal sin resolverlo.
 

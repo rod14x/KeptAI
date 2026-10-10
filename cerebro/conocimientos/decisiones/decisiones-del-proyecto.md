@@ -12,7 +12,17 @@
 
 ## Dirección expresada por el equipo
 
-### D-005 — Preparación de Miguel, delegación y bitácora
+### D-005 — WhatsApp con Evolution API y n8n dentro del MVP
+
+**Fecha:** 10 de octubre de 2026. **Responsable:** Isabel. **Estado:** dirección vigente del equipo; no acredita implementación. **Fuente:** USR-FLUJO-002 y confirmación de la usuaria.
+
+Evolution API (mensajes entrantes y salientes) y n8n (WF1 ingesta de orden, WF2 voucher, WF3 salientes) entran al MVP, con los comandos `/cerrar` y `/ok ORD-123` del vendedor. Actualiza D-004 solo en la entrada de datos: deja de ser exclusivamente manual. Se conserva de D-004: Spring Boot como único backend y dueño de reglas, fechas y saldos; Kommo y ERP fuera del MVP; semilla ficticia. El nombre del producto sigue siendo KeptAI.
+
+Precisiones de Isabel del mismo día: plazo de crédito de 15 a 30 días; el vendedor aprueba el crédito según el estado del cliente (pedidos anteriores en orden y pagados); Corpotex ya tiene acceso a sus pagos, por lo que KeptAI no integra el banco y solo concilia; n8n se elige por el poco tiempo disponible e invoca la IA. Cada orden tiene una sola obligación de pago, sin cuotas, y la mora no bloquea: el sistema avisa y el vendedor decide. La prueba de WhatsApp usa un solo número y un contacto.
+
+El modelo de datos pasa a ser la fusión del DER de Isabel con PROP-DB-001, pendiente de revisión de Andrés y Miguel. Detalle: [actores, flujos y DER](actores-flujos-y-der-mvp.md), PROP-FLUJO-DER-001.
+
+### D-006 — Preparación de Miguel, delegación y bitácora
 
 **Fecha:** 10 de octubre de 2026. **Responsable:** usuario Miguel. **Estado:** dirección de trabajo actual, no acredita código terminado. **Fuente:** USR-DEV-MIGUEL-001/002. Usar el entorno/repositorio actual, Claude Code para desarrollo principal y delegación de tareas pequeñas; Miguel envía prompts por etapas. Documentar resumen de avance en AGENTS.md y detalle en bitácora; OpenCode recibe handoff posterior o continúa pendientes si Claude alcanza límite de uso.
 
