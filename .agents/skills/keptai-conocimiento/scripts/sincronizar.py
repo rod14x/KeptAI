@@ -78,13 +78,22 @@ def check(repo):
     print(f"OK: {len(expected)} archivos; {len(ids)} registros; {mode}.")
 
 
-def sync(repo):
+def sync(repo, preserve_historical_diagrams=False):
     files = source_files(repo)
     ids = coverage(files)
     # No borrar fuentes retiradas automáticamente: requieren revisión del equipo.
     extras = {p.relative_to(DEST).as_posix() for p in DEST.rglob("*") if p.is_file()} - files.keys()
     if extras:
-        raise ValueError(f"Hay copias sin fuente. Revisar antes de retirar: {sorted(extras)}")
+        if not preserve_historical_diagrams or any(not p.startswith("diagramas/") for p in extras):
+            raise ValueError(f"Hay copias sin fuente. Revisar antes de retirar: {sorted(extras)}")
+        prior = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        known = {entry["path"]: entry["sha256"] for entry in prior["files"]}
+        for relative in extras:
+            data = (DEST / relative).read_bytes()
+            if digest(data) != known.get(relative):
+                raise ValueError(f"Diagrama histórico sin hash previo válido: {relative}")
+            files[relative] = data
+        print(f"AVISO: conservadas instantáneas históricas verificadas: {sorted(extras)}")
     for relative, data in files.items():
         target = DEST / relative
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -96,7 +105,8 @@ def sync(repo):
         "schema_version": 1,
         "source_repository": "https://github.com/rod14x/KeptAI",
         "source_head_at_generation": git_output(repo, ["rev-parse", "HEAD"]),
-        "source_basis": "working_tree",
+        "source_basis": "working_tree_plus_preserved_diagrams" if extras else "working_tree",
+        "preserved_historical_diagrams": sorted(extras),
         "source_changes_at_generation": uncommitted.splitlines() if uncommitted else [],
         "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
         "interview_ids": ids,
@@ -111,6 +121,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, help="Raíz local del repo KeptAI")
     parser.add_argument("--check", action="store_true", help="Solo verificar, sin modificar")
+    parser.add_argument("--preserve-historical-diagrams", action="store_true",
+                        help="Conservar diagramas sin fuente solo si su hash coincide con el manifiesto previo")
     args = parser.parse_args()
     repo = args.repo.resolve() if args.repo else SKILL.parents[2]
     if not (repo / "conocimientos" / "INDICE.md").is_file():
@@ -118,7 +130,7 @@ def main():
             parser.error("Indicar --repo con la raíz del cerebro; no se encontró conocimientos/INDICE.md")
         repo = None
     try:
-        check(repo) if args.check else sync(repo)
+        check(repo) if args.check else sync(repo, args.preserve_historical_diagrams)
     except (ValueError, OSError, KeyError, json.JSONDecodeError) as error:
         parser.exit(1, f"ERROR: {error}\n")
 

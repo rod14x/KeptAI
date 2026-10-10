@@ -1,16 +1,16 @@
 # PROMPT PARA CLAUDE DESIGN — KeptAI (3 pantallas, prototipo funcional Reto 6 Corpotex)
 
-> Alineado con: D-003 (capa de caja), PROP-ROADMAP-001 (§3 y §6), Reto 6 (C-01 a C-07). Versión 3, 10/10/2026 (stack: PROP-INFRA-001 v1.1).
+> Alineado con: D-003 (capa de caja), PROP-ROADMAP-001 (§3 y §6), Reto 6 (C-01 a C-07). Versión 4, 10/10/2026 (D-004; PROP-INFRA-001 v1.2; roadmap v1.3).
 
 ## 1. Rol y objetivo
-Actúa como diseñador de producto senior (UX/UI) para software financiero-operativo. Diseña la interfaz de **KeptAI**, una **capa de caja** que se coloca entre el CRM (Kommo, por confirmar) y el ERP/facturación ("Factura Ya", por confirmar) de una empresa que vende por WhatsApp a crédito. El diseño será **implementado en 18 horas** por un equipo de 4 en **React + TypeScript + Vite** (hosting Cloudflare), con backend **FastAPI** (Python, Render) y Supabase (PostgreSQL, Auth, Storage privado) e IA Gemini, así que: **solo 3 pantallas**, componentes simples y reutilizables, sin interacciones que no se puedan construir rápido. Idioma **español (Perú)**, moneda **soles (S/, PEN)**, fechas dd/mm/aaaa, zona America/Lima.
+Actúa como diseñador de producto senior (UX/UI) para software financiero-operativo. Diseña la interfaz de **KeptAI**, una **capa de caja** cuyo MVP no usa datos ni integraciones ERP/CRM: entradas manuales de chat/vouchers/audio, registros/CSV y semilla ficticia. El diseño será **implementado en 18 horas** por un equipo de 4 en **React + TypeScript + Vite** (hosting Cloudflare), con backend **Spring Boot** (Java 21, Render/Docker) y Supabase (PostgreSQL, Auth, Storage privado) e IA Gemini, así que: **solo 3 pantallas**, componentes simples y reutilizables, sin interacciones que no se puedan construir rápido. Idioma **español (Perú)**, moneda **soles (S/, PEN)**, fechas dd/mm/aaaa, zona America/Lima.
 
-Idea a hacer evidente en la UI: *"Corpotex ya tiene su CRM y su ERP. Lo que no tiene es lo que pasa entre los dos: la plata que se cobra, la que se gana y la que viene."*
+Idea visible: "Ordena lo que cobras, lo que ganas y la caja que viene, con evidencias y revisión humana". Sin pitch.
 
 ## 2. Contexto de negocio
 - **Corpotex**: confeccionista de Piura. Marcas: **Corpotex** (uniformes corporativos/industriales) y **Unicrack** (Sport y Uniformes escolares). Producción propia (taller) y talleres de terceros. Vende por WhatsApp, un vendedor por marca.
-- **Situación declarada por la empresa**: ~**80% de las ventas es a crédito**, informal por WhatsApp; ~**30% de la cartera queda sin cobrar**. Pagos (Yape, Plin, transferencias) los anotan dos personas y a veces no se registran; los reportes muestran precio facturado, no costo ni caja.
-- **Cómo mostrar 80% y 30%**: como *"dato aportado por la empresa"* en un indicador, nunca como constante del sistema ni como pérdida confirmada (su significado aún se valida). En la UI se llama **"cartera sin cobrar"**, no "incobrable". El castigo de mora es un **parámetro editable** `factor_mora` de la proyección de caja (control con rótulo "Supuesto configurable"), **por defecto 0%**, con un botón de escenario "Aplicar 30% (dato empresa)".
+- **Datos pendientes:** 80% a crédito y 30% no están verificados; el significado/denominador del 30% no está confirmado. No usarlos como KPI operativo ni pérdida real.
+- **Escenarios:** `factor_mora` editable como supuesto, valor inicial 0%; sin botón "Aplicar 30% (dato empresa)". Un valor introducido por usuario es escenario hipotético independiente de aquella afirmación.
 - **Plazos configurables** (demo: 15 y 30 días; la entrevista menciona 30/45). El **evento que inicia el plazo** (entrega / confirmación) también es configurable.
 - **Distinguir tres conceptos que no son lo mismo**: *organización* (cliente de KeptAI, aislamiento de datos), *entidad* (RUC/empresa del grupo) y *marca*.
 
@@ -22,7 +22,7 @@ Costos de insumos, mano de obra y terceros entran solo como **datos ya cargados*
 ## 4. Usuarios, acceso y filtros globales
 **Acceso:** pantalla mínima de **inicio de sesión** (email y contraseña, cuentas de prueba precreadas; no cuenta como una de las 3 pantallas) y menú de usuario con cerrar sesión. Roles mínimos: *revisión* (captura y confirmación) y *administración* (verificar, aplicar, ver resultados). Cada acción no permitida muestra el estado "sin permiso" con mensaje claro, sin ocultar silenciosamente la información.
 
-Usuarios: vendedores, administración/registro de pagos y gerencia. El **cliente corporativo** consulta su estado de cuenta mediante un **enlace firmado de vida corta** (vista de solo lectura dentro de Pantalla 2; si el enlace expiró, mostrar "Enlace vencido, solicita uno nuevo"). **Selector global persistente**: `Corpotex | Unicrack | Consolidado` (el consolidado requiere acceso autorizado). Toda cifra muestra **fecha de corte** y su **fuente** (dato empresa / demostración / supuesto configurable). Responsivo real: móvil y escritorio (C-01).
+Usuarios: vendedores, administración/registro de pagos y gerencia. El **cliente corporativo** consulta su estado de cuenta mediante un **enlace firmado de vida corta** (vista de solo lectura dentro de Pantalla 2; si el enlace expiró, mostrar "Enlace vencido, solicita uno nuevo"). **Selector global persistente**: organización autorizada + entidad + marca (Corpotex/Unicrack) + consolidado autorizado; no inventar RUC ni confundir marca con empresa (el consolidado requiere acceso autorizado). Toda cifra muestra **fecha de corte** y su **fuente** (dato empresa / demostración / supuesto configurable). Responsivo real: móvil y escritorio (C-01).
 
 ## 5. Las 3 pantallas
 
@@ -42,7 +42,7 @@ Usuarios: vendedores, administración/registro de pagos y gerencia. El **cliente
 - **Tres acciones separadas y con confirmación**: ① *Validar evidencia* → ② *Registrar verificación de fondos* (responsable y hora; "verificación simulada" en el demo, no conexión a un banco) → ③ *Aplicar pago*. Stepper visible: *Comprobante pendiente → Pago verificado → Pago aplicado*, más estados *Pago duplicado*, *Saldo pendiente*, *Alerta resuelta*. Aplicar dos veces o reintentar no duplica el pago (botón deshabilitado mientras la solicitud está en curso, mensaje "ya aplicado" si el servidor lo rechaza por idempotencia). Un error de red nunca debe mostrarse como éxito: mostrar "No se pudo confirmar, reintenta" y recargar el estado real.
 - **Autorización de crédito**: si el cliente ya tiene saldo, banner "Cliente con saldo S/ X" y estado **Autorización pendiente** con responsable y motivo; no se aprueba solo desde la UI (el servidor decide).
 - **Cobranza**: línea de tiempo de alertas (3 días antes, el día, 3 días después, escalamiento), alerta interna con responsable, cancelada al aplicarse el pago completo. Lista de cuentas por cobrar con rangos: por vencer, vence hoy, vencido.
-- **Estado de cuenta del cliente** (subvista móvil, enlace sin login): saldo vigente, próximo vencimiento, pedidos, abonos aplicados, "actualizado al dd/mm hh:mm". Sin jerga interna.
+- **Estado de cuenta del cliente** (subvista móvil, enlace sin login principal con token temporal/revocable limitado a un cliente, solo lectura y sin evidencias privadas): saldo vigente, próximo vencimiento, pedidos, abonos aplicados, "actualizado al dd/mm hh:mm". Sin jerga interna.
 - Para el pedido con saldo abierto, "Compromiso de pago" (no llamarlo pagaré).
 
 ### Pantalla 3 — Resultado y caja (escritorio + lectura móvil)
@@ -66,8 +66,8 @@ Usuarios: vendedores, administración/registro de pagos y gerencia. El **cliente
 Sobrio, financiero, confiable; sin look de plantilla genérica. Primero **tokens**: color de marca, neutros, semáforo semántico (ok / por vencer / vencido / riesgo / info), tipografía con **cifras tabulares**, espaciado 4/8, radios y sombras mínimos; modo claro. Estado = **color + icono + texto**; contraste AA; objetivos táctiles ≥ 44 px. Separar visualmente **evidencia recibida** de **dato validado**. Componentes: tarjeta de borrador, stepper de pago, chip de estado, tabla con rangos, KPI, línea de alertas, selector de entidad, gráfico semanal. Estados de cada pantalla: cargando, vacío, error, sin permiso.
 
 ## 8. Restricciones de honestidad
-- No afirmar integraciones activas con Kommo, ERP, bancos ni WhatsApp: mostrarlas como "Cargar archivo" / "Conectar (pendiente)". Alertas **dentro de la app**, sin envío real.
-- No inventar cifras reales de Corpotex; solo 80% y 30% son dato de la empresa, rotulados.
+- No afirmar integraciones activas con Kommo, ERP, bancos ni WhatsApp: mostrarlas como "Cargar archivo"; no añadir conexión ERP/CRM en este MVP. Alertas **dentro de la app**, sin envío real.
+- No inventar cifras reales de Corpotex; 80% y 30% son afirmaciones pendientes, no métricas auditadas de la demo.
 - Una regla de negocio pendiente se rotula **"Propuesta"**; no inventar política de crédito.
 
 ## 9. Entregables y aceptación
@@ -75,7 +75,11 @@ Sobrio, financiero, confiable; sin look de plantilla genérica. Primero **tokens
 **Aceptación:**
 1. El recorrido **3 vouchers + 1 chat** se hace sin salir del prototipo: captura → conciliación (V-003 duplicado) → saldo S/400 → alerta → P-001 con −S/40 → caja actualizada.
 2. Se distingue *comprobante recibido*, *pago verificado* y *pago aplicado*.
-3. El selector Corpotex/Unicrack/Consolidado cambia las cifras de forma coherente.
+3. Los filtros de organización/entidad/marca y el consolidado autorizado cambian cifras de forma coherente, sin confundir marca con empresa.
 4. El consolidado no duplica el cargo interno de S/320.
 5. Cada cifra declara su fuente; ningún supuesto parece dato real.
 6. Móvil completa el recorrido; escritorio muestra todo lo de Pantalla 3.
+
+## Responsabilidad y referencia vigente
+
+Germán implementa la integración técnica del frontend; Isabella mantiene experiencia/componentes/reglas funcionales. Andrés define ER/diccionario/Flyway/seed y motor; Miguel revisa y construye API/captura Spring. Véase [roadmap de Germán](../conocimientos/decisiones/roadmap-german-frontend.md) y [modelo DB](../conocimientos/decisiones/modelo-base-datos-mvp.md). El acceso compartido no se publica sin token; si falta el control, usar vista autenticada y declarar brecha.

@@ -30,3 +30,7 @@ Los documentos antiguos conservan valor como evidencia del proceso y propuestas 
 - Formatos de exportación de Excel/CSV y responsables de validación.
 
 Estas dependencias proceden de las fuentes y sus observaciones; no son datos ya recibidos. Para una demo, pueden usarse muestras ficticias expresamente identificadas. Para afirmar impacto real, se requieren registros y una línea base validada.
+
+## Actualización técnica vigente — D-004
+
+USR-EQUIPO-003 confirma experiencia Spring, elige Spring Boot y excluye datos ERP/CRM del MVP. Prevalece sobre FastAPI/Edge Functions anteriores. Andrés define DB, Miguel revisa/API; Germán adopta PROP-FRONT-001 coordinado con Isabella. Prompt original USR-DESIGN-001 es fuente histórica; usar adaptación sin 30% de castigo empresarial ni acceso público sin token. Entrada manual/CSV y semilla ficticia no son integración externa.

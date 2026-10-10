@@ -11,7 +11,7 @@ Utiliza las fuentes incluidas para trabajar en español sobre KeptAI, cuya empre
 
 ## Comenzar una tarea
 
-1. Lee el [índice](references/cerebro/conocimientos/INDICE.md), la [idea principal](references/cerebro/conocimientos/empresa/idea-negocio-replanteada.md) y D-003 en [decisiones](references/cerebro/conocimientos/decisiones/decisiones-del-proyecto.md).
+1. Lee el [índice](references/cerebro/conocimientos/INDICE.md), la [idea principal](references/cerebro/conocimientos/empresa/idea-negocio-replanteada.md) y D-003/D-004 en [decisiones](references/cerebro/conocimientos/decisiones/decisiones-del-proyecto.md).
 2. Consulta la [guía de fuentes](references/mapa-fuentes.md) y los documentos completos pertinentes. Para resolver diferencias con propuestas anteriores, lee [precedencia y pendientes](references/precedencia-y-pendientes.md). No hace falta cargar todos los anexos para cada pregunta: toda la información está disponible para consulta.
 3. Sustenta las afirmaciones y requisitos con archivo, sección e ID cuando exista. Para entrevistas, consulta la respuesta completa, su tiempo y sus limitaciones. Identifica lo que sigue siendo propuesta o dato pendiente.
 
@@ -19,7 +19,7 @@ Si trabajas en el repositorio original y sus fuentes difieren de la copia inclui
 
 ## Dirección vigente del producto
 
-KeptAI es una capa de caja que complementa el CRM y el ERP existentes. El núcleo tiene cuatro funciones:
+KeptAI es una capa de caja. En el MVP vigente (D-004/USR-EQUIPO-003) no se usan datos ni integraciones ERP/CRM: entradas manuales y datos ficticios identificados. El backend es Spring Boot por experiencia confirmada de Miguel y Andrés. Andrés define base de datos; Miguel revisa/API/IA; Germán sigue el roadmap frontend basado en el prompt adaptado, con Isabella en interfaz/reglas. Consultar índice para modelo DB y roadmap Germán. El núcleo tiene cuatro funciones:
 
 - **Captura:** pedidos y pagos desde WhatsApp, con validación humana. El Reto 6 contempla texto, audio e imágenes; incluye vouchers de Yape, Plin y transferencias.
 - **Concilia:** vincular pagos con pedidos y mostrar pagos completos, parciales, duplicados, huérfanos y diferencias.
@@ -32,7 +32,7 @@ La demo vigente usa 3 vouchers y un chat para mostrar conciliación, un pedido c
 
 ## Cómo interpretar la evidencia
 
-- La idea USR-IDEA-001 y D-003 definen la prioridad actual del equipo. Los requisitos C-01 a C-07 de IMG-RETO6-001 conservan su alcance de criterios del reto. Si una nueva solicitud cambia una prioridad, registra el cambio; no impongas esta versión sobre una instrucción posterior del usuario.
+- D-004/USR-EQUIPO-003 actualizan backend, datos y roles; el prompt USR-DESIGN-001 original es antecedente, con versión adaptada vigente. No adoptar 30% de castigo ni acceso público irrestricto del adjunto. La idea USR-IDEA-001 y D-003 definen la prioridad actual del equipo. Los requisitos C-01 a C-07 de IMG-RETO6-001 conservan su alcance de criterios del reto. Si una nueva solicitud cambia una prioridad, registra el cambio; no impongas esta versión sobre una instrucción posterior del usuario.
 - A01/A02 son entrevistas transcritas automáticamente y editadas sin verificación humana por escucha. USR-FLUJO-001 y USR-REDISENO-001 son textos aportados por el equipo, con observaciones propias. Una propuesta técnica no demuestra implementación ni aprobación por la empresa.
 - El 80% a crédito está pendiente de verificación. El 30% no tiene significado, período ni denominador confirmados: no convertirlo en incobrabilidad, pérdida o castigo. Los 40 clientes son corporativos frecuentes declarados, no el total auditado.
 - Kommo se menciona en la idea vigente; las entrevistas no confirmaron inequívocamente el nombre. Factura Ya es un nombre posible. No inferir plan, API, credenciales o integración implementada. La ficha describe Apps Script y registros desactualizados, no acceso técnico comprobado.
