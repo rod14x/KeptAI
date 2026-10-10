@@ -1,8 +1,8 @@
 # Roadmap de desarrollo KeptAI — equipo y dependencias
 
-> ID: PROP-ROADMAP-001. Versión: 1.2. Fecha: 10 de octubre de 2026.
-> Estado: plan de ejecución propuesto; no acredita tareas hechas ni un stack aprobado.
-> Roles: distribución vigente indicada por el usuario en USR-EQUIPO-002.
+> ID: PROP-ROADMAP-001. Versión: 1.3. Fecha: 10 de octubre de 2026.
+> Estado: plan de ejecución propuesto; no acredita tareas hechas; Spring Boot y exclusión de ERP/CRM son dirección vigente del usuario D-004.
+> Roles: USR-EQUIPO-002/003; Miguel y Andrés conocen Spring. Andrés define la base de datos; Germán adopta USR-DESIGN-001 con ajustes documentados.
 > Ventana de referencia: sábado 10, 15:30, a domingo 11, 09:30; zona America/Lima. Son 18 horas restantes del esquema de 24 horas aportado, no 24 horas adicionales. Confirmar entrega y horarios con la organización.
 > Alcance de esta documentación: desarrollo, integración, QA y preparación técnica de la demostración. **No se asignan tareas de pitch, slides ni exposición.**
 
@@ -20,6 +20,10 @@ La demostración de referencia utiliza **3 vouchers y un chat**. Además debe ha
 
 **Fundamento:** [idea vigente](../empresa/idea-negocio-replanteada.md), USR-IDEA-001; [decisiones](decisiones-del-proyecto.md), D-003; [Reto 6](reto-6-corpotex-conciliacion-y-rentabilidad.md), C-01 a C-07.
 
+### Entrada de datos y límites vigentes
+
+No tenemos datos ERP/CRM. El MVP funciona sin esos sistemas: chat pegado/cargado, vouchers/audio subidos manualmente, registros/CSV y semilla ficticia de pedidos, costos, vencimientos y caja. Sin conectores, credenciales ni exportaciones ERP/CRM en B0–B8. La base propia es autoridad para la demo y conserva procedencia; no acredita sustituir el registro oficial empresarial. C-03 conserva extracción real IA cuando está disponible y revisión humana; entrada manual no se presenta como integración.
+
 ## 2. Equipo: quién construye qué
 
 ### Isabella — frontend y definición funcional del negocio
@@ -34,7 +38,7 @@ La demostración de referencia utiliza **3 vouchers y un chat**. Además debe ha
 
 **Entregables:** wireframes, reglas funcionales, componentes de presentación y recorrido usable. **Depende de:** contratos de Miguel y campos/cálculos de Andrés. **Aceptación:** una persona puede corregir un borrador, interpretar una discrepancia y entender qué saldo sigue abierto sin explicaciones del desarrollador.
 
-### Germán — frontend técnico e integración
+### Germán — frontend técnico e integración del prompt de diseño
 
 **Responsabilidad principal:** hacer que el frontend funcione técnicamente con el backend y con el despliegue de la web. No toma la propiedad de los cálculos financieros.
 
@@ -43,6 +47,8 @@ La demostración de referencia utiliza **3 vouchers y un chat**. Además debe ha
 - Integrar los componentes de Isabella sin duplicar su trabajo de interfaz.
 - Preparar el despliegue de la web y comprobar móvil, URLs, configuración y ausencia de secretos en el navegador.
 - Resolver problemas técnicos del frontend, estados desactualizados, permisos visibles y respuestas fallidas.
+
+**Guía específica:** [Roadmap técnico de Germán + prompt Claude Design adaptado](roadmap-german-frontend.md), PROP-FRONT-001. Incluye los tres recorridos, estados, configuración, filtros y handoff. Isabella construye interfaz/reglas; Germán integra y valida técnicamente.
 
 **Entregables:** frontend integrado, cliente de API compartido, web accesible y pruebas técnicas del navegador. **Depende de:** endpoints de Miguel y operaciones transaccionales de Andrés. **Aceptación:** las pantallas muestran datos persistidos, una recarga conserva el estado y un error no produce un éxito falso.
 
@@ -55,15 +61,15 @@ La demostración de referencia utiliza **3 vouchers y un chat**. Además debe ha
 - Conservar origen y campos ausentes; los importes no se inventan cuando una evidencia no es legible.
 - Implementar los servicios de pedidos, consulta de conciliación, estados de cuenta, autorización pendiente y acceso a resultados financieros.
 - Integrar el motor de Andrés: el endpoint orquesta la operación, pero no vuelve a calcular saldos con una segunda fórmula.
-- Configurar y desplegar la API FastAPI elegida; mantener claves de IA y claves privilegiadas del lado del servidor.
+- Configurar y desplegar la API Spring Boot elegida; mantener claves de IA y claves privilegiadas del lado del servidor.
 
 **Entregables:** API documentada, captura real, validación de borradores y servicios disponibles para frontend. **Depende de:** esquema y motor de Andrés; reglas funcionales de Isabella. **Aceptación:** texto o voucher se procesa, se corrige y se guarda con evidencia, y la misma llamada repetida no duplica la operación de negocio.
 
-### Andrés — backend financiero, persistencia y resolución de problemas
+### Andrés — diseño de base de datos, backend financiero y resolución de problemas
 
-**Responsabilidad principal:** programar el modelo transaccional, la conciliación y los cálculos, y resolver fallos de consistencia del recorrido.
+**Responsabilidad principal:** definir y documentar la base de datos, programar el modelo transaccional, la conciliación y los cálculos, y resolver fallos de consistencia del recorrido.
 
-- Diseñar y crear esquema, migraciones, claves e identificadores; entregar una semilla de demostración reiniciable.
+- Ser dueño del modelo entidad-relación, diccionario, PK/FK, índices, restricciones, esquema privado/RLS y migraciones Flyway; Miguel revisa contratos/entidades. Entregar [modelo DB](modelo-base-datos-mvp.md), PROP-DB-001, y semilla ficticia reiniciable antes de integrar pagos.
 - Implementar verificación y aplicación de pagos, detección de duplicados, saldos, vencimientos y alertas.
 - Programar costos y margen por pedido, agrupaciones por línea/marca, centro productivo y consolidación sin doble conteo.
 - Implementar caja a cuatro semanas, reporte generado al actualizar datos y exportación CSV.
@@ -103,11 +109,11 @@ Margen del pedido y agrupaciones, producción propia/tercerizada, centro product
 
 ### Infraestructura recomendada para empezar
 
-La base propuesta queda definida: **React + TypeScript + Vite en Cloudflare Workers Static Assets; FastAPI/Python en Render como único backend; Supabase para PostgreSQL, Auth y Storage privado; Gemini API para captura; GitHub Actions y pruebas para integrar.** FastAPI se elige por el alcance de API/captura y entrega temprana de contratos; Spring Boot se reconsidera si el equipo acredita mayor dominio Java. No se ha confirmado esa experiencia. Es la recomendación para este equipo y ventana de desarrollo, pendiente de una prueba de acceso y despliegue; no acredita servicios ya contratados.
+La base propuesta queda definida: **React + TypeScript + Vite en Cloudflare Workers Static Assets; Spring Boot/Java en Render (Docker) como único backend; Supabase para PostgreSQL, Auth y Storage privado; Gemini API para captura; GitHub Actions y pruebas para integrar.** Spring Boot se elige por dirección del usuario y experiencia confirmada de Miguel/Andrés en Spring. No requiere datos de ERP/CRM; no hay dependencias de esos conectores. Es la recomendación para este equipo y ventana de desarrollo, pendiente de una prueba de acceso y despliegue; no acredita servicios ya contratados.
 
 - **Germán:** frontend técnico, configuración SPA/HTTPS, sesión, cliente de API y hosting web.
 - **Isabella:** interfaz, reglas funcionales y validación de cómo se muestran revisión, saldo, margen y caja.
-- **Miguel:** backend FastAPI/Python en Render, captura Gemini, validación de entradas, secretos y despliegue de API.
+- **Miguel:** backend Spring Boot/Java en Render (Docker), captura Gemini, validación de entradas, secretos y despliegue de API.
 - **Andrés:** PostgreSQL, migraciones, RLS, Storage autorizado y operación transaccional para pagos; motor de resultados y alertas.
 
 **Detalle para implementar:** [Infraestructura y tecnologías del MVP](infraestructura-desarrollo-mvp.md), PROP-INFRA-001. Incluye estructura de repo, variables, entornos, orden de puesta en marcha, CI, backups, límites, recuperación y criterios de infraestructura lista. Consultarlo antes de crear la app.
@@ -115,18 +121,18 @@ La base propuesta queda definida: **React + TypeScript + Vite en Cloudflare Work
 #### Componentes concretos
 
 1. **Web:** React/TypeScript con Vite y Node 24 LTS para desarrollo/build. Cloudflare aloja los assets y fallback SPA; el backend no se duplica en Cloudflare. [Static Assets](https://developers.cloudflare.com/workers/static-assets/).
-2. **API:** FastAPI/Python, Pydantic, Uvicorn y OpenAPI; Render Web Service; JWT verificado y claves IA solo en servidor. [FastAPI](https://fastapi.tiangolo.com/features/), [Render](https://render.com/docs/deploy-fastapi).
-3. **Base:** PostgreSQL con SQLAlchemy 2/psycopg 3, migraciones Alembic y RLS/grants por organización; contexto de organización verificado por FastAPI, rol runtime limitado y esquema de negocio no expuesto a Data API. Pago, aplicación y auditoría se confirman en una transacción SQLAlchemy/PostgreSQL, no en llamadas independientes del navegador. [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security).
+2. **API:** Spring Boot/Java 21, Spring MVC/Security y contrato OpenAPI versionado; Render Web Service; JWT verificado y claves IA solo en servidor. [Spring Boot](https://docs.spring.io/spring-boot/system-requirements.html), [Render Docker](https://render.com/docs/docker).
+3. **Base:** PostgreSQL con Spring Data JPA/Hibernate, JDBC PostgreSQL, migraciones Flyway y RLS/grants por organización; contexto de organización verificado por Spring Security/servicios Spring, rol runtime limitado y esquema de negocio no expuesto a Data API. Pago, aplicación y auditoría se confirman en una transacción Spring `@Transactional`/PostgreSQL, no en llamadas independientes del navegador. [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security).
 4. **Evidencias:** Storage privado con rutas por organización y enlaces autorizados; no publicar fotos de vouchers. [Storage](https://supabase.com/docs/guides/storage/buckets/fundamentals).
 5. **IA:** Gemini API, modelo inicial configurable `gemini-3.5-flash-lite`, JSON validado y confirmación humana. Probar texto/imagen/audio antes de fijar configuración. La IA no confirma fondos ni calcula el saldo. [Modelo](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite).
-6. **Alertas:** reglas y trabajos persistidos en PostgreSQL; Render Cron Job ejecutando el mismo código Python al estabilizar vencimientos, sin worker largo en memoria. Los envíos reales dependen de canal autorizado. [Cron](https://render.com/docs/cronjobs).
-7. **QA y CI:** Vitest para frontend, pytest/HTTPX y PostgreSQL para API y transacciones y Playwright para el recorrido móvil; GitHub Actions ejecuta typecheck, pruebas y build.
+6. **Alertas:** reglas y trabajos persistidos en PostgreSQL; Render Cron Job ejecutando el mismo código Java en modo job al estabilizar vencimientos, sin worker largo en memoria. Los envíos reales dependen de canal autorizado. [Cron](https://render.com/docs/cronjobs).
+7. **QA y CI:** Vitest para frontend, JUnit/Spring Boot Test/MockMvc y PostgreSQL para API y transacciones y Playwright para el recorrido móvil; GitHub Actions ejecuta typecheck, pruebas y build.
 
 #### Entornos y despliegue
 
-Desarrollo local y proyecto remoto de **demo con datos ficticios**. El piloto real va en un proyecto separado. Frontend y backend tienen variables diferentes: URL de API y URL/clave pública Supabase en el navegador; DATABASE_URL, secretos IA y credenciales controladas en Render/CI. Germán configura retorno de Auth y origen frontend; Miguel autoriza llamadas; Andrés verifica acceso a datos y archivos.
+Desarrollo local y proyecto remoto de **demo con datos ficticios**. El piloto real va en un proyecto separado. Frontend y backend tienen variables diferentes: URL de API y URL/clave pública Supabase en el navegador; credenciales JDBC, secretos IA y credenciales controladas en Render/CI. Germán configura retorno de Auth y origen frontend; Miguel autoriza llamadas; Andrés verifica acceso a datos y archivos.
 
-Antes de H1 deben estar desplegados una página, una API FastAPI autenticada y un pedido persistente. El primer recorrido de infraestructura es **sesión → carga privada → extracción revisable → pedido consultable**. Si falla, se resuelve antes de sumar funcionalidades. Migraciones y lockfile se versionan; backups de base y evidencias se tratan por separado antes de datos reales.
+Antes de H1 deben estar desplegados una página, una API Spring Boot autenticada y un pedido persistente. El primer recorrido de infraestructura es **sesión → carga privada → extracción revisable → pedido consultable**. Si falla, se resuelve antes de sumar funcionalidades. Migraciones y lockfile se versionan; backups de base y evidencias se tratan por separado antes de datos reales.
 
 Web móvil forma parte del objetivo. Instalación PWA, n8n, Kafka, Jenkins, Pinecone, Kotlin y servidores adicionales quedan fuera de la base inicial. Si un servicio recomendado no puede desplegarse en la prueba del primer bloque, documentar una única alternativa disponible; no construir dos plataformas a la vez.
 
@@ -135,6 +141,8 @@ Web móvil forma parte del objetivo. Instalación PWA, n8n, Kafka, Jenkins, Pine
 - **Miguel:** servicios de captura y revisión; pedidos y evidencias; fachada de API.
 - **Andrés:** esquema y migraciones; motor transaccional de pagos; costos, caja y reportes.
 - **Compartido:** un contrato de datos y un contrato de errores. Miguel invoca las operaciones de Andrés; no reimplementa sus fórmulas.
+
+El estado de cuenta compartido sin login principal requiere token temporal/revocable limitado a un cliente, sin evidencias privadas. Sin ese control, usar vista autenticada y marcar la brecha. Un selector de marca no sustituye organización/entidad. `factor_mora` parte de 0% como escenario editable, nunca del 30% empresarial no verificado.
 
 Contrato mínimo orientativo: cargar evidencia, extraer borrador, confirmar borrador, consultar candidatos de conciliación, registrar verificación, aplicar pago, consultar pedido/estado de cuenta, consultar resultado/caja y exportar reporte. Cada respuesta conserva identificadores, moneda, estado, origen y fecha de corte. No se prescribe aquí una API final aprobada.
 
@@ -145,11 +153,11 @@ Si alguno de estos horarios ya pasó, empezar en el primer checkpoint no satisfe
 ### B0 — Sábado 15:30–16:30: acuerdo funcional y contratos
 
 - **Isabella:** dibujar las tres pantallas, definir estados, validaciones y un recorrido único; identificar políticas pendientes.
-- **Germán:** crear esqueleto frontend, rutas y capa API; comprobar mecanismo de despliegue web.
+- **Germán:** aplicar el roadmap PROP-FRONT-001/prompt adaptado: esqueleto frontend, tres rutas, cliente API Spring, fixtures y despliegue web; acordar estados con Isabella.
 - **Miguel:** proponer contrato y probar captura con el proveedor de IA disponible; comprobar despliegue backend y secretos.
-- **Andrés:** definir esquema, aplicaciones de pagos y casos numéricos; acordar unidades monetarias y fechas.
+- **Andrés:** definir ER/diccionario de base, claves/FK, aplicaciones de pagos y casos numéricos; acordar moneda/fechas, crear primera Flyway y revisar con Miguel.
 
-**Salida conjunta:** contratos, esquema inicial, acceso Supabase/Gemini, API FastAPI en Render y despliegue Cloudflare comprobados, configuración de infraestructura acordada, casos de demo identificados y responsabilidades acordadas. Miguel y Andrés entregan ejemplos de respuesta para que frontend avance sin esperar todos los endpoints.
+**Salida conjunta:** contratos, esquema inicial, acceso Supabase/Gemini, API Spring Boot en Render y despliegue Cloudflare comprobados, configuración de infraestructura acordada, casos de demo identificados y responsabilidades acordadas. Miguel y Andrés entregan ejemplos de respuesta para que frontend avance sin esperar todos los endpoints.
 
 ### B1 — 16:30–18:00: primera conexión persistente
 
@@ -158,7 +166,7 @@ Si alguno de estos horarios ya pasó, empezar en el primer checkpoint no satisfe
 - **Miguel:** implementar ingreso de evidencia y confirmación de borradores; desplegar endpoints base.
 - **Andrés:** crear tablas, restricciones y semilla; entregar primer saldo y costo/margen del pedido.
 
-**H1, 18:00:** URL HTTPS con rutas SPA, sesión real, evidencia privada y API FastAPI autenticada; crear o confirmar un pedido, guardarlo y consultarlo en la web desplegada. Las respuestas simuladas del contrato se distinguen de las reales y empiezan a reemplazarse. Costos y vencimientos ya tienen un formato estable.
+**H1, 18:00:** URL HTTPS con rutas SPA, sesión real, evidencia privada y API Spring Boot autenticada; crear o confirmar un pedido, guardarlo y consultarlo en la web desplegada. Las respuestas simuladas del contrato se distinguen de las reales y empiezan a reemplazarse. Costos y vencimientos ya tienen un formato estable.
 
 ### B2 — 18:00–20:00: recorrido básico de los cuatro módulos
 
@@ -192,7 +200,7 @@ Si alguno de estos horarios ya pasó, empezar en el primer checkpoint no satisfe
 - **Miguel y Andrés activos:** arreglar backend, montos, duplicados, permisos y fechas. Hacer prueba integral sobre el frontend ya entregado.
 - **Isabella y Germán descansan:** pareja de frontend. Antes de salir dejan estado, archivos, comandos de prueba y bloqueos.
 
-**H5, 03:00:** congelar nuevas funcionalidades; guardar versión estable y lista de defectos. No se agregan stock, cotizaciones, recompra ni nuevos conectores.
+**H5, 03:00:** congelar nuevas funcionalidades; guardar versión estable y lista de defectos. No se agregan stock, cotizaciones, recompra ni conectores externos.
 
 ### B6 — 03:00–05:00: estabilización técnica de interfaz
 
@@ -226,7 +234,7 @@ Esta rotación asegura cobertura por especialidad, pero no soporte completo de a
 - Isabella entrega definiciones funcionales a ambos programadores backend antes de construir validaciones incompatibles.
 - Miguel y Andrés acuerdan contratos y esquema; frontend puede trabajar con ejemplos claramente etiquetados mientras se terminan los servicios.
 - Andrés entrega el motor de aplicación; Miguel lo expone y Germán lo conecta. Esta integración tiene prioridad sobre más componentes visuales.
-- Costos, precios, fechas y egresos se preparan desde B0: sin esos datos no hay demostración financiera, aunque OCR y pantallas funcionen.
+- Costos, precios, fechas y egresos ficticios/manuales se preparan desde B0, sin consultar ERP/CRM: sin esos datos no hay demostración financiera, aunque OCR y pantallas funcionen.
 - Desplegar una versión pequeña en B1 evita descubrir un problema de alojamiento al final.
 
 **Regla de integración:** después de cada cambio que cruza frontend/backend, comprobar el mismo pedido en la base, la API y la pantalla. No considerar integrado un botón que cambia solamente el estado local.
@@ -296,12 +304,12 @@ La cobertura se verifica con evidencias; una casilla en un plan no demuestra una
 - Revisar un ejemplo de pedido/pago con el mentor, si está disponible, y precisar costos, políticas y datos.
 - Registrar si 80% y 30% tienen cálculo válido; mientras tanto quedan fuera de afirmaciones cuantificadas de impacto.
 - Definir inicio de crédito y plazos configurables: la idea usa 15/30 días y la entrevista menciona 30/45. No suponer una única regla real.
-- Confirmar la relación entre entidades, marcas, RUC, CRM, ERP y Apps Script. Para el prototipo, cargar archivos puede sustituir un conector aún no disponible, identificándolo como tal.
+- Confirmar organización/entidad/marca de la semilla ficticia sin inventar RUC. Datos y conectores ERP/CRM quedan fuera del MVP por D-004; no condicionan el plan.
 
 ### Recortes en orden
 
 1. Mantener alertas y estados de cuenta dentro de la aplicación; no añadir envío real por WhatsApp/correo sin acceso y configuración comprobados.
-2. Sustituir integración viva Kommo/ERP por carga de archivos autorizados y exportación CSV; no afirmar que el conector está implementado.
+2. Conservar entrada manual de chat/vouchers/audio, registros/CSV y semilla ficticia; ningún conector ERP/CRM entra al MVP, tampoco como contingencia.
 3. Reducir refinamientos visuales, personalización, gráficos extra e instalación PWA; conservar revisión, saldo, margen y cuatro semanas.
 4. Reducir cantidad de escenarios del recorrido principal, conservando las excepciones como pruebas. No quitar el centro productivo del alcance sin identificar una brecha frente a C-06.
 5. Si falla IA, permitir edición manual y mantener la muestra preprocesada como respaldo identificado. Eso permite probar finanzas, pero **no** acredita captura con IA ni cumplimiento completo de C-03/C-04.

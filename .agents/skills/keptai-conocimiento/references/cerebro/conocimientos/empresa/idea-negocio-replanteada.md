@@ -1,5 +1,7 @@
 # Idea de negocio replanteada
 
+> Actualización de alcance del MVP (10/10/2026): [D-004](../decisiones/decisiones-del-proyecto.md) elige Spring Boot y excluye uso de datos ERP/CRM por falta de acceso. El texto original conserva la visión del producto; las integraciones descritas no son tareas ni dependencias del MVP vigente.
+
 > Fecha de incorporación: 10 de octubre de 2026. Referencia: USR-IDEA-001.
 > Fuente: texto aportado por el usuario en esta conversación. Responsable de la dirección: usuario del proyecto.
 > Estado: definición principal vigente del producto por indicación expresa del usuario. Las cifras, capacidades de integración y resultados comerciales todavía requieren validación; no son hechos verificados por este documento.

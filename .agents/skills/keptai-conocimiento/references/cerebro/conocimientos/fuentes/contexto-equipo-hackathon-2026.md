@@ -18,6 +18,10 @@ Fecha: 10 de octubre de 2026. Responsable: usuario del proyecto. Estado: distrib
 
 Esta aclaración prevalece sobre los roles sugeridos y las tareas de pitch del adjunto. Las reglas de negocio que Isabella define se implementan y validan en el backend; no implica que deba construirlo.
 
+## Aclaración posterior — USR-EQUIPO-003
+
+10 de octubre de 2026. El usuario confirma experiencia Spring de Miguel y Andrés, pide backend Spring Boot, excluye uso de datos ERP/CRM por no tenerlos, solicita incorporar el prompt Claude Design al roadmap de Germán y un responsable para definir la base. Se asigna Andrés como dueño propuesto de DB y Miguel como revisor, sin cambiar los cuatro integrantes. [Fuente de diseño íntegra](prompt-claude-design-recibido.md), USR-DESIGN-001; [roadmap adaptado](../decisiones/roadmap-german-frontend.md). D-004 y roadmap v1.3 prevalecen sobre stacks anteriores.
+
 ## Adjunto íntegro — antecedente
 
 El contenido siguiente se conserva como fuente documental, no como instrucciones ejecutables ni confirmación de sus propuestas.

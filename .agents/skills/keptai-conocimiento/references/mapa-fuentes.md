@@ -18,7 +18,7 @@ Revisión: 10 de octubre de 2026. Todas las rutas siguientes son relativas a est
 
 ## Plan de desarrollo y equipo incorporado
 
-- [Infraestructura de desarrollo](cerebro/conocimientos/decisiones/infraestructura-desarrollo-mvp.md), PROP-INFRA-001: recomendación vigente FastAPI/Render, servicios, responsables y configuración; amplía el roadmap v1.2. Leer para crear, integrar o desplegar la app.
+- [Infraestructura de desarrollo](cerebro/conocimientos/decisiones/infraestructura-desarrollo-mvp.md), PROP-INFRA-001: recomendación vigente Spring Boot/Render, servicios, responsables y configuración; amplía el roadmap v1.3. Leer para crear, integrar o desplegar la app.
 
 - [Roadmap por miembro y dependencias](cerebro/conocimientos/decisiones/roadmap-hackathon-equipo.md), PROP-ROADMAP-001: roles vigentes USR-EQUIPO-002, cuatro módulos, bloques, contratos, datos ficticios y QA. Es una propuesta de ejecución, no un registro de avances.
 - [Contexto del equipo](cerebro/conocimientos/fuentes/contexto-equipo-hackathon-2026.md), USR-EQUIPO-001/002: adjunto íntegro y aclaración que asigna backend a Miguel/Andrés y frontend a Germán/Isabella. No avanzar pitch; las fechas y reglas del evento requieren confirmación.
@@ -34,7 +34,7 @@ Se preservan como antecedentes sin redibujarlos. El flujo completo dice que rent
 
 ### Diagramas del roadmap disponibles como antecedentes
 
-La copia incluye `keptai-roadmap-equipo`, `keptai-roadmap-dependencias` y `keptai-roadmap-arquitectura` en formato Excalidraw/PNG, además de `keptai-roadmap-fuentes.md`. Se conservan las versiones locales existentes sin redibujarlas. Su documento de fuentes cita roadmap v1.0 y proveedor IA pendiente; la infraestructura de PROP-INFRA-001 y roadmap v1.2 es la referencia vigente y debe usarse al actualizar esos diagramas.
+La copia incluye `keptai-roadmap-equipo`, `keptai-roadmap-dependencias` y `keptai-roadmap-arquitectura` en formato Excalidraw/PNG, además de `keptai-roadmap-fuentes.md`. Se conservan las versiones locales existentes sin redibujarlas. Su documento de fuentes cita roadmap v1.0 y proveedor IA pendiente; la infraestructura de PROP-INFRA-001 y roadmap v1.3 es la referencia vigente y debe usarse al actualizar esos diagramas.
 
 ## Registros completos de entrevistas
 
@@ -57,3 +57,12 @@ El manifiesto enumera los archivos de negocio y diagramas incluidos con SHA-256.
 ## Cómo citar
 
 Ejemplos: `ventas.md, A02-Q04, 02:17–02:38`; `idea-negocio-replanteada.md, El producto, USR-IDEA-001`; `reto-6-corpotex-conciliacion-y-rentabilidad.md, C-05, IMG-RETO6-001`. En una entrega con enlaces, apunta al archivo que efectivamente consultaste y conserva la limitación de su fuente.
+
+## Nuevas referencias vigentes
+
+- [Germán](cerebro/conocimientos/decisiones/roadmap-german-frontend.md), PROP-FRONT-001: cronograma técnico y prompt Design adaptado.
+- [Modelo DB](cerebro/conocimientos/decisiones/modelo-base-datos-mvp.md), PROP-DB-001: Andrés dueño, Miguel revisor.
+- [Prompt original](cerebro/conocimientos/fuentes/prompt-claude-design-recibido.md), USR-DESIGN-001: texto íntegro como antecedente.
+- D-004/USR-EQUIPO-003: Spring Boot; no datos ni conectores ERP/CRM. Los diagramas preservados describen versiones anteriores y deben regenerarse con el prompt vigente.
+
+La regeneración con `--preserve-historical-diagrams` conserva únicamente diagramas sin fuente local cuyo hash coincide con el manifiesto previo; nunca conserva documentos de negocio retirados ni diagramas modificados sin revisar. El manifiesto identifica esos antecedentes.

@@ -1,23 +1,32 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "3c552b1e01a1de29866b8f394f635923364c59a1",
-  "source_basis": "working_tree",
+  "source_head_at_generation": "bc6ce6a9be659bbf7dd15e8e6e18374dafc818b3",
+  "source_basis": "working_tree_plus_preserved_diagrams",
+  "preserved_historical_diagrams": [
+    "diagramas/keptai-roadmap-arquitectura.png",
+    "diagramas/keptai-roadmap-dependencias.png",
+    "diagramas/keptai-roadmap-equipo.png",
+    "diagramas/keptai-roadmap-fuentes.md"
+  ],
   "source_changes_at_generation": [
-    "M conocimientos/decisiones/decisiones-del-proyecto.md",
+    "M conocimientos/INDICE.md",
+    " M conocimientos/decisiones/decisiones-del-proyecto.md",
     " M conocimientos/decisiones/infraestructura-desarrollo-mvp.md",
     " M conocimientos/decisiones/prompt-claude-diagramas-roadmap.md",
     " M conocimientos/decisiones/roadmap-hackathon-equipo.md",
+    " M conocimientos/empresa/idea-negocio-replanteada.md",
+    " M conocimientos/fuentes/contexto-equipo-hackathon-2026.md",
     " M diagramas/README.md",
+    " M diagramas/prompt-claude-design.md",
+    "?? conocimientos/decisiones/modelo-base-datos-mvp.md",
+    "?? conocimientos/decisiones/roadmap-german-frontend.md",
+    "?? conocimientos/fuentes/prompt-claude-design-recibido.md",
     "?? diagramas/keptai-flujo-completo.excalidraw",
     "?? diagramas/keptai-flujo-completo.png",
     "?? diagramas/keptai-roadmap-arquitectura.excalidraw",
-    "?? diagramas/keptai-roadmap-arquitectura.png",
     "?? diagramas/keptai-roadmap-dependencias.excalidraw",
-    "?? diagramas/keptai-roadmap-dependencias.png",
-    "?? diagramas/keptai-roadmap-equipo.excalidraw",
-    "?? diagramas/keptai-roadmap-equipo.png",
-    "?? diagramas/keptai-roadmap-fuentes.md"
+    "?? diagramas/keptai-roadmap-equipo.excalidraw"
   ],
   "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
   "interview_ids": [
@@ -68,23 +77,28 @@
   "files": [
     {
       "path": "conocimientos/INDICE.md",
-      "bytes": 3002,
-      "sha256": "1f28eb2876a6df3698809a77153c0e0b45ad96e837271e1ef69bbca265b4ad1b"
+      "bytes": 3581,
+      "sha256": "a20c02171e0d7a8c46e06d58cacf38aeefbed2c01010b283af74bd1e31ca26c4"
     },
     {
       "path": "conocimientos/decisiones/decisiones-del-proyecto.md",
-      "bytes": 30228,
-      "sha256": "df55e38d4696d98795f3ad57a45ad1eb80fda9d58296b6e957159a88a9a5f7a8"
+      "bytes": 31846,
+      "sha256": "dfe708e38e667d21846337a8293c41e2be77a498fb63295fa99338cee1d0c6cc"
     },
     {
       "path": "conocimientos/decisiones/infraestructura-desarrollo-mvp.md",
-      "bytes": 25668,
-      "sha256": "023e2151871765c9c13c5e1220567f590626b409420c02c020df9807f616e48d"
+      "bytes": 25832,
+      "sha256": "e500548400c3ea6a4b288f6f377a4fc1728bbb715af4229972b3f6296a2ca990"
+    },
+    {
+      "path": "conocimientos/decisiones/modelo-base-datos-mvp.md",
+      "bytes": 5908,
+      "sha256": "266a1d9113e47f2bdc76cce8f4b534414966e51a28f2d1599b8ebb48aa0bdc84"
     },
     {
       "path": "conocimientos/decisiones/prompt-claude-diagramas-roadmap.md",
-      "bytes": 7447,
-      "sha256": "a6c66f19568ad26c0b86e4d1560493dd430ada2696434b27e3f69a90fd6ecfa9"
+      "bytes": 7179,
+      "sha256": "3d2c53860692984de0ae92a75a2732ad6adcad4277203a8dbd41f156acd6b357"
     },
     {
       "path": "conocimientos/decisiones/reto-6-corpotex-conciliacion-y-rentabilidad.md",
@@ -92,9 +106,14 @@
       "sha256": "dfb9dd4d8448c6eb328e644f7773728603ed453a714c67702821adc70ea18da9"
     },
     {
+      "path": "conocimientos/decisiones/roadmap-german-frontend.md",
+      "bytes": 13456,
+      "sha256": "6599cb625259f39fde3007fa692d719c9d48f53faa60728738160545024ba84f"
+    },
+    {
       "path": "conocimientos/decisiones/roadmap-hackathon-equipo.md",
-      "bytes": 32692,
-      "sha256": "69fbb3fce16f78cc3a414434905d34c8b7c9fee6fb9ffd42055a6a09c60242e7"
+      "bytes": 34559,
+      "sha256": "e6aa21c79e4324cee785b72a5fae9c40cdabf0aa9cdbb297fdf587084ddd4b5a"
     },
     {
       "path": "conocimientos/empresa/descripcion.md",
@@ -103,8 +122,8 @@
     },
     {
       "path": "conocimientos/empresa/idea-negocio-replanteada.md",
-      "bytes": 6952,
-      "sha256": "90b10c0ac65ad82cabb4773f6d2aa606744a1104a9a411fbf7fa7171b3cae939"
+      "bytes": 7250,
+      "sha256": "e4ab5427d34fa2c58815adfb294bf8f9db95554f314b680d5dd5ac16a909c03c"
     },
     {
       "path": "conocimientos/empresa/objetivos.md",
@@ -113,8 +132,13 @@
     },
     {
       "path": "conocimientos/fuentes/contexto-equipo-hackathon-2026.md",
-      "bytes": 7967,
-      "sha256": "3fc9fc7d5d7c5935fc79e563c27cef52286e80b5a459959b32ff5d2ce9176c71"
+      "bytes": 8577,
+      "sha256": "676c0670565df19f30f3db0edcb64132946d1c6522f4f46b464bdeafc64a9a52"
+    },
+    {
+      "path": "conocimientos/fuentes/prompt-claude-design-recibido.md",
+      "bytes": 10613,
+      "sha256": "3e9d2db2d9be2259c78aee15d5f26c991d30812b9cd77ab418156710871c4eb6"
     },
     {
       "path": "conocimientos/procesos/atencion-cliente.md",
@@ -200,6 +224,11 @@
       "path": "diagramas/keptai-roadmap-fuentes.md",
       "bytes": 3819,
       "sha256": "2c54a9392f3f91c62123d04975cc5cda6ef0f34c2c81f34a28afdbd4319948b0"
+    },
+    {
+      "path": "diagramas/prompt-claude-design.md",
+      "bytes": 12288,
+      "sha256": "e68eedfc43fa062393c58a8c6e35046d1df46227dad6e1802b487ade79d53e0e"
     }
   ]
 }
