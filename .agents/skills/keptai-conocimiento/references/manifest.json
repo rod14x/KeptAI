@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "bc6ce6a9be659bbf7dd15e8e6e18374dafc818b3",
+  "source_head_at_generation": "171817374472764ea0ea138722a4e08f32634d92",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -10,23 +10,21 @@
     "diagramas/keptai-roadmap-fuentes.md"
   ],
   "source_changes_at_generation": [
-    "M conocimientos/INDICE.md",
-    " M conocimientos/decisiones/decisiones-del-proyecto.md",
-    " M conocimientos/decisiones/infraestructura-desarrollo-mvp.md",
-    " M conocimientos/decisiones/prompt-claude-diagramas-roadmap.md",
-    " M conocimientos/decisiones/roadmap-hackathon-equipo.md",
-    " M conocimientos/empresa/idea-negocio-replanteada.md",
-    " M conocimientos/fuentes/contexto-equipo-hackathon-2026.md",
-    " M diagramas/README.md",
-    " M diagramas/prompt-claude-design.md",
-    "?? conocimientos/decisiones/modelo-base-datos-mvp.md",
-    "?? conocimientos/decisiones/roadmap-german-frontend.md",
-    "?? conocimientos/fuentes/prompt-claude-design-recibido.md",
+    "M diagramas/README.md",
+    "?? diagramas/keptai-base-datos-spring-v1-3.excalidraw",
+    "?? diagramas/keptai-base-datos-spring-v1-3.png",
     "?? diagramas/keptai-flujo-completo.excalidraw",
     "?? diagramas/keptai-flujo-completo.png",
+    "?? diagramas/keptai-roadmap-arquitectura-spring-v1-3.excalidraw",
+    "?? diagramas/keptai-roadmap-arquitectura-spring-v1-3.png",
     "?? diagramas/keptai-roadmap-arquitectura.excalidraw",
+    "?? diagramas/keptai-roadmap-dependencias-spring-v1-3.excalidraw",
+    "?? diagramas/keptai-roadmap-dependencias-spring-v1-3.png",
     "?? diagramas/keptai-roadmap-dependencias.excalidraw",
-    "?? diagramas/keptai-roadmap-equipo.excalidraw"
+    "?? diagramas/keptai-roadmap-equipo-spring-v1-3.excalidraw",
+    "?? diagramas/keptai-roadmap-equipo-spring-v1-3.png",
+    "?? diagramas/keptai-roadmap-equipo.excalidraw",
+    "?? diagramas/keptai-roadmap-fuentes-spring-v1-3.md"
   ],
   "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
   "interview_ids": [
@@ -171,6 +169,16 @@
       "sha256": "908e457465b8583de5f015e76a140d289b43dd7df0961f8969e79d165dfd166d"
     },
     {
+      "path": "diagramas/keptai-base-datos-spring-v1-3.excalidraw",
+      "bytes": 110684,
+      "sha256": "57a7bd790a243daa2bd80df820381590df64fbdbf548411448cbb66a0cc1551a"
+    },
+    {
+      "path": "diagramas/keptai-base-datos-spring-v1-3.png",
+      "bytes": 448812,
+      "sha256": "7376b5c79c5b08ca548bb140d83b95cc330c1b334eba0226ceea8c1bea010cee"
+    },
+    {
       "path": "diagramas/keptai-flujo-completo.excalidraw",
       "bytes": 107328,
       "sha256": "172e2b418db57c34a49ae6a800ec96c0845f987488a03e85cc25e5f05acb2e2e"
@@ -191,6 +199,16 @@
       "sha256": "31d0b24e0f034bf89b7bea5288b467450a140dbf51061643f9ade69c36eca501"
     },
     {
+      "path": "diagramas/keptai-roadmap-arquitectura-spring-v1-3.excalidraw",
+      "bytes": 116929,
+      "sha256": "c7726b0626d6b2014a574c0bb2d07bb89cf411d237546763aa7791ef4a136555"
+    },
+    {
+      "path": "diagramas/keptai-roadmap-arquitectura-spring-v1-3.png",
+      "bytes": 517462,
+      "sha256": "42972b4ab0568502345f8354c0ef7ae5986a5486af991069997ac9e1be03943c"
+    },
+    {
       "path": "diagramas/keptai-roadmap-arquitectura.excalidraw",
       "bytes": 113088,
       "sha256": "f4d7e793b5206ed7cf34c1c25e517d7c16cecd14e1b5d182d106b0d7b91ea862"
@@ -199,6 +217,16 @@
       "path": "diagramas/keptai-roadmap-arquitectura.png",
       "bytes": 453871,
       "sha256": "ade8526366bf42eb054187b535614e99bb2f9ff4ba6a4849956e3bf647a6f6d0"
+    },
+    {
+      "path": "diagramas/keptai-roadmap-dependencias-spring-v1-3.excalidraw",
+      "bytes": 96529,
+      "sha256": "01f33a3788a1e0fcce4630202d9d524a84036cb3da5c18975d933e961f28dc8a"
+    },
+    {
+      "path": "diagramas/keptai-roadmap-dependencias-spring-v1-3.png",
+      "bytes": 376609,
+      "sha256": "510341e264a69168416ae4e6a1620a4fb3058646fd038daea1d4358e4b8c2f5f"
     },
     {
       "path": "diagramas/keptai-roadmap-dependencias.excalidraw",
@@ -211,6 +239,16 @@
       "sha256": "d7761e645ed8634d7e5dd67f8674be2cd43da70923f7e8944e93bdd2ff923c64"
     },
     {
+      "path": "diagramas/keptai-roadmap-equipo-spring-v1-3.excalidraw",
+      "bytes": 126820,
+      "sha256": "9b7934046d76b1e2c1ecb669aeca6aa1d26c1bcc2b5d2c5ef2e276d32ff676df"
+    },
+    {
+      "path": "diagramas/keptai-roadmap-equipo-spring-v1-3.png",
+      "bytes": 598631,
+      "sha256": "7e4c6fdf469ae502f39326634cbe2cb152cb984474992daa6109b7e70b67b62d"
+    },
+    {
       "path": "diagramas/keptai-roadmap-equipo.excalidraw",
       "bytes": 124773,
       "sha256": "652de5e6d98664376095edfa6429f3df804fcd6716d6630e7a2edc742e2eee59"
@@ -219,6 +257,11 @@
       "path": "diagramas/keptai-roadmap-equipo.png",
       "bytes": 547508,
       "sha256": "4a042251b052a7ad937ca5650b1994350397e67e697610b83f31be307faaf0ab"
+    },
+    {
+      "path": "diagramas/keptai-roadmap-fuentes-spring-v1-3.md",
+      "bytes": 5110,
+      "sha256": "025171e945388260539cd605ba2b92515295890f03ec87c1f57d34307e21a175"
     },
     {
       "path": "diagramas/keptai-roadmap-fuentes.md",

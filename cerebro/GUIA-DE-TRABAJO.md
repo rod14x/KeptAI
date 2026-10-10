@@ -37,3 +37,31 @@ git commit -m "Agregar índice, guía y mapa inicial del cerebro"
 git push
 ```
 Los archivos generados son una propuesta local. No se han publicado automáticamente.
+
+
+## Agentes conectados al cerebro (configurado el 10 de octubre de 2026)
+
+Desde una terminal Ubuntu dentro de WezTerm/Herdr:
+```bash
+~/.local/bin/keptai check
+~/.local/bin/keptai claude
+```
+Si `keptai` está disponible en tu PATH, basta con `keptai claude`. El lanzador entra a la carpeta KeptAI y envía una tarea inicial de lectura de instrucciones, índice y decisiones. En una terminal separada puedes usar `keptai codex`, `keptai hermes` o `keptai opencode`. No lanzar todos para la misma tarea ni permitir ediciones simultáneas de los mismos archivos.
+
+WezTerm continúa abriendo tu sesión Herdr dev. Los paneles antiguos conservan su directorio: el lanzador cambia al cerebro antes de iniciar el agente. No inicia otro Herdr ni modifica sesiones existentes. Claude y Hermes conservan sus MCP ya configurados; no se copian credenciales. No se ha agregado Excalidraw o Notion a Codex/OpenCode mediante este cambio.
+
+AGENTS.md contiene las instrucciones portables; CLAUDE.md importa esas instrucciones. Hermes reconoce AGENTS.md según el CLI instalado. El mensaje inicial explícito también pide consultarlo a los cuatro agentes. Estas instrucciones orientan su conducta; verificar las referencias en las respuestas sigue siendo parte de la revisión.
+
+### Primera tarea
+Después de la respuesta inicial, pide: «Usando las fuentes del cerebro, revisa el mapa de Excalidraw y propón el primer recorrido demostrable del MVP. Identifica actores, estados, datos mínimos y criterios de aceptación. Marca las decisiones pendientes. Todavía no programes».
+
+### Equipo
+Cada integrante clona KeptAI en su máquina. Puede iniciar su agente desde la raíz del repo o ejecutar `bash scripts/keptai claude`. El lanzador global `~/.local/bin/keptai` es específico de esta máquina; las credenciales, skills y MCP deben configurarse individualmente. No están compartidos por Git.
+
+### Compartir la configuración
+```bash
+git add AGENTS.md CLAUDE.md scripts/keptai GUIA-DE-TRABAJO.md
+git commit -m "Conectar agentes al cerebro KeptAI"
+git push
+```
+Esta configuración no actualiza Git ni inicia tareas de programación sin una instrucción.

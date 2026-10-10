@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -eo pipefail
+export PATH="$HOME/.local/bin:$HOME/.opencode/bin:$PATH"
+if [[ -s "$HOME/.nvm/nvm.sh" ]]; then
+  source "$HOME/.nvm/nvm.sh"
+  nvm use --silent default >/dev/null
+fi
+keptai_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$keptai_root"
+action="${1:-help}"
+if [[ $# -gt 0 ]]; then shift; fi
+initial='Lee AGENTS.md, conocimientos/INDICE.md y conocimientos/decisiones/decisiones-del-proyecto.md. Responde en español. Resume el objetivo del proyecto en tres puntos con referencias y señala decisiones pendientes. No modifiques archivos ni dibujes todavía; espera mi siguiente tarea.'
+case "$action" in
+  claude) exec claude "$@" "$initial" ;;
+  codex) exec codex "$@" "$initial" ;;
+  opencode) exec opencode --prompt "$initial" "$@" ;;
+  hermes) exec hermes chat --skills dev-coordinator --query "$initial" "$@" ;;
+  shell) exec bash -li ;;
+  diagram)
+    exec mcp-excalidraw-server import "$keptai_root/diagramas/keptai-mapa-inicial.excalidraw" ;;
+  check)
+    printf 'Cerebro: %s\nHerdr en este panel: %s\n' "$keptai_root" "${HERDR_ENV:-0}"
+    for tool in claude codex opencode hermes herdr mcp-excalidraw-server; do
+      command -v "$tool" || exit 1
+    done
+    test -r AGENTS.md
+    test -r CLAUDE.md
+    test -r conocimientos/INDICE.md
+    git status --short
+    ;;
+  help|-h|--help)
+    printf '%s\n' 'keptai claude | codex | hermes | opencode: abrir agente con el cerebro' 'keptai shell: abrir una shell en KeptAI' 'keptai diagram: agregar el mapa al lienzo Excalidraw (no repetir si ya está)' 'keptai check: comprobar rutas y herramientas' ;;
+  *) printf 'Acción desconocida: %s\n' "$action" >&2; exit 2 ;;
+esac
