@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "antislop": {
+      "source": "miqdadbadjuber/anti-slop",
+      "sourceType": "github",
+      "skillPath": "skills/antislop/SKILL.md",
+      "computedHash": "e263d21c173627572f12ba679494ebf86f6b8f4863ac3e470383ecff28d8d279"
+    },
     "brandkit": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",
