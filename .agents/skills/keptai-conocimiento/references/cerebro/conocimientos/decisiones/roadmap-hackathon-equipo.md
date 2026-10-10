@@ -1,6 +1,6 @@
 # Roadmap de desarrollo KeptAI — equipo y dependencias
 
-> ID: PROP-ROADMAP-001. Versión: 1.1. Fecha: 10 de octubre de 2026.
+> ID: PROP-ROADMAP-001. Versión: 1.2. Fecha: 10 de octubre de 2026.
 > Estado: plan de ejecución propuesto; no acredita tareas hechas ni un stack aprobado.
 > Roles: distribución vigente indicada por el usuario en USR-EQUIPO-002.
 > Ventana de referencia: sábado 10, 15:30, a domingo 11, 09:30; zona America/Lima. Son 18 horas restantes del esquema de 24 horas aportado, no 24 horas adicionales. Confirmar entrega y horarios con la organización.
@@ -55,7 +55,7 @@ La demostración de referencia utiliza **3 vouchers y un chat**. Además debe ha
 - Conservar origen y campos ausentes; los importes no se inventan cuando una evidencia no es legible.
 - Implementar los servicios de pedidos, consulta de conciliación, estados de cuenta, autorización pendiente y acceso a resultados financieros.
 - Integrar el motor de Andrés: el endpoint orquesta la operación, pero no vuelve a calcular saldos con una segunda fórmula.
-- Configurar y desplegar las funciones o backend elegido; mantener claves de IA y claves privilegiadas del lado del servidor.
+- Configurar y desplegar la API FastAPI elegida; mantener claves de IA y claves privilegiadas del lado del servidor.
 
 **Entregables:** API documentada, captura real, validación de borradores y servicios disponibles para frontend. **Depende de:** esquema y motor de Andrés; reglas funcionales de Isabella. **Aceptación:** texto o voucher se procesa, se corrige y se guarda con evidencia, y la misma llamada repetida no duplica la operación de negocio.
 
@@ -103,11 +103,11 @@ Margen del pedido y agrupaciones, producción propia/tercerizada, centro product
 
 ### Infraestructura recomendada para empezar
 
-La base propuesta queda definida: **React + TypeScript + Vite en Cloudflare Workers Static Assets; Supabase para PostgreSQL, Auth, Storage privado y Edge Functions; Gemini API para captura; GitHub Actions y pruebas para integrar.** Es la recomendación para este equipo y ventana de desarrollo, pendiente de una prueba de acceso y despliegue; no acredita servicios ya contratados.
+La base propuesta queda definida: **React + TypeScript + Vite en Cloudflare Workers Static Assets; FastAPI/Python en Render como único backend; Supabase para PostgreSQL, Auth y Storage privado; Gemini API para captura; GitHub Actions y pruebas para integrar.** FastAPI se elige por el alcance de API/captura y entrega temprana de contratos; Spring Boot se reconsidera si el equipo acredita mayor dominio Java. No se ha confirmado esa experiencia. Es la recomendación para este equipo y ventana de desarrollo, pendiente de una prueba de acceso y despliegue; no acredita servicios ya contratados.
 
 - **Germán:** frontend técnico, configuración SPA/HTTPS, sesión, cliente de API y hosting web.
 - **Isabella:** interfaz, reglas funcionales y validación de cómo se muestran revisión, saldo, margen y caja.
-- **Miguel:** backend TypeScript en Edge Functions, captura Gemini, validación de entradas, secretos y despliegue de API.
+- **Miguel:** backend FastAPI/Python en Render, captura Gemini, validación de entradas, secretos y despliegue de API.
 - **Andrés:** PostgreSQL, migraciones, RLS, Storage autorizado y operación transaccional para pagos; motor de resultados y alertas.
 
 **Detalle para implementar:** [Infraestructura y tecnologías del MVP](infraestructura-desarrollo-mvp.md), PROP-INFRA-001. Incluye estructura de repo, variables, entornos, orden de puesta en marcha, CI, backups, límites, recuperación y criterios de infraestructura lista. Consultarlo antes de crear la app.
@@ -115,18 +115,18 @@ La base propuesta queda definida: **React + TypeScript + Vite en Cloudflare Work
 #### Componentes concretos
 
 1. **Web:** React/TypeScript con Vite y Node 24 LTS para desarrollo/build. Cloudflare aloja los assets y fallback SPA; el backend no se duplica en Cloudflare. [Static Assets](https://developers.cloudflare.com/workers/static-assets/).
-2. **API:** Supabase Edge Functions TypeScript/Deno; sesión verificada, contratos y claves IA solo en servidor. [Edge Functions](https://supabase.com/docs/guides/functions).
-3. **Base:** PostgreSQL con RLS/grants por organización. Pago, aplicación y auditoría se confirman en una transacción SQL/RPC, no en llamadas independientes del navegador. [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security).
+2. **API:** FastAPI/Python, Pydantic, Uvicorn y OpenAPI; Render Web Service; JWT verificado y claves IA solo en servidor. [FastAPI](https://fastapi.tiangolo.com/features/), [Render](https://render.com/docs/deploy-fastapi).
+3. **Base:** PostgreSQL con SQLAlchemy 2/psycopg 3, migraciones Alembic y RLS/grants por organización; contexto de organización verificado por FastAPI, rol runtime limitado y esquema de negocio no expuesto a Data API. Pago, aplicación y auditoría se confirman en una transacción SQLAlchemy/PostgreSQL, no en llamadas independientes del navegador. [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security).
 4. **Evidencias:** Storage privado con rutas por organización y enlaces autorizados; no publicar fotos de vouchers. [Storage](https://supabase.com/docs/guides/storage/buckets/fundamentals).
 5. **IA:** Gemini API, modelo inicial configurable `gemini-3.5-flash-lite`, JSON validado y confirmación humana. Probar texto/imagen/audio antes de fijar configuración. La IA no confirma fondos ni calcula el saldo. [Modelo](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite).
-6. **Alertas:** reglas y trabajos persistidos en PostgreSQL; Supabase Cron al estabilizar vencimientos, sin worker largo en memoria. Los envíos reales dependen de canal autorizado. [Cron](https://supabase.com/docs/guides/cron).
-7. **QA y CI:** Vitest para funciones puras, pruebas de API/SQL para transacciones y Playwright para el recorrido móvil; GitHub Actions ejecuta typecheck, pruebas y build.
+6. **Alertas:** reglas y trabajos persistidos en PostgreSQL; Render Cron Job ejecutando el mismo código Python al estabilizar vencimientos, sin worker largo en memoria. Los envíos reales dependen de canal autorizado. [Cron](https://render.com/docs/cronjobs).
+7. **QA y CI:** Vitest para frontend, pytest/HTTPX y PostgreSQL para API y transacciones y Playwright para el recorrido móvil; GitHub Actions ejecuta typecheck, pruebas y build.
 
 #### Entornos y despliegue
 
-Desarrollo local y proyecto remoto de **demo con datos ficticios**. El piloto real va en un proyecto separado. Frontend y backend tienen variables diferentes: únicamente URL y clave pública Supabase en el navegador; secretos IA y claves privilegiadas en Supabase/CI. Germán configura retorno de Auth y origen frontend; Miguel autoriza llamadas; Andrés verifica acceso a datos y archivos.
+Desarrollo local y proyecto remoto de **demo con datos ficticios**. El piloto real va en un proyecto separado. Frontend y backend tienen variables diferentes: URL de API y URL/clave pública Supabase en el navegador; DATABASE_URL, secretos IA y credenciales controladas en Render/CI. Germán configura retorno de Auth y origen frontend; Miguel autoriza llamadas; Andrés verifica acceso a datos y archivos.
 
-Antes de H1 deben estar desplegados una página, una función autenticada y un pedido persistente. El primer recorrido de infraestructura es **sesión → carga privada → extracción revisable → pedido consultable**. Si falla, se resuelve antes de sumar funcionalidades. Migraciones y lockfile se versionan; backups de base y evidencias se tratan por separado antes de datos reales.
+Antes de H1 deben estar desplegados una página, una API FastAPI autenticada y un pedido persistente. El primer recorrido de infraestructura es **sesión → carga privada → extracción revisable → pedido consultable**. Si falla, se resuelve antes de sumar funcionalidades. Migraciones y lockfile se versionan; backups de base y evidencias se tratan por separado antes de datos reales.
 
 Web móvil forma parte del objetivo. Instalación PWA, n8n, Kafka, Jenkins, Pinecone, Kotlin y servidores adicionales quedan fuera de la base inicial. Si un servicio recomendado no puede desplegarse en la prueba del primer bloque, documentar una única alternativa disponible; no construir dos plataformas a la vez.
 
@@ -149,7 +149,7 @@ Si alguno de estos horarios ya pasó, empezar en el primer checkpoint no satisfe
 - **Miguel:** proponer contrato y probar captura con el proveedor de IA disponible; comprobar despliegue backend y secretos.
 - **Andrés:** definir esquema, aplicaciones de pagos y casos numéricos; acordar unidades monetarias y fechas.
 
-**Salida conjunta:** contratos, esquema inicial, acceso Supabase/Gemini y despliegue Cloudflare comprobados, configuración de infraestructura acordada, casos de demo identificados y responsabilidades acordadas. Miguel y Andrés entregan ejemplos de respuesta para que frontend avance sin esperar todos los endpoints.
+**Salida conjunta:** contratos, esquema inicial, acceso Supabase/Gemini, API FastAPI en Render y despliegue Cloudflare comprobados, configuración de infraestructura acordada, casos de demo identificados y responsabilidades acordadas. Miguel y Andrés entregan ejemplos de respuesta para que frontend avance sin esperar todos los endpoints.
 
 ### B1 — 16:30–18:00: primera conexión persistente
 
@@ -158,7 +158,7 @@ Si alguno de estos horarios ya pasó, empezar en el primer checkpoint no satisfe
 - **Miguel:** implementar ingreso de evidencia y confirmación de borradores; desplegar endpoints base.
 - **Andrés:** crear tablas, restricciones y semilla; entregar primer saldo y costo/margen del pedido.
 
-**H1, 18:00:** URL HTTPS con rutas SPA, sesión real, evidencia privada y función autenticada; crear o confirmar un pedido, guardarlo y consultarlo en la web desplegada. Las respuestas simuladas del contrato se distinguen de las reales y empiezan a reemplazarse. Costos y vencimientos ya tienen un formato estable.
+**H1, 18:00:** URL HTTPS con rutas SPA, sesión real, evidencia privada y API FastAPI autenticada; crear o confirmar un pedido, guardarlo y consultarlo en la web desplegada. Las respuestas simuladas del contrato se distinguen de las reales y empiezan a reemplazarse. Costos y vencimientos ya tienen un formato estable.
 
 ### B2 — 18:00–20:00: recorrido básico de los cuatro módulos
 

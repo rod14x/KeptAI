@@ -1,15 +1,14 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "bf03fde69973be43e5c6be799a4d47fabb21873c",
+  "source_head_at_generation": "3c552b1e01a1de29866b8f394f635923364c59a1",
   "source_basis": "working_tree",
   "source_changes_at_generation": [
-    "M conocimientos/INDICE.md",
-    " M conocimientos/decisiones/decisiones-del-proyecto.md",
+    "M conocimientos/decisiones/decisiones-del-proyecto.md",
+    " M conocimientos/decisiones/infraestructura-desarrollo-mvp.md",
     " M conocimientos/decisiones/prompt-claude-diagramas-roadmap.md",
     " M conocimientos/decisiones/roadmap-hackathon-equipo.md",
     " M diagramas/README.md",
-    "?? conocimientos/decisiones/infraestructura-desarrollo-mvp.md",
     "?? diagramas/keptai-flujo-completo.excalidraw",
     "?? diagramas/keptai-flujo-completo.png",
     "?? diagramas/keptai-roadmap-arquitectura.excalidraw",
@@ -74,18 +73,18 @@
     },
     {
       "path": "conocimientos/decisiones/decisiones-del-proyecto.md",
-      "bytes": 28860,
-      "sha256": "4024f82cff89dba6c80b8aeff7fb63f6770a3c9f8d7d7b191c073c9fd91aeced"
+      "bytes": 30228,
+      "sha256": "df55e38d4696d98795f3ad57a45ad1eb80fda9d58296b6e957159a88a9a5f7a8"
     },
     {
       "path": "conocimientos/decisiones/infraestructura-desarrollo-mvp.md",
-      "bytes": 19889,
-      "sha256": "47bc936cba4dfa020658b3655663c0df80155607bd333606712a4dd3ed76e88b"
+      "bytes": 25668,
+      "sha256": "023e2151871765c9c13c5e1220567f590626b409420c02c020df9807f616e48d"
     },
     {
       "path": "conocimientos/decisiones/prompt-claude-diagramas-roadmap.md",
-      "bytes": 7267,
-      "sha256": "01dbc6463208286a4749c285f7331e7df58528a1ff65c8b3722069c905320db7"
+      "bytes": 7447,
+      "sha256": "a6c66f19568ad26c0b86e4d1560493dd430ada2696434b27e3f69a90fd6ecfa9"
     },
     {
       "path": "conocimientos/decisiones/reto-6-corpotex-conciliacion-y-rentabilidad.md",
@@ -94,8 +93,8 @@
     },
     {
       "path": "conocimientos/decisiones/roadmap-hackathon-equipo.md",
-      "bytes": 32183,
-      "sha256": "217a1e86eae39d2a3e096f8dd85f8d38272ef0b35be950729dfe1673f262b310"
+      "bytes": 32692,
+      "sha256": "69fbb3fce16f78cc3a414434905d34c8b7c9fee6fb9ffd42055a6a09c60242e7"
     },
     {
       "path": "conocimientos/empresa/descripcion.md",

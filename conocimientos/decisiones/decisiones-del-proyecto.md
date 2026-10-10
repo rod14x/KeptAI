@@ -52,7 +52,7 @@ La estructura conserva empresa/descripcion.md, empresa/objetivos.md, procesos/ve
 
 ### P-004 — Aplicación modular con PostgreSQL
 
-**Estado:** propuesta. Interfaz móvil, API, módulos de negocio, base transaccional, documentos privados y trabajador de segundo plano. TypeScript es una opción según capacidades del equipo. Framework, hosting y presupuesto permanecen pendientes.
+**Estado:** propuesta. Interfaz móvil, API, módulos de negocio, base transaccional, documentos privados y trabajador de segundo plano. La recomendación actual de framework y hosting está en P-010; presupuesto y acceso permanecen pendientes.
 
 ### P-005 — Eventos y alertas confiables
 
@@ -70,11 +70,19 @@ La estructura conserva empresa/descripcion.md, empresa/objetivos.md, procesos/ve
 
 **Estado:** hipótesis. Suscripción por empresa y posible incorporación según complejidad. Precio, disposición de pago y ahorros necesitan validación. Véase [objetivos](../empresa/objetivos.md).
 
-### P-009 — Infraestructura recomendada para el MVP
+### P-009 — Infraestructura inicial — backend sustituido por P-010
 
 **Estado:** recomendación técnica, pendiente de comprobar acceso y despliegue; no acredita contratación o implementación. **Fecha:** 10 de octubre de 2026. **Responsable de la propuesta:** agente documental, por solicitud del usuario. **Fundamento:** completar el roadmap con tecnologías para comenzar sin cambiar D-003 ni USR-EQUIPO-002.
 
 Base recomendada: React/TypeScript/Vite y Cloudflare Workers Static Assets; Supabase PostgreSQL, Auth, Storage privado y Edge Functions; Gemini API; trabajos persistidos/Cron y GitHub Actions. Germán frontend/hosting, Isabella interfaz/reglas funcionales, Miguel API/IA, Andrés datos y motor financiero. Detalle en [infraestructura](infraestructura-desarrollo-mvp.md), PROP-INFRA-001, y [roadmap v1.1](roadmap-hackathon-equipo.md). Un solo backend; cuentas, presupuesto y configuración deben comprobarse antes de contratar o prometer integración.
+
+### P-010 — FastAPI como backend recomendado vigente
+
+**Fecha:** 10 de octubre de 2026. **Responsable:** agente documental por solicitud del usuario de comparar FastAPI/Spring Boot y corregir la publicación. **Estado:** recomendación técnica vigente; no acredita implementación ni aprobación empresarial. **Fundamento:** D-003, captura IA y API modular de cuatro funciones, dos integrantes backend y entrega temprana de contratos al frontend.
+
+FastAPI/Python con Pydantic, Uvicorn, SQLAlchemy 2/psycopg 3 y Alembic, desplegado en Render. Supabase permanece para PostgreSQL/Auth/Storage privado; Cloudflare aloja frontend. Pagos y auditoría en una transacción PostgreSQL, autorización por organización e idempotencia. pytest/HTTPX para backend; Render Cron Job para reglas programadas usando el mismo código. Sustituye Edge Functions/TypeScript y Supabase Cron de P-009; no crear un segundo backend.
+
+Spring Boot sigue siendo alternativa válida si Andrés/Miguel tienen experiencia Java superior o código reutilizable; esa experiencia no está confirmada. La elección no elimina controles financieros ni impone una migración futura. Véase [infraestructura v1.1](infraestructura-desarrollo-mvp.md), sección 1, y [roadmap v1.2](roadmap-hackathon-equipo.md). Servicios, región, plan y presupuesto se verifican antes del despliegue.
 
 ## Decisiones abiertas y condiciones de cierre
 
