@@ -48,9 +48,9 @@ export function DashboardPage() {
           </>
         }
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {overdueCount > 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-bad px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-xs">
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-bad-tint px-3 py-1.5 text-xs font-semibold text-bad">
                 <WarningCircle size={14} weight="fill" />
                 URGENTE
               </span>
@@ -70,10 +70,10 @@ export function DashboardPage() {
             <motion.div
               variants={itemVariants}
               role="alert"
-              className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border-2 border-bad bg-bad-tint p-4 text-bad shadow-sm"
+              className="flex flex-col items-start justify-between gap-4 rounded-xl border border-bad/30 bg-bad-tint p-5 text-bad xl:flex-row xl:items-center"
             >
-              <div className="flex items-center gap-3">
-                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-bad px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-xs">
+              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-bad px-2.5 py-1 text-xs font-bold text-inverse">
                   <WarningCircle size={15} weight="fill" />
                   URGENTE
                 </span>
@@ -83,14 +83,14 @@ export function DashboardPage() {
                       ? "1 entrega vencida detectada en el tablero de clientes"
                       : `${overdueCount} entregas vencidas detectadas en el tablero de clientes`}
                   </p>
-                  <p className="text-xs text-bad/90 mt-0.5">
+                  <p className="mt-1 max-w-[75ch] text-xs leading-relaxed text-bad">
                     Hay pedidos donde la fecha límite de entrega fue superada o el despacho ocurrió con atraso respecto a lo acordado.
                   </p>
                 </div>
               </div>
               <Link
                 to="/clientes"
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-bad px-3.5 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90"
+                className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg bg-bad px-4 py-2 text-[13px] font-semibold text-inverse transition-opacity hover:opacity-90"
               >
                 Ver en Kanban <ArrowRight size={14} weight="bold" />
               </Link>

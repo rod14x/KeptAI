@@ -14,10 +14,9 @@ const VARIANTS: Record<Variant, string> = {
   danger: "bg-card text-bad ring-1 ring-bad/30 hover:bg-bad-tint disabled:text-faint",
 };
 
-// Alturas pensadas para la ley de Fitts: 40px el más pequeño, 48px el principal.
+// Controles táctiles: 44px el más pequeño, 48px el principal.
 const SIZES = { sm: "h-11 px-4 text-[13px]", md: "h-11 px-5 text-sm", lg: "h-12 px-6 text-[15px]" } as const;
 
-const HOVER = { y: -1 };
 const TAP = { scale: 0.97 };
 
 export function Button({
@@ -36,11 +35,10 @@ export function Button({
       {...rest}
       disabled={off}
       aria-busy={loading || undefined}
-      whileHover={off ? undefined : HOVER}
       whileTap={off ? undefined : TAP}
       transition={spring}
       className={cx(
-        "inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold transition-colors duration-150",
+        "inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold transition-colors duration-150 disabled:pointer-events-none",
         SIZES[size],
         VARIANTS[variant],
         className,

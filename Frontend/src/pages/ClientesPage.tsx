@@ -90,7 +90,7 @@ export function ClientesPage() {
         title="Clientes y crédito"
         subtitle={<>Tablero Kanban de clientes, crédito y alerta de fechas de entrega. Vista {SCOPE_LABEL[scope]}.</>}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Segmented
               label="Modo de vista"
               value={view}
@@ -114,7 +114,7 @@ export function ClientesPage() {
         </div>
       ) : (
         <Stagger className="flex flex-col gap-6">
-          <motion.dl variants={listVariants} className="metric-strip grid md:grid-cols-2 lg:grid-cols-4">
+          <motion.dl variants={listVariants} className="metric-strip metric-strip-four grid md:grid-cols-2 lg:grid-cols-4">
             <Stat label="Crédito en uso" value={<Money cents={totals.used} />} hint={`${customers.length} clientes`} />
             <Stat
               label="Saldo vencido"
@@ -136,7 +136,7 @@ export function ClientesPage() {
           </motion.dl>
 
           <Card className="p-4 sm:p-6">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
               <Segmented
                 tone="solid"
                 label="Filtrar por estado"
@@ -167,13 +167,13 @@ export function ClientesPage() {
               </div>
             ) : view === "kanban" ? (
               /* Tablero Kanban de Clientes */
-              <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4 items-start">
+              <div className="mt-6 grid grid-cols-1 items-start gap-5 md:grid-cols-2 2xl:grid-cols-4">
                 {KANBAN_COLUMNS.map((col) => {
                   const colCustomers = rows.filter((r) => r.status === col.id);
                   return (
                     <div
                       key={col.id}
-                      className="flex flex-col gap-3 rounded-xl border border-line bg-panel/70 p-3.5 shadow-sm"
+                      className="flex min-w-0 flex-col gap-3 rounded-xl bg-panel p-3.5"
                     >
                       <div className="flex items-center justify-between border-b border-line pb-2.5">
                         <div>
@@ -260,19 +260,19 @@ function KanbanCustomerCard({ r, alert }: { r: CustomerRow; alert?: DeliveryAler
       variants={itemVariants}
       whileTap={TAP}
       className={cx(
-        "rounded-xl border p-3.5 transition-all",
+        "rounded-xl border p-3.5 transition-colors",
         isOverdue
-          ? "border-2 border-bad bg-bad-tint/30 shadow-sm dark:bg-bad-tint/20 ring-1 ring-bad/40"
-          : "border-line bg-card hover:border-line-soft hover:shadow-sm",
+          ? "border-bad/50 bg-bad-tint/30"
+          : "border-line bg-card hover:border-violet",
       )}
     >
-      <MotionLink to={`/clientes/${r.id}`} className="flex flex-col gap-2.5">
-        <div className="flex items-start justify-between gap-2">
+      <MotionLink to={`/clientes/${r.id}`} className="flex flex-col gap-2.5 rounded-md">
+        <div className="flex flex-col items-start gap-2.5">
           <div className="flex min-w-0 items-center gap-2.5">
             <Avatar name={r.name} size="md" />
             <div className="min-w-0">
-              <span className="block truncate text-sm font-bold text-ink">{r.name}</span>
-              <span className="block truncate text-[11px] text-muted">
+              <span className="block text-sm font-bold leading-snug text-ink">{r.name}</span>
+              <span className="mt-1 block text-xs leading-relaxed text-muted">
                 {[r.brand === "corpotex" ? "Corpotex" : "Unicrack", r.seller].filter(Boolean).join(" · ")}
               </span>
             </div>
@@ -287,7 +287,7 @@ function KanbanCustomerCard({ r, alert }: { r: CustomerRow; alert?: DeliveryAler
               <span className="flex items-center gap-1">
                 <WarningCircle size={13} weight="bold" /> ALERTA DE FECHA
               </span>
-              <span className="rounded bg-bad px-1 text-[10px] text-white">VENCIDO</span>
+              <span className="rounded bg-bad px-1.5 py-0.5 text-[11px] text-inverse">VENCIDO</span>
             </div>
             <p className="mt-0.5 text-xs font-semibold text-ink">{alert.reason}</p>
             <div className="mt-1 flex flex-wrap gap-x-2 text-[10px] text-muted">

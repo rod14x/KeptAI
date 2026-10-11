@@ -208,7 +208,7 @@ function MainTask({ task }: { task: Task }) {
           <motion.li key={it.id} variants={itemVariants} className="border-t border-line-soft first:border-t-0">
             <Link to={it.href} className="group -mx-2 flex min-h-20 items-center gap-3 rounded-lg px-2 py-4 hover:bg-panel">
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold">{it.title}</span>
+                <span className="block text-sm font-semibold leading-snug">{it.title}</span>
                 <span className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-muted">
                   <span className="truncate">{it.detail}</span>
                   {it.flag && <span className="shrink-0 rounded-md bg-warn-tint px-2 py-0.5 text-[11px] font-semibold text-warn">{it.flag}</span>}

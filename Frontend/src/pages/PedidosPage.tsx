@@ -166,7 +166,7 @@ function OrdersList() {
         <label className="w-full sm:w-72"><span className="sr-only">Buscar pedido</span><input aria-label="Buscar pedido" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} placeholder="Buscar por cliente o referencia" className="h-11 w-full rounded-lg border border-line bg-panel px-3 text-sm" /></label>
       </div>
       <div className="overflow-x-auto">
-        <table className="tabular w-full min-w-[700px] text-sm">
+        <table role="table" aria-label="Pedidos y saldos" className="orders-table tabular w-full text-sm sm:min-w-[700px]">
           <thead className="bg-panel text-left text-xs text-muted">
             <tr>
               <th className="px-5 py-3 font-semibold">Pedido / Cliente</th>
@@ -176,20 +176,20 @@ function OrdersList() {
               <th className="px-5 py-3 font-semibold">Estado</th>
             </tr>
           </thead>
-          <motion.tbody variants={listVariants} initial="hidden" animate="show">
+          <motion.tbody role="rowgroup" variants={listVariants} initial="hidden" animate="show">
             {filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE).map((o: OrderRow) => (
-              <motion.tr variants={itemVariants} key={o.id} className="border-t border-line-soft hover:bg-panel">
-                <td className="px-5 py-3.5">
-                  <Link to={`/pedidos/${o.id}`} className="group block">
+              <motion.tr role="row" variants={itemVariants} key={o.id} className="border-t border-line-soft transition-colors hover:bg-panel focus-within:bg-panel">
+                <td role="cell" className="order-identity">
+                  <Link to={`/pedidos/${o.id}`} className="group block rounded-sm">
                     <span className="block font-bold group-hover:underline">{o.ref}</span>
-                    <span className="block max-w-[220px] truncate text-[13px] text-muted">{o.customer}</span>
+                    <span className="mt-1 block text-[13px] leading-relaxed text-muted sm:max-w-[220px] sm:truncate">{o.customer}</span>
                   </Link>
                 </td>
-                <td className={cx("px-3 py-3.5", o.balanceCents > 0 && o.dueDate && "font-bold")}>{o.dueDate ? formatDate(o.dueDate) : <span className="font-normal text-muted">Al despachar</span>}</td>
-                <td className="px-3 py-3.5 text-right">{formatMoney(o.saleCents)}</td>
-                <td className="px-3 py-3.5 text-right font-bold">{formatMoney(o.balanceCents)}</td>
-                <td className="px-5 py-3.5">
-                  <span className="flex flex-col items-start gap-1">
+                <td role="cell" className={cx("order-due", o.balanceCents > 0 && o.dueDate && "font-bold")}><span className="mobile-cell-label" aria-hidden="true">Vencimiento</span>{o.dueDate ? formatDate(o.dueDate) : <span className="font-normal text-muted">Al despachar</span>}</td>
+                <td role="cell" className="order-amount"><span className="mobile-cell-label" aria-hidden="true">Venta</span>{formatMoney(o.saleCents)}</td>
+                <td role="cell" className="order-amount font-bold"><span className="mobile-cell-label" aria-hidden="true">Saldo</span>{formatMoney(o.balanceCents)}</td>
+                <td role="cell" className="order-status">
+                  <span className="flex flex-wrap items-start gap-1.5 sm:flex-col">
                     <OrderStateChip estado={o.estado} />
                     {o.estado === "despachada" && <FinanceChip finance={o.finance} daysToDue={o.daysToDue ?? undefined} />}
                   </span>

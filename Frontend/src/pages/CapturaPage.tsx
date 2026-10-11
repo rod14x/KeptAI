@@ -26,7 +26,7 @@ const CHANNELS = ["Yape", "Plin", "Transferencia BCP", "Transferencia BBVA", "Tr
 
 function Field({ id, label, children, hint }: { id: string; label: string; children: React.ReactNode; hint?: string }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex min-w-0 max-w-full flex-col gap-1.5">
       <label htmlFor={id} className="text-[13px] font-semibold">
         {label}
       </label>
