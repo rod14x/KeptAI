@@ -28,7 +28,7 @@ const DEMO_ACCOUNTS = [
 ];
 
 export function LoginPage() {
-  const { person } = useAuth();
+  const { person, error, retry, signOut } = useAuth();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? "/";
   const [open, setOpen] = useState(Boolean((location.state as { from?: string } | null)?.from));
@@ -52,6 +52,22 @@ export function LoginPage() {
             Acceder
           </Button>
         </nav>
+
+        {error && (
+          <div role="alert" className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-white/90 px-4 py-3 text-sm ring-1 ring-line">
+            <p className="min-w-0 flex-1">{error.message}</p>
+            {error.retryable && (
+              <>
+                <Button size="sm" onClick={retry}>
+                  Reintentar
+                </Button>
+                <Button size="sm" variant="secondary" onClick={signOut}>
+                  Cerrar sesión
+                </Button>
+              </>
+            )}
+          </div>
+        )}
 
         <Stagger className="grid items-center gap-12 py-12 lg:min-h-[calc(100dvh-104px)] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:py-16">
           {/* El mensaje entra en orden de lectura: titular, explicación y acción. */}

@@ -28,7 +28,8 @@ export const PersonSchema = z.object({
   role: RoleSchema,
   title: z.string(),
   brand: BrandSchema.nullable(),
-  since: isoDate,
+  /** Alta en el equipo: solo la semilla mock la conoce; en modo api el contrato no la expone (null). */
+  since: isoDate.nullable(),
 });
 export type Person = z.infer<typeof PersonSchema>;
 

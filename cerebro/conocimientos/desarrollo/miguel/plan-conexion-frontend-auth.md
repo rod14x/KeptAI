@@ -9,6 +9,9 @@ La aplicacion usa las APIs de Supabase Auth/Storage mediante su configuracion, i
 Para prueba real, Miguel configura cuenta Auth mediante dashboard y la membresia correspondiente en su PostgreSQL local con procedimiento parametrizado. No enviar mensajes a Andres automaticamente ni ejecutar cambios remotos. Si falta un dato indispensable, pedir solamente ese dato mientras se termina trabajo independiente.
 MIG-04 Storage sigue despues de MIG-03-C/D; su inspeccion de bucket/RLS se obtiene de Andres cuando sea necesaria. No adelantar uploader ni usar secret key para inspeccion privilegiada como sustituto del MCP.
 
+## Actualización AUTH-FE-02 — 11/10/2026
+Implementada la sesión robusta del frontend (modo api sin activar; `VITE_API_MODE` sigue en mock): `Frontend/src/context/session.ts` (SessionController), `AuthContext.tsx`, aviso en `LoginPage.tsx`, `Person.since` nullable y 34 pruebas con fixtures. Conserva `user_id`, `organization_id` y `role` de `/me`; distingue credenciales, 401, 403, 409, 503/red y respuesta inválida; no cierra una sesión válida por un fallo temporal; ignora respuestas antiguas tras logout, desmontaje o cambio de usuario. AUTH-FE-01 (cuenta Auth y membresía local) y AUTH-FE-03/04 siguen pendientes; no está probado con Supabase Auth real. Lo descrito abajo como «qué falta» de AuthContext ya no aplica, salvo el destino inicial y la vista de identidad (AUTH-FE-03).
+
 ## 1. Qué existe y qué falta
 Backend MIG-03-B implementa JWT con JWKS RS256/ES256, issuer/audiencia/exp/nbf/sub, resolución PostgreSQL por sub y GET /api/v1/me. Pruebas reejecutadas en esta revisión: 182 sin fallos; OpenAPI38 operaciones/214 ejemplos/25 negativos correctos. Son fixtures JWT/BD, no Supabase Auth real.
 Frontend ya contiene Supabase signInWithPassword/getSession, token provider, getMyContext y UserContext Zod. La respuesta user_id/organization_id/role coincide con CommonDtos.UserContext.
@@ -94,3 +97,7 @@ Distingue401/403/409/503, conserva organización y rol resueltos por backend, es
 Revisa configuración/provisión y pide solo los valores faltantes; nunca publiques secretos. Si no hay Auth real, termina el código y las pruebas independientes y declara integración parcial.
 Puedes delegar revisión acotada sin dos escritores sobre los mismos archivos. No tocar V1–V7, base manual, Supabase remoto ni servicios del usuario. No Git mutante.
 Entrega pruebas, pasos de configuración/reinicio/manual y límites. Actualiza bitácora, AGENTS, guías y snapshot skill; luego Miguel pasará el output a Codex para commit/push.
+
+### Revisión AUTH-FE-02 (Codex, 11/10/2026)
+Resultado final: 89 pruebas (43 contrato, 39 sesión, 7 adaptador Supabase) y build OK con Node Linux. Se reforzaron logout local, clasificación de errores SDK, cierre diferido condicionado a la generación, restauración/reintento y retiro de identidad/token durante otro login. Evidencia y límites en estado.md, sección Revisión Codex AUTH-FE-02.
+Siguiente entrega acotada: AUTH-FE-03. En modo api, el inicio y la navegación solo deben presentar identidad de /me y disponibilidad de módulos; no ejecutar llamadas de negocio ausentes ni combinar identidad real con datos demo. Mantener mock explícito y no activar .env.local hasta la prueba real.

@@ -27,6 +27,11 @@ Estas instrucciones aplican a este repositorio KeptAI: cerebro/ conserva conocim
 
 ## Resumen vigente de Miguel
 
+- Revisión final AUTH-FE-02 (11/10/2026): 89 pruebas frontend (43 contrato, 39 sesión, 7 adaptador), build OK con Node Linux. Corregidos logout local, errores SDK, cierre diferido condicionado, restauración/token/reintento y retiro de identidad durante nuevo login. Mock conservado; Auth real y navegador no probados. Siguiente solo AUTH-FE-03; AUTH-FE-01/04 y MIG-03-E pendientes. Detalle en estado.md.
+
+
+- AUTH-FE-02 completada con fixtures (11/10/2026): Frontend/src/context/session.ts (SessionController) + AuthContext conservan user_id/organization_id/role de /me, Bearer del ultimo evento, onAuthStateChange sin reentrancia, y distinguen credenciales, 401, 403, 409, 503/red (sesion conservada con reintento) y respuesta invalida; respuestas tardias tras logout/desmontaje/cambio de usuario se descartan. Person.since nullable (sin fecha inventada). npm test 77 pruebas y npm run build OK; modo api NO activado, Supabase Auth real no probado. Siguiente: AUTH-FE-03 (inicio de identidad); AUTH-FE-01/04 pendientes.
+
 - MIG-05-A0 recepcion WF1: POST /api/v1/ordenes/ingesta con INGESTA, JSON estricto e instancia validada;200 VALIDADO_SIN_PERSISTIR, sin crear pedido ni guardar texto.234 tests verify sin fallos, OpenAPI valido. README Middleware configura nodo final. Credencial real/URL alcanzable y reinicio manual pendientes; no cambia n8n de Isabella. MIG-05/D3 completos no cerrados.
 
 - Direccion n8n 11/10/2026: Isabella desarrolla workflows en su entorno; D3 local solo contrato/backend/coordinacion, sin sobrescribir Middleware. Muestra WF1 contrastada en Backend/docs/integracion-n8n-isabella.md: extraccion vacia invalida, body array no acreditado. No ingesta implementada ni integracion real.
