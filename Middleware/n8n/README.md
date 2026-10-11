@@ -42,7 +42,7 @@ sequenceDiagram
 
 ## Contratos
 
-Auth: n8n→backend `X-Api-Key`; backend→WF3 `X-Api-Secret`.
+Auth (cuatro canales distintos; ver [configuración de los nodos y datos pendientes](../../Backend/docs/integracion-n8n-isabella.md#mig-03-d3--conexión-de-los-nodos-finales-con-spring-alcance-local--11102026)): Evolution→WF0 y WF0→WF1/WF2 los define el entorno de Isabella; n8n→backend `X-Api-Key` (una clave por organización+instancia+alcance; INGESTA para WF1/WF2); backend→WF3 `X-Api-Secret`. Hoy solo `/ordenes/ingesta` responde (recepción); `/pagos/voucher` da 404 (sin controlador), `/ordenes/confirmar` y `/mensajes/{id}/estado` están cerradas (403).
 
 ### POST /api/v1/ordenes/ingesta — recepción disponible
 El nodo final WF1 debe usar POST, Content-Type: application/json y X-Api-Key de un servicio INGESTA activo. La instancia del JSON debe coincidir con la registrada para esa clave. Body: un objeto, no el array de items de la vista n8n.

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "02104b0286c21a9310a51ed7c32b4e2082519f81",
+  "source_head_at_generation": "dcf4238f268acb37ecf1646d7c6687bd63f5328a",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -11,8 +11,7 @@
   ],
   "source_changes_at_generation": [
     "M cerebro/conocimientos/desarrollo/miguel/estado.md",
-    " M cerebro/conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md",
-    " M cerebro/conocimientos/desarrollo/miguel/plan-continuacion-backend-integrado.md"
+    " M cerebro/conocimientos/desarrollo/miguel/plan-mig-03-d.md"
   ],
   "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
   "interview_ids": [
@@ -113,8 +112,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/estado.md",
-      "bytes": 91199,
-      "sha256": "931af42ca7fb3d6c342eb01fae1366e26ca9c253599919f715d229c1f4389362"
+      "bytes": 97429,
+      "sha256": "2212f7105e859db42b5ab30497ca01d27bba914ca319effcccaf6580fdd7bdf9"
     },
     {
       "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
@@ -143,8 +142,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/plan-mig-03-d.md",
-      "bytes": 7930,
-      "sha256": "e6c22446276791a7eda0a69f02e9334e913ef653c6281aeb0a7ea303d042aff5"
+      "bytes": 8220,
+      "sha256": "da990e3e945c555fa6a4aacd3773a3a78476ac00d0eeb7d20922df587b4efddc"
     },
     {
       "path": "conocimientos/desarrollo/miguel/preparacion-supabase-rls.md",
@@ -548,9 +547,9 @@
     },
     {
       "path": "Backend/docs/contrato-api.md",
-      "bytes": 9223,
-      "sha256": "91e92cbcc359684ef76f10e0b5de9cc14d995bf164268e27f473d79f37adbcc1",
-      "source_sha256": "91e92cbcc359684ef76f10e0b5de9cc14d995bf164268e27f473d79f37adbcc1",
+      "bytes": 9397,
+      "sha256": "7d9e604731982bc30534fdc54946616251414574f74aa9330efd3f630f4acf6d",
+      "source_sha256": "7d9e604731982bc30534fdc54946616251414574f74aa9330efd3f630f4acf6d",
       "sanitized": false
     },
     {
@@ -562,16 +561,16 @@
     },
     {
       "path": "Backend/docs/integracion-n8n-isabella.md",
-      "bytes": 7977,
-      "sha256": "9571f6d64ebaa53c01bff7b9e894fa076d00b442b006bf4237b9d7309abba2b7",
-      "source_sha256": "9571f6d64ebaa53c01bff7b9e894fa076d00b442b006bf4237b9d7309abba2b7",
+      "bytes": 16102,
+      "sha256": "876436d4b082f83fdcd6118f9767fc2036c43689aeaec20e2103f70f85e3c03a",
+      "source_sha256": "876436d4b082f83fdcd6118f9767fc2036c43689aeaec20e2103f70f85e3c03a",
       "sanitized": false
     },
     {
       "path": "Backend/docs/matriz-acceso.md",
-      "bytes": 20699,
-      "sha256": "5bfa7a33417e4b675106759b3618fc8a61e56b82481fde19b76a726b774676e7",
-      "source_sha256": "5bfa7a33417e4b675106759b3618fc8a61e56b82481fde19b76a726b774676e7",
+      "bytes": 22341,
+      "sha256": "a65452b01533f48f828cc09771b3bbe8c7fde909ff2a975accee8eebf363c9d0",
+      "source_sha256": "a65452b01533f48f828cc09771b3bbe8c7fde909ff2a975accee8eebf363c9d0",
       "sanitized": false
     },
     {
@@ -583,16 +582,16 @@
     },
     {
       "path": "Backend/docs/openapi.yaml",
-      "bytes": 211808,
-      "sha256": "4fd4ee38bb461d4e504cf20f2d830090dc7b342055e74445f6169b16423a3c3d",
-      "source_sha256": "ce3db61d7faa63db8b4624fa134f8d8abcb21607bc209cedd22aca4a4f7cdd45",
+      "bytes": 213063,
+      "sha256": "2d4a1c58ea705f7283165668e6927a2db0e2ae5f75b70e8bd59caac4f7d0b966",
+      "source_sha256": "74bd448cc442d1dbff849902cecacb22f486ea1597376e0311790cecd8e2e54f",
       "sanitized": true
     },
     {
       "path": "Backend/docs/provision-servicios-local.md",
-      "bytes": 4650,
-      "sha256": "c6addfb68a5daf52fc7f870bb2a17c41a76cb69254b54e9d95b16b0bdee5d994",
-      "source_sha256": "c6addfb68a5daf52fc7f870bb2a17c41a76cb69254b54e9d95b16b0bdee5d994",
+      "bytes": 6068,
+      "sha256": "ca8a8a78e1b55ebef39360fb36be3f12cd924cd6d8779cffb9f66a0b8181361c",
+      "source_sha256": "ca8a8a78e1b55ebef39360fb36be3f12cd924cd6d8779cffb9f66a0b8181361c",
       "sanitized": false
     },
     {
@@ -604,9 +603,9 @@
     },
     {
       "path": "Middleware/n8n/README.md",
-      "bytes": 8429,
-      "sha256": "da9365fbd54dc37bd469f732c3f5742b211190a43f76488c288302f95c54f027",
-      "source_sha256": "cfd6410783bfa1caaeee2f673db85f498326e0ba2ec69d4b8385e03d5c746ac7",
+      "bytes": 8936,
+      "sha256": "4a6e15125e79e3e2f461bf8b18690a08d4571f423720b079132795dbbc5178b0",
+      "source_sha256": "343cdfb8a4b44ef29dc7975f7b4163f7426e741e856d71a57524b7e42c086f26",
       "sanitized": true
     },
     {

@@ -6,7 +6,7 @@ Fuente: payload compartido directamente por Miguel, atribuido al entorno de Isab
 Isabella desarrolla n8n en su entorno según Miguel. No sobrescribir Middleware/n8n/WF0–WF3 ni desplegar/activar workflows desde la tarea backend. Los JSON versionados son antecedentes hasta contrastarlos con un export actualizado. MIG-03-D3 prepara el contrato, credenciales y pruebas del lado de Spring; seguridad y retención reales del entorno n8n requieren comprobación del responsable.
 
 ## Contraste con el contrato vigente
-- Operación prevista: POST /api/v1/ordenes/ingesta, body N8nIngestaOrdenRequest. D2 autoriza INGESTA; no existe controller de negocio todavía (MIG-05). Un permiso no acredita ingesta.
+- Operación: POST /api/v1/ordenes/ingesta, body N8nIngestaOrdenRequest. Estado actual (D3): **recepción implementada** (200 VALIDADO_SIN_PERSISTIR, sin crear pedido); la creación de BORRADOR, la persistencia y la idempotencia son MIG-05. Un 200 no acredita ingesta.
 - origen whatsapp e instancia isabel tienen formato admitido. El texto de instancia/JID no autentica empresa ni vendedor: la identidad deriva de X-Api-Key resuelta en PostgreSQL.
 - generadoEn usa ISO8601 con Z, compatible con OffsetDateTime; mensajesProcesados=4 está dentro del rango del contrato. Esto no prueba la calidad de la extracción.
 - extraccion={} incumple los obligatorios faltantes (lista) y confianza (número 0–1). OpenAPI y Bean Validation coinciden. No quitar validación para admitir esta muestra.
@@ -51,3 +51,53 @@ Conservar la coordinación con Isabella: no editar ni activar sus workflows desd
 
 ## Recepción WF1 solicitada posteriormente por Miguel
 Se implementa POST /api/v1/ordenes/ingesta solo para recibir y validar JSON con INGESTA e instancia auténtica. Respuesta200 VALIDADO_SIN_PERSISTIR, persistido=false, procesado=false, request_id; no201 ficticio ni cola. El diagnostico anterior sobre controller ausente queda como antecedente. Configuracion y ejemplo ficticio vigentes en Middleware/n8n/README.md. Persistencia/idempotencia/negocio de MIG-05 y conexión real con Isabella pendientes. No se creó clave real ni URL externa.
+
+
+## MIG-03-D3 — conexión de los nodos finales con Spring (alcance local) — 11/10/2026
+Preparación del lado Spring. **No se editó, activó ni ejecutó ningún workflow de Isabella, no se generó ninguna credencial de su instancia y no se hicieron llamadas externas.** Los valores de la instancia y de la URL alcanzable los confirma Isabella.
+
+### Estado de cada ruta que n8n usa
+| Ruta | Estado hoy | Qué devuelve a un servicio |
+|---|---|---|
+| `POST /api/v1/ordenes/ingesta` | **Implementada solo como recepción** | INGESTA con instancia correcta: 200 `VALIDADO_SIN_PERSISTIR`, `persistido=false`, `procesado=false`, `request_id` |
+| `POST /api/v1/pagos/voucher` | **Autorizada para INGESTA pero ausente** (sin controlador) | 404: no valida ni guarda; el transporte del voucher no está definido |
+| `POST /api/v1/ordenes/confirmar` | **Cerrada** por decisión pendiente (vendedorJid, MIG-06) | 403 a cualquier servicio |
+| `POST /api/v1/mensajes/{id}/estado` | **Cerrada** (alcance SCHEDULER solo propuesto) | 403 a cualquier servicio |
+
+### Cuatro autenticaciones distintas (no mezclar valores)
+| Canal | Dirección | Cabecera/mecanismo | Quién la valida | Estado |
+|---|---|---|---|---|
+| Evolution → WF0 `POST /webhook/evolution` | entrada a n8n | la que Isabella configure en su webhook/Evolution | n8n (Isabella) | fuera de Spring; sin verificar aquí |
+| WF0 → WF1 `/webhook/venta-cerrar` y WF2 `/webhook/voucher` | interna de n8n | credencial propia del webhook de n8n (p. ej. Header Auth) | n8n (Isabella) | los JSON versionados no la tienen; Isabella confirma cómo está su entorno |
+| n8n → Spring | saliente de n8n | `X-Api-Key` (clave aleatoria por organización + instancia + alcance) | **Spring**: SHA-256 → `resolver_servicio` | implementada; provisión local en `provision-servicios-local.md` |
+| Spring → WF3 `/webhook/enviar-mensaje` | saliente de Spring | `X-Api-Secret` | WF3 (Isabella) | propiedades listas; cliente HTTP no implementado |
+Cada una usa un valor distinto; `X-Api-Key` no se reutiliza como secreto de webhook ni al revés, ni coincide con `SUPABASE_SECRET_KEY` o el JWT. Ninguna autoriza a un vendedor: la autoría humana no se infiere de `vendedorJid`.
+
+### WF1 · nodo «Enviar pedido al backend»
+- **Método y URL:** `POST {apiUrl}/api/v1/ordenes/ingesta` (`apiUrl` sin barra final; debe ser alcanzable desde donde corre n8n: `localhost` apunta al propio n8n, no a la máquina de Miguel, y el Spring de Miguel en 8080 puede ser una versión anterior).
+- **Cabeceras (por nombre):** `X-Api-Key` (credencial de n8n tipo Header Auth con la clave INGESTA de esa instancia; nunca en el JSON del workflow ni en el nodo Config) y `Content-Type: application/json`. **No** enviar `Authorization` (credenciales simultáneas = 401) ni repetir `X-Api-Key`. `Idempotency-Key` no se usa todavía.
+- **Body:** un único objeto JSON por solicitud, nunca el array `[ {…} ]` de la vista de items. Exactamente estos campos: `origen`, `instancia`, `chatId`, `vendedorJid`, `clienteNombreChat`, `extraccion`, `hojaResumenMd`, `transcript`, `mensajesProcesados`, `generadoEn`. Campos desconocidos (p. ej. `organizacion_id`) o `extraccion` vacía = 400. `instancia` debe ser la registrada para la clave: el servidor la compara con PostgreSQL y no la deduce del JSON.
+- **Respuesta actual:** 200 con `{estado:"VALIDADO_SIN_PERSISTIR", persistido:false, procesado:false, request_id}`. **No** es una venta guardada: no avisar al vendedor de que el pedido quedó registrado. No hay 201 ni `ordenId` todavía.
+- **Errores:** 400 (cuerpo mal formado/incompleto; corregir el flujo, no reintentar igual y no volcar el cuerpo al log), 401 (clave ausente, inválida, revocada o credencial doble; detener y avisar al responsable), 403 (alcance o instancia incorrectos), 415 (no JSON), 503/timeout/5xx (reintentar con espera y tope pequeño; hoy no hay efectos secundarios y, con MIG-05, la idempotencia se derivará de `instancia + chatId + generadoEn`, así que los reintentos deben conservar `generadoEn`). Usar la salida de error del nodo, no «continuar ignorando».
+- **Retención (D-007):** el `transcript` y el resumen no se persisten en Spring ni se escriben en sus logs (comprobado con datos ficticios). Spring **no puede garantizar** lo que n8n retiene: Isabella debe verificar que las ejecuciones no guarden el cuerpo/respuesta de este nodo (ajustes de guardado de ejecuciones) y que el historial de errores no contenga chats.
+
+### WF2 · nodo «Enviar pago al backend»
+- **Método y URL previstos:** `POST {apiUrl}/api/v1/pagos/voucher`; mismas cabeceras que WF1.
+- **Body previsto (N8nPagoVoucherRequest):** `instancia`, `chatId`, `clienteJid`, `mensajeId`, `pushName`, `recibidoEn` y `extraccion` (es_voucher, tipo, banco, monto, moneda, fecha, hora, codigo_operacion, remitente, destinatario, confianza, error_parseo). **No hay campo para la imagen, su hash ni una ruta de Storage y no se inventan:** el transporte del archivo se define en MIG-04/05 con Isabella.
+- **Respuesta actual: 404.** La ruta está autorizada para INGESTA pero no existe controlador: ni valida ni guarda. Tratar el 404 como «no implementado» (sin reintentos en bucle, sin mensaje al cliente) y **no activar este nodo en producción** hasta MIG-05. Idempotencia persistente (`mensajeId`) también es MIG-05.
+
+### Comprobación local ya hecha (Spring de esta rama, base desechable, datos ficticios)
+`Backend/scripts/verificar-n8n-local.sh` (Docker, puerto 8082): 20/20 comprobaciones HTTP sobre `/ordenes/ingesta` (recepción válida conforme al esquema OpenAPI; sin clave, clave inexistente o corta = 401; clave SCHEDULER = 403; instancia distinta = 403 en ambos sentidos; `X-Api-Key` más `Authorization` o repetida = 401; JSON truncado, con contenido final, array, `extraccion` vacía, `organizacion_id` forjada y cuerpo vacío = 400; `text/plain` = 415; GET = 403), 0 filas de negocio tras las pruebas, el transcript ficticio ausente del log, y rotación/revocación con `servicio-local.sh` (la clave anterior da 401 y la nueva 200; la revocada 401). Esto **no es n8n real**.
+
+### Datos exactos que necesitamos de Isabella para la conexión real
+1. **Nombre exacto de la instancia** que n8n envía en `instancia` (¿`isabel`, `ventas-01`, otra?) y si hay una o varias instancias/organizaciones; con él Miguel registra el servicio INGESTA.
+2. **URL de Spring alcanzable desde su n8n** (host/puerto y si es HTTPS) y si n8n corre en la misma máquina; sin túneles ni despliegues improvisados.
+3. **Export actualizado de WF0–WF3 sin credenciales ni ejecuciones** (o revisión acotada) y el **body real** del nodo final de WF1 con cabeceras por nombre; una **muestra ficticia válida y otra fallida** con los nombres exactos de campo; si el nodo envía un objeto o el array de items.
+4. Cómo autentica su entorno **Evolution → WF0** y **WF0 → WF1/WF2** (sección de autenticaciones) y si el valor del webhook es distinto del `X-Api-Key`.
+5. **Retención**: ajustes de guardado de ejecuciones de WF1/WF2 (sin cuerpo ni respuesta de chats) y de logs de error.
+6. Para MIG-04/05: **cómo viajará el archivo del voucher** (subida directa a Storage, multipart a Spring u otro) y qué hash calcula, sin que Spring lo adivine.
+7. Confirmación de que **no** se activa todavía la rama «Confirmar pedido en backend» (WF0) ni el callback de WF3: siguen cerrados.
+
+
+### Destinos finales aportados por Miguel (11/10/2026)
+Backend previsto https://keptai.ejesxyz.com, n8n https://n8n.ejesxyz.com. Configurar X-Api-Key en el HTTP Request; Bearer sigue reservado a JWT de usuarios del panel. Miguel pide autenticación por clave, sin restricción adicional por dominio/IP. No afirmar dominio desplegado ni usar CORS/Origin como autenticación de servidor. Rutas finales previstas: POST /api/v1/ordenes/ingesta y POST /api/v1/pagos/voucher. Hoy solo la primera recibe sin persistir; la segunda sigue ausente. Clave real e instancia todavía no provisionadas. Transporte del archivo original de WF2 pendiente para MIG-04/05.

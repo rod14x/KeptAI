@@ -1,6 +1,6 @@
 # Provisión local de claves de servicio (MIG-03-D1)
 
-Fecha: 11/10/2026. **Guía preparada; no ejecutada** en ninguna base (ni la local activa ni Supabase). Aplica a las claves `X-Api-Key` con las que n8n se autentica ante Spring. Elección técnica de D1 (no una regla empresarial aprobada): la clave es un secreto aleatorio de 256 bits; en PostgreSQL solo se guarda su **SHA-256 en hex minúsculas** (`integracion_servicio.clave_hash`, 64 hex), calculado sobre la clave exacta en UTF-8.
+Fecha: 11/10/2026 (actualizada en MIG-03-D3). **Guía y scripts preparados; NO ejecutados sobre la base local activa ni sobre Supabase.** Los scripts se validaron únicamente en un PostgreSQL desechable (`Backend/scripts/verificar-n8n-local.sh`). Aplica a las claves `X-Api-Key` con las que n8n se autentica ante Spring. Elección técnica de D1 (no una regla empresarial aprobada): la clave es un secreto aleatorio de 256 bits; en PostgreSQL solo se guarda su **SHA-256 en hex minúsculas** (`integracion_servicio.clave_hash`, 64 hex), calculado sobre la clave exacta en UTF-8.
 
 ## Reglas
 - Una clave por organización, instancia y alcance: **dos claves independientes**, una `INGESTA` (WF1/WF2) y otra `SCHEDULER` (callback de WF3/alertas). Nunca reutilizar la misma para ambos alcances.
@@ -18,38 +18,32 @@ Backend/scripts/generar-clave-servicio.sh "$HOME/.config/keptai/n8n-scheduler-co
 ```
 El script crea cada archivo (600) con 64 caracteres hex aleatorios, rechaza destinos dentro del repositorio o existentes e imprime únicamente `hash_sha256=…` (no secreto). Si prefiere otro generador, debe producir ≥256 bits aleatorios y calcular el hash como `printf %s "$(cat archivo)" | sha256sum` (sin salto de línea).
 
-## 2. Registrar solo el hash (manual, a cargo de Miguel, con el migrador)
-Plantilla parametrizada; sustituya las variables y revise antes de ejecutar. No contiene claves ni contraseñas:
-```sql
--- psql -v org='<UUID de keptai.organizacion>' -v instancia='<nombre n8n>' \
---      -v alcance='INGESTA' -v hash='<hash_sha256 impreso por el script>' -f registrar.sql
-INSERT INTO keptai.integracion_servicio (organizacion_id, instancia, alcance, clave_hash)
-VALUES (:'org'::uuid, :'instancia', :'alcance', :'hash');
+## 2. Registrar solo el hash con `servicio-local.sh` (vista previa por defecto)
+```bash
+S=Backend/scripts/servicio-local.sh
+# 1) Vista previa (no toca ninguna base): parámetros y SQL, hash solo como prefijo.
+$S alta --org-id <uuid de una organización EXISTENTE> --instancia <instancia exacta que envía n8n> \
+        --alcance INGESTA --key-file "$HOME/.config/keptai/n8n-ingesta-corpotex.key"
+# 2) Aplicar al PostgreSQL local de BD/local (Docker), solo cuando Miguel lo decida:
+sg docker -c "$S alta ... --apply"
+$S listar  --org-id <uuid> --apply                # servicio_id, instancia, alcance, activo, prefijo de hash
+$S revocar --org-id <uuid> --servicio-id <uuid> --apply
+$S rotar   --org-id <uuid> --servicio-id <uuid> --old-key-file <actual> --new-key-file <nueva> --apply
 ```
-- `alcance` solo admite `INGESTA` o `SCHEDULER` (CHECK de V4); `clave_hash` debe ser único y `^[0-9a-f]{64}$`.
-- Revocar: UPDATE de activo=false sobre la fila correcta por id y organizacion; la siguiente peticion da401.
-- Rotar: generar una nueva clave fuera del repo, conservar su hash y reemplazar clave_hash en la misma fila, coordinando el cambio de credencial en n8n. La clave anterior deja de funcionar al confirmar el UPDATE. No insertar otra fila con el mismo triplete: UNIQUE(organizacion_id,instancia,alcance) se aplica tambien a filas inactivas. Este procedimiento no ofrece una ventana con ambas claves validas ni historial de versiones; ese soporte requeriria un diseno posterior. Verificar y habilitar activo=true solo si la reactivacion esta autorizada.
+- Todos los comandos son **vista previa** sin `--apply`. Una sola transacción por comando. Para otra base (p. ej. desechable) defina `KEPTAI_PSQL_EXEC="docker exec -i <contenedor> psql -X -q -U <usuario> -d <base>"`.
+- El archivo de clave debe estar **fuera del repositorio, con permisos 600**, y contener 32–128 caracteres ASCII visibles (lo produce `generar-clave-servicio.sh`). El script calcula el SHA-256 de la clave exacta (sin el salto de línea final) y **nunca** imprime la clave; del hash muestra solo 8 caracteres.
+- `alta` exige una organización existente y rechaza: clave ya registrada (el hash es único), y un triplete organización + instancia + alcance existente (activo o inactivo): **no hay sobrescritura silenciosa**; para cambiar una clave use `rotar`. `alcance` solo INGESTA o SCHEDULER; la `instancia` debe ser exactamente la que n8n envía en el JSON (`^[A-Za-z0-9._-]{1,100}$`) y la confirma Isabella: no se asume ninguna.
+- `revocar` pone `activo=false` en el servicio indicado (id + organización); la siguiente petición con esa clave da 401 (se consulta PostgreSQL en cada petición).
+- `rotar` reemplaza el hash de un servicio activo si el hash anterior coincide; **no hay ventana con ambas claves válidas ni historial de versiones** (coordinar el cambio de credencial en n8n). La clave anterior deja de valer al confirmar.
+- Reactivar un servicio revocado (`activo=true`) es un `UPDATE` manual con el migrador y solo si está autorizado; no hay comando.
+- Nunca ejecutar esto contra la base activa para credenciales de Isabella antes de confirmar su instancia, y nunca imprimir ni pegar claves en chats o tickets.
 
-Plantilla de rotacion (manual, con migrador, no ejecutada):
-```sql
-BEGIN;
-UPDATE keptai.integracion_servicio
-SET clave_hash = :'hash_nuevo'
-WHERE id = :'servicio'::uuid
-  AND organizacion_id = :'org'::uuid
-  AND instancia = :'instancia'
-  AND alcance = :'alcance'
-  AND clave_hash = :'hash_anterior'
-  AND activo = true
-RETURNING id;
--- Debe devolver exactamente una fila; si no, ejecutar ROLLBACK y revisar.
--- Solo tras comprobar ese resultado ejecutar COMMIT.
-```
+## 3. Configurar n8n (lado Spring listo; los workflows de Isabella no se tocan)
+Cada instancia enviará su clave en la cabecera `X-Api-Key` desde una credencial de n8n (nunca en el JSON del workflow ni en el nodo Config). La configuración exacta de los nodos finales de WF1 y WF2, la separación de las cuatro autenticaciones y los datos pendientes de Isabella están en [integracion-n8n-isabella.md](integracion-n8n-isabella.md) (sección MIG-03-D3). Brecha vigente en los antecedentes versionados: WF0–WF2 usan una sola `apiKey` y sus webhooks de entrada no exigen cabecera en los JSON del repo; la configuración real es de Isabella.
 
-- La organización debe existir y ser la correcta: el alcance y la organización quedan fijados por esta fila, no por n8n.
+## 4. Qué demuestra y qué no
+Demuestra (PostgreSQL desechable + login runtime): clave → hash → `resolver_servicio` → principal de servicio → contexto `org + servicio`; y, desde D3, la recepción HTTP de `/api/v1/ordenes/ingesta` con claves reales de prueba, rotación y revocación. No demuestra n8n real, persistencia, el voucher (la ruta no existe: 404) ni la confirmación/callback (cerradas: 403).
 
-## 3. Configurar n8n (etapa D3, no hecha)
-Los workflows actuales no están modificados. Cuando se ejecute D3, cada instancia enviará su clave por la cabecera `X-Api-Key` (credencial de n8n, nunca en el JSON del workflow). Brecha registrada: WF0–WF2 usan hoy una sola `apiKey` y ningún webhook entrante exige cabecera; WF3 valida `X-Api-Secret`. D1 no toca esos flujos.
 
-## 4. Qué demuestra y qué no D1
-Demuestra (PostgreSQL desechable + login runtime): clave → hash → `resolver_servicio` → principal de servicio → contexto `org + servicio` (usuario vacío) en la transacción del negocio. No demuestra n8n real, endpoints de negocio ni permisos por ruta (D2): las rutas de servicio siguen devolviendo 403 a un servicio válido.
+### Revisión de provisión (11/10/2026)
+Resultados de set_config descartados para no mostrar hash completo; verificador ejecutable comprueba ausencia de64 hex en stdout de alta. Rotación/revocación bloquean la fila antes de validar el estado para serializar cambios concurrentes. Alta, duplicados, rotación y revocación verificados en PostgreSQL desechable; no aprovisionados servicios reales.
