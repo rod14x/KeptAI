@@ -1,8 +1,14 @@
+> Dirección vigente D-007 (10/10/2026): leer Actores/flujos/DER v1.4, BD/revision-sql-rls.md y Backend/docs/alineacion-bd-n8n.md. IA en n8n transitoria; solo vouchers persistentes y datos estructurados, sin historial/audio. MIG-03 incorpora contexto de usuario/servicio y RLS V4/V5; MIG-05 es ingesta n8n. Referencias antiguas a cliente Gemini/guardar chats quedan reemplazadas.
+
 # Plan de implementación — Miguel y Claude Code
 
 > ID: MIG-PLAN-001. Fecha: 10 de octubre de 2026. Fuente: USR-DEV-MIGUEL-001/002 y roadmap sección Miguel. Estado: plan listo, código aún no iniciado. Responsable humano Miguel; Claude coordinador de implementación. No modifica propiedad DB/motor de Andrés.
 
+> Actualización (10/10/2026): `BD/` ya contiene el esquema de Andrés (V1-V3, no desplegado) y `Middleware/n8n/` los workflows de WhatsApp (D-005, no ejecutados). Antes de cerrar MIG-02 el contrato debe alinearse con ellos; ver [revisión MIG-REV-001](revision-integracion-andres.md). El bloqueo "DB/motor no entregados" aplica ahora solo al motor financiero y a la semilla.
+
 ## Entregables de Miguel
+D-009 incorpora [seis condiciones de cierre](../../../../BD/validaciones-pre-supabase.md) al plan. MIG-03/04 cubren acceso y Storage; MIG-05/06, idempotencia y auditoría; MIG-07, motor, integridad, concurrencia y aceptación financiera; MIG-08 integra las seis con evidencia por entorno. V6 conserva las 25 tablas vigentes; no declarar una etapa integrada completa usando mocks. Los estados históricos se consultan en estado.md.
+
 
 Backend Spring reproducible, contrato y DTOs para frontend, autenticación/permisos, evidencias privadas, extracción multimodal, revisión auditada, API de pedido persistente, endpoints/adapters del motor de Andrés, consultas/reportes/estado de cuenta y configuración/test/despliegue. Se construye en Backend/ del repo actual. BD/ guarda el diseño de Andrés; migraciones Flyway dentro del servicio y un solo dueño.
 

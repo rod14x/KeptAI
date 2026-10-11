@@ -11,6 +11,24 @@
 - Implementado: exige evidencia de ejecución; estos documentos no acreditan implementación del software.
 
 ## Dirección expresada por el equipo
+### D-009 — Validaciones obligatorias de cierre y despliegue
+Fecha: 10/10/2026. Responsable de la dirección: Miguel. Fuente: USR-DB-VALIDACION-001, instrucción directa del equipo. Estado: condiciones de cierre adoptadas; validación integral pendiente.
+
+Conservar V5/V6 como línea base y las 25 tablas vigentes de D-008. Exigir integridad financiera en PostgreSQL, idempotencia real, aislamiento multiempresa en RLS y backend, anulación/reversión trazables, concurrencia y aceptación del reto (marca/línea/centro, costos compartidos, vencimiento desde despacho y caja sin doble conteo).
+
+[DB-VAL-001: casos, responsables y evidencia](../../../BD/validaciones-pre-supabase.md) define las seis condiciones. VAL-01/03/04/05 tienen cobertura local parcial; VAL-02/06 siguen pendientes como recorridos integrados. Ni Flyway Success ni los 141 tests previos cierran estos requisitos. Esta decisión no acredita pruebas nuevas ni autoriza un despliegue remoto.
+
+
+
+### D-008 — Base inicial de 25 tablas y reproducibilidad local
+
+**Fecha:** 10/10/2026. **Responsable:** Miguel. **Estado:** alcance aprobado explicitamente por el usuario; implementacion local verificada, remoto no inspeccionado.
+
+Miguel aprueba las 25 tablas recomendadas de DB-MAP-001 y pide adaptarlas al SQL de Andres y poder reproducirlas en local. Contacto y nota_cliente quedan fuera de esta etapa. V1-V3 originales y V4-V5 previas no se reescriben; V6 retira las dos tablas solo si vacias, sin CASCADE, y aborta ante datos/dependencias. Si hay datos remotos, conservarlos mediante procedimiento autorizado antes de aplicar.
+
+PostgreSQL local mediante Docker y Flyway comparte BD/migrations/ con Supabase; el MCP de Andres administra/inspecciona el remoto, no sincroniza datos ni reemplaza JDBC. Perfil Spring local con runtime separado; Auth/Storage completos no forman parte del contenedor PostgreSQL simple.
+
+El numero 25 es base inicial, no limite para cumplir requisitos. Margen por linea y centro de resultados C-05/C-06 siguen requiriendo extensiones definidas aun sin SQL; no se pasan a fase 2. [Definicion](../../../BD/definicion-base-datos.md), [local](../../../BD/local/README.md), [trazabilidad](trazabilidad-tablas-mvp.md), [DER V6](../../diagramas/keptai-der-v6.md).
 
 ### D-005 — WhatsApp con Evolution API y n8n dentro del MVP
 
@@ -371,3 +389,11 @@ Se puede preparar la interfaz y el modelo de datos mientras se resuelven estas p
 **Referencias técnicas consultadas el 10 de octubre de 2026:** documentación oficial de [webhooks de Kommo](https://developers.kommo.com/docs/webhooks-general), [OAuth 2.0 de Kommo](https://developers.kommo.com/docs/oauth-20), [transacciones de PostgreSQL](https://www.postgresql.org/docs/18/transaction-iso.html) y [seguridad por fila](https://www.postgresql.org/docs/18/ddl-rowsecurity.html).
 
 Las prioridades, módulos, reglas, diagramas, fases y métricas de este documento son propuestas de diseño. Las referencias técnicas demuestran capacidades generales de las plataformas, no que estén disponibles o configuradas en las cuentas de Corpotex.
+
+## D-007 — Persistir vouchers, sin historial de mensajes
+
+- Fecha: 10/10/2026. Responsable: Miguel. Estado: **dirección explícita del usuario**; implementación SQL local, despliegue Supabase pendiente.
+- Fundamento: Miguel pide revisar obligatoriamente Actores, flujos y DER y corrige que no se guardan mensajes, solo vouchers. Reemplaza las entidades de contenido MENSAJE y texto saliente del DER previo.
+- Alcance: persistir pedidos, pagos, costos, decisiones y resúmenes estructurados necesarios al negocio; conservar vouchers privados. No guardar chats completos, transcript, audios, contenido saliente ni copias de esos datos en logs/auditoría/Storage/idempotencia. Metadatos mínimos de canal y envío sí permiten reintentos y confirmaciones.
+- SQL: V4/V5 y script Supabase Storage separado. No modificar ni aplicar las migraciones históricas remotamente sin revisar historial y datos.
+- IA: n8n procesa chat/audio/imágenes de forma transitoria; configurar también retención y poda de ejecuciones n8n antes de la prueba real.

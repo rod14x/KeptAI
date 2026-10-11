@@ -1,3 +1,5 @@
+> Actualización vigente MIG-02/D-007 (10/10/2026): contrato alineado en [docs/contrato-api.md](docs/contrato-api.md) y [docs/alineacion-bd-n8n.md](docs/alineacion-bd-n8n.md). SQL correctivo en BD/V4–V5; solo vouchers y datos de negocio persistentes, sin chat/audio/texto saliente. Los endpoints no están implementados; MIG-03 será JWT/API key y contexto RLS. Las secciones anteriores de propuestas se conservan como historial cuando difieran.
+
 # Backend KeptAI — desarrollo compartido
 
 Servicio Spring Boot 4.1.1 / Java 21 (Maven Wrapper). Estado MIG-01: solo arranque, perfiles, health mínimo y errores básicos; sin base de datos, captura, pagos ni JWT todavía. Miguel construye API/captura/IA; Andrés define datos/migraciones y motor financiero. No iniciar dos scaffolds independientes.
@@ -56,3 +58,24 @@ SPRING_PROFILES_ACTIVE=prod java -jar target/keptai-backend-0.0.1-SNAPSHOT.jar  
 ```
 
 Pruebas de infraestructura (`src/test/.../infra`): `PostgresInfraTests` (JDBC `SELECT` y Flyway-PostgreSQL sin migraciones contra `postgres:17-alpine`) y `SpringDataSourceInfraTests` (DataSource, JdbcTemplate y EntityManager Hibernate vía `@ServiceConnection`). Solo prueban infraestructura: no hay tablas de negocio y no acreditan integración financiera. La primera ejecución descarga la imagen Docker (~1 min).
+
+## Contrato API y DTOs — PROPUESTA MIG-02 (10/10/2026)
+
+> **Estado: propuesta técnicamente revisada; el gate de aceptación de Andrés está pendiente y MIG-02 NO está completada.** Ningún endpoint de este contrato existe: solo `GET /actuator/health` y el `401` JSON de MIG-01 son operativos. Todos los ejemplos son ficticios.
+
+- Contrato: [`docs/openapi.yaml`](docs/openapi.yaml) (OpenAPI 3.1, 30 operaciones). Matriz endpoint → dueño → estado, convenciones, supuestos, limitaciones y los 18 acuerdos que un humano debe confirmar antes de cerrar MIG-02: [`docs/contrato-api.md`](docs/contrato-api.md).
+- DTOs de transporte: `src/main/java/pe/keptai/backend/contract/` (records con Bean Validation y `@JsonProperty` explícito, enums con valor JSON explícito, `ContractJson.newMapper()` estricto). No son entidades JPA ni contienen fórmulas financieras; `web/ApiError` no se modificó.
+- Pruebas (`src/test/java/pe/keptai/backend/contract/`): cada ejemplo del YAML se deserializa en su DTO, valida y vuelve a serializarse idéntico; enums y propiedades YAML ↔ Java; matriz de la guía ↔ YAML; validación de importes (centavos, límite seguro de JS, negativos), fechas, estados y campos desconocidos; coherencia aritmética de la semilla entre ejemplos.
+
+### Validar el YAML (herramienta reproducible, sin dependencias Java)
+
+```bash
+cd Backend
+docs/tools/validate-openapi.sh        # crea docs/tools/.venv (ignorado por Git) con versiones fijadas
+```
+
+Usa `openapi-spec-validator` 0.8.4 (OpenAPI 3.1) y `jsonschema` 4.24.1 (formatos `uuid`, `date`, `date-time`, `uri`): valida la especificación y los `$ref`, cada ejemplo contra su esquema, reglas del contrato (propuesta, `Idempotency-Key` en `POST`, paginación, sin `organization_id` del cliente, cuerpos cerrados) y 25 casos negativos. Si `python3 -m venv` falla por falta de `ensurepip`, el script crea el entorno sin pip y descarga el instalador oficial `get-pip.py` (requiere red). No instala nada global.
+
+## Base local V6 (25 tablas)
+
+Ver [BD/local/README.md](../BD/local/README.md). Ejecutar db.sh up/migrate y arrancar desde Backend/ con ./mvnw spring-boot:run -Dspring-boot.run.profiles=local. El perfil lee BD/local/.env, usa runtime y no ejecuta Flyway; dev sigue sin DB. Health/401 probados; JWT/API/motor siguen pendientes.

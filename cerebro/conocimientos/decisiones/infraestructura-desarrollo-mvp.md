@@ -15,7 +15,7 @@ Stack: React/TypeScript/Vite en Cloudflare Workers Static Assets; Spring Boot/Ja
 
 **Andrés es responsable del diseño de base de datos**, además del motor financiero. Miguel revisa el esquema y construye API/captura; no se incorpora un quinto integrante sin nombre. [Modelo de base propuesto](modelo-base-datos-mvp.md). Germán ejecuta el [roadmap frontend](roadmap-german-frontend.md) basado en el prompt recibido, coordinado con Isabella.
 
-Para el trabajo vigente de Miguel (D-005), usar Backend/ de este checkout; cerebro/ mantiene documentación y BD/ conserva diseño de Andrés. No crear otro repo. Un monolito modular Spring Boot basta al comienzo: captura, pedidos/pagos, cobranza y resultados/caja. Se conserva el núcleo de D-003 y no se avanza pitch. Esta documentación no acredita implementación ni despliegue.
+Para el trabajo vigente de Miguel (D-006), usar Backend/ de este checkout; cerebro/ mantiene documentación y BD/ conserva diseño de Andrés. No crear otro repo. Un monolito modular Spring Boot basta al comienzo: captura, pedidos/pagos, cobranza y resultados/caja. Se conserva el núcleo de D-003 y no se avanza pitch. Esta documentación no acredita implementación ni despliegue.
 
 ## 2. Tecnologías por componente
 

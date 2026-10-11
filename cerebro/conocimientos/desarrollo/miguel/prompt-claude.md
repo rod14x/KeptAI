@@ -1,3 +1,5 @@
+> Dirección vigente D-007 (10/10/2026): leer Actores/flujos/DER v1.4, BD/revision-sql-rls.md y Backend/docs/alineacion-bd-n8n.md. IA en n8n transitoria; solo vouchers persistentes y datos estructurados, sin historial/audio. MIG-03 incorpora contexto de usuario/servicio y RLS V4/V5; MIG-05 es ingesta n8n. Referencias antiguas a cliente Gemini/guardar chats quedan reemplazadas.
+
 # Prompt de inicio para Claude Code — Miguel
 
 Desde la raíz del repo, iniciar una conversación para desarrollo (la conversación de diagramas tiene otro objetivo). Copiar:
@@ -6,7 +8,7 @@ Desde la raíz del repo, iniciar una conversación para desarrollo (la conversac
 Trabajaremos la parte de Miguel del backend KeptAI. Usa keptai-conocimiento.
 Lee AGENTS.md, CLAUDE.md y:
 - cerebro/conocimientos/INDICE.md;
-- cerebro/conocimientos/decisiones/decisiones-del-proyecto.md (D-003/D-004/D-005);
+- cerebro/conocimientos/decisiones/decisiones-del-proyecto.md (D-003/D-004/D-005 WhatsApp con n8n/D-006 trabajo de Miguel);
 - cerebro/conocimientos/desarrollo/miguel/tarea-general.md;
 - cerebro/conocimientos/desarrollo/miguel/plan-implementacion.md;
 - cerebro/conocimientos/desarrollo/miguel/tareas.md;

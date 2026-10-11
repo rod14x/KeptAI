@@ -1,0 +1,355 @@
+{
+  "name": "WF0 Router Evolution",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## WF0 Router Evolution\nVersión 1.0.0 | 2026-10-10 | Autor: Isabelita\n\nWebhook único de Evolution API (evento MESSAGES_UPSERT). Comandos del vendedor: '/cerrar' y '/ok ORD-123'. Foto de cliente: se manda a lectura de voucher. Ignora grupos y estados.",
+        "height": 220,
+        "width": 520
+      },
+      "id": "5bf0e217-4f19-4913-a06b-a6c320d9696f",
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -520,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "evolution",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "e2fca8b2-b2da-45f9-ad45-16d2181f41d9",
+      "name": "Webhook Evolution",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -440,
+        0
+      ],
+      "webhookId": "c1cfe350-49b4-4bf8-8ca3-9771da196277"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cbe23049-302c-4d37-9cce-048ea9c3abae",
+              "name": "evoUrl",
+              "value": "https://TU-EVOLUTION-API",
+              "type": "string"
+            },
+            {
+              "id": "7cac424c-8b76-4079-b212-873cd1952b34",
+              "name": "evoKey",
+              "value": "CAMBIAR_APIKEY_EVOLUTION",
+              "type": "string"
+            },
+            {
+              "id": "dd63b286-83ee-41e7-aeda-b7bb3fda6420",
+              "name": "apiUrl",
+              "value": "https://TU-BACKEND-SPRINGBOOT",
+              "type": "string"
+            },
+            {
+              "id": "5aae7acc-593d-4e5a-a8d5-8c0c66cb8e8d",
+              "name": "apiKey",
+              "value": "CAMBIAR_API_KEY_BACKEND",
+              "type": "string"
+            },
+            {
+              "id": "78428146-0d20-453e-8c0e-585a6c3b0213",
+              "name": "n8nUrl",
+              "value": "https://TU-N8N",
+              "type": "string"
+            },
+            {
+              "id": "06459e4f-596b-42c6-b973-5c45425dccb5",
+              "name": "llmUrl",
+              "value": "https://api.openai.com/v1",
+              "type": "string"
+            },
+            {
+              "id": "cc92186e-4648-4a85-9b5c-dbb937decc96",
+              "name": "llmKey",
+              "value": "CAMBIAR_LLM_KEY",
+              "type": "string"
+            },
+            {
+              "id": "3e95ec4d-3a7f-4b62-ab01-466ddad5512c",
+              "name": "llmModel",
+              "value": "gpt-4o-mini",
+              "type": "string"
+            },
+            {
+              "id": "56403dd7-cea1-4ccf-af21-a6f4350e5f04",
+              "name": "visionModel",
+              "value": "gpt-4o-mini",
+              "type": "string"
+            },
+            {
+              "id": "3f233c6e-fb96-4256-a52c-2844123f4189",
+              "name": "transcribeModel",
+              "value": "whisper-1",
+              "type": "string"
+            },
+            {
+              "id": "e633d48a-8d7b-47fa-8540-72f7cfc19826",
+              "name": "sharedSecret",
+              "value": "CAMBIAR_SECRETO_COMPARTIDO",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8bf19287-e269-4861-bb9a-dd7ef4fbcfff",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst b = $('Webhook Evolution').first().json.body || {};\nconst ev = String(b.event || '').toLowerCase().replace('_', '.');\nconst d = b.data || {};\nconst key = d.key || {};\nconst jid = key.remoteJid || '';\nconst msg = d.message || {};\nconst text = (msg.conversation || msg.extendedTextMessage?.text || msg.imageMessage?.caption || '').trim();\nconst out = {\n  route: 'ignorar', instance: b.instance, remoteJid: jid, fromMe: !!key.fromMe, messageId: key.id,\n  messageType: d.messageType, pushName: d.pushName || '', text,\n  vendedorJid: b.sender || '', ts: d.messageTimestamp || null,\n};\nif (ev === 'messages.upsert' && jid && !jid.endsWith('@g.us') && jid !== 'status@broadcast') {\n  const low = text.toLowerCase();\n  if (out.fromMe && low.startsWith('/cerrar')) out.route = 'cerrar';\n  else if (out.fromMe && low.startsWith('/ok')) { out.route = 'confirmar'; out.ref = text.split(/\\s+/)[1] || ''; }\n  else if (!out.fromMe && d.messageType === 'imageMessage') out.route = 'voucher';\n}\nreturn [{ json: out }];\n"
+      },
+      "id": "7bba3ee8-3e94-4ecf-8173-0298cbac0825",
+      "name": "Clasificar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "e34059a1-47cf-47f2-afe6-7f8966adee6b",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "cerrar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cerrar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "8d8881c7-7e39-4a7a-83d4-57c26dabb7e9",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "confirmar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "confirmar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "2128a81e-dd97-4061-9215-a13a84b5d4f7",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "voucher",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "voucher"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3f4e82b-28b1-4120-85fe-299b5bc9bc2d",
+      "name": "Ruta",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.n8nUrl }}/webhook/venta-cerrar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": []
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ instance: $json.instance, remoteJid: $json.remoteJid, vendedorJid: $json.vendedorJid, pushName: $json.pushName }) }}",
+        "options": {}
+      },
+      "id": "a67f21ee-c839-4ab8-944b-6a9f6dcaf551",
+      "name": "Llamar WF1 cerrar venta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.apiUrl }}/api/v1/ordenes/confirmar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "={{ $('Config').first().json.apiKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ref: $json.ref, instancia: $json.instance, chatId: $json.remoteJid, vendedorJid: $json.vendedorJid, mensajeId: $json.messageId }) }}",
+        "options": {}
+      },
+      "id": "4f5174fd-19d6-4374-af4c-825a35fa0d86",
+      "name": "Confirmar pedido en backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.n8nUrl }}/webhook/voucher",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": []
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ instance: $json.instance, remoteJid: $json.remoteJid, messageId: $json.messageId, pushName: $json.pushName, ts: $json.ts }) }}",
+        "options": {}
+      },
+      "id": "98f85619-f72d-48e8-a2b6-61ee1e424c6d",
+      "name": "Llamar WF2 voucher",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        140
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Evolution": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Clasificar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clasificar": {
+      "main": [
+        [
+          {
+            "node": "Ruta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruta": {
+      "main": [
+        [
+          {
+            "node": "Llamar WF1 cerrar venta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Confirmar pedido en backend",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Llamar WF2 voucher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

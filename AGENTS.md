@@ -26,8 +26,20 @@ Estas instrucciones aplican a este repositorio KeptAI: cerebro/ conserva conocim
 - Sin commit/push/reset/clean/cambio de rama automático. Miguel revisa Git y publica. No controlar terminales ajenas ni lanzar agentes en Herdr desde esta tarea.
 
 ## Resumen vigente de Miguel
+- D-009 adoptada: BD/validaciones-pre-supabase.md define seis condiciones obligatorias. V5/V6 y 25 tablas se conservan; integridad/RLS/reversión/concurrencia parciales en local, idempotencia HTTP y aceptación integrada pendientes. MIG-03 a MIG-08 deben registrar evidencia por entorno. No confundir Flyway Success o 141 tests previos con cierre para Supabase.
 
-- Última tarea completada: MIG-01 (10/10/2026): Spring Boot 4.1.1/Java 21 en Backend/, Maven Wrapper, perfiles, health mínimo y test de arranque; `./mvnw verify` y arranque local verificados. Dependencias JPA/Flyway+PostgreSQL/OAuth2 resource server/Testcontainers añadidas (BOM 4.1.1); `./mvnw verify` 7 tests con PostgreSQL real por Testcontainers; dev/test sin BD, prod exige datasource.
-- Próxima tarea: MIG-02 (contrato OpenAPI y DTOs), tras acordar campos con Andrés. No iniciada.
-- Bloqueos conocidos: Docker operativo en sesión nueva (si falla por grupo: reiniciar o `sg docker -c`); DB/motor de Andrés, Supabase y clave Gemini no disponibles. JDK 21 resuelto. Usar siempre ./mvnw con JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64.
-- Bitácora: cerebro/conocimientos/desarrollo/miguel/estado.md. Solo arranque e infraestructura; los 7 tests cubren contexto, health, 401 y conectividad PostgreSQL/JDBC/Hibernate/Flyway-módulo, no endpoints, JWT, entidades ni negocio. MIG-01 cerrado con acuerdos pendientes con Andrés (lista en estado.md).
+
+- D-008 aprobada por Miguel: base V6 de 25 tablas, V1-V5 intactas, contacto/notas excluidas solo si vacias. Docker/Flyway local en 127.0.0.1:5433; BD/local/db.sh y perfil Spring local con runtime. Supabase remoto/Auth/Storage no instalados aqui; C-05/C-06 siguen pendientes. DER V6 y guia BD/local/README.md vigentes.
+
+- DB-MAP-001 (`cerebro/conocimientos/decisiones/trazabilidad-tablas-mvp.md`): 27 tablas mapeadas a fuente/requisito, no conteo obligatorio. D-008 aprueba 25 actuales, contacto/nota_cliente fuera de esta etapa; C-05/C-06 con extensiones sin SQL. Mantener diferencia entre negocio y diseno tecnico.
+
+- Base definida por solicitud de Miguel: `BD/definicion-base-datos.md` (DB-DEF-001). V5 historica = 27 tablas; V6 vigente = 25; costo por item/transferencia interna definidos, aun sin SQL. Uploader servidor y caja verificada distintos de aplicaciones.
+
+- Rama `backend-miguel`, base merge `1b5375e`. Trabajo local sin commit/push; respaldo previo en stash conservado.
+- MIG-01 completo. MIG-02: entrega de contrato/DTOs alineada con SQL y WF0–WF3; revisión final y pruebas en estado.md. Endpoints de negocio, JWT y motor siguen sin implementar; quedan interfaces/semilla y upload de voucher WF2 por acordar con Andrés.
+- D-007 (Miguel): persistir vouchers privados y datos estructurados de negocio; no mensajes, transcript, audios ni texto saliente. Consultar obligatoriamente `cerebro/conocimientos/decisiones/actores-flujos-y-der-mvp.md` v1.4 y `BD/revision-sql-rls.md`. Canal y outbox solo metadatos.
+- BD: V1–V3 de Andrés intactas; V4/V5 corrigen contenido, RLS/roles/contexto, integridad financiera, costos e índices. Runtime sin propiedad/BYPASSRLS, organización + usuario o servicio activo local a cada transacción. Storage separado en `BD/supabase/vouchers_storage.sql`.
+- Supabase conectado por MCP según Miguel; remoto no inspeccionado ni modificado aquí. Supabase remoto sin .env/conexión de app acreditada; .env/JDBC local probados por D-008. Revisar historial/roles/datos antes de aplicar; V4 aborta si hay mensajes previos o schema distinto de keptai. No repair/purga automática.
+- Claude agotó límite de sesión (reset informado 22:50 Lima); Codex terminó cambios autorizados y registra handoff. No MIG-03 adelantada. Java21, ./mvnw, Docker operativo; no global mvn Windows.
+- Skill keptai regenerada con cerebro, BD, Middleware y contrato Backend/docs. Graphify es instantánea previa a D-007, no diseño vigente. Diagramas históricos conservados.
+- Bitácora y resultados: `cerebro/conocimientos/desarrollo/miguel/estado.md`. Próxima etapa: MIG-03, sin abrir otros agentes ni contactar equipo automáticamente.

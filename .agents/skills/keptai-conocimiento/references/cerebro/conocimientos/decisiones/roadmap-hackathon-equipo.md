@@ -2,11 +2,15 @@
 
 > ID: PROP-ROADMAP-001. Versión: 1.3. Fecha: 10 de octubre de 2026.
 > Estado: plan de ejecución propuesto; no acredita tareas hechas; Spring Boot y exclusión de ERP/CRM son dirección vigente del usuario D-004.
+> Actualización D-005 (10/10/2026): WhatsApp entra al MVP mediante Evolution API y n8n, como prueba con un número y un contacto; n8n invoca la IA y entrega JSON a Spring, que sigue siendo el único backend con reglas. Plazo de crédito de 15 a 30 días y una sola obligación por orden; el vendedor aprueba el crédito y la mora solo genera un aviso, sin bloqueo. KeptAI no integra el banco: concilia. Detalle en [actores, flujos y DER](actores-flujos-y-der-mvp.md). Lo que este documento diga en contrario queda como antecedente.
+> Pendiente: asignar responsable de los workflows de n8n y de la instancia de Evolution API; este roadmap aún no reparte esas tareas.
 > Roles: USR-EQUIPO-002/003; Miguel y Andrés conocen Spring. Andrés define la base de datos; Germán adopta USR-DESIGN-001 con ajustes documentados.
 > Ventana de referencia: sábado 10, 15:30, a domingo 11, 09:30; zona America/Lima. Son 18 horas restantes del esquema de 24 horas aportado, no 24 horas adicionales. Confirmar entrega y horarios con la organización.
 > Alcance de esta documentación: desarrollo, integración, QA y preparación técnica de la demostración. **No se asignan tareas de pitch, slides ni exposición.**
 
 ## 1. Resultado que debe existir al terminar
+Cierre obligatorio D-009: [DB-VAL-001](../../../BD/validaciones-pre-supabase.md). Andrés entrega integridad, transacciones, anulación y concurrencia del motor; Miguel entrega idempotencia HTTP, contexto de organización y validación de permisos; Germán e Isabella comprueban el recorrido y las cifras mostradas. Consolidación por marca/línea/centro y costos compartidos pertenecen a la aceptación del reto y siguen pendientes, junto con vencimiento desde despacho y caja sin doble conteo. No declarar listo para Supabase por una migración exitosa.
+
 
 Un prototipo funcional de la capa de caja de KeptAI, con tres pantallas y un mismo conjunto de datos, que permita:
 
@@ -22,7 +26,7 @@ La demostración de referencia utiliza **3 vouchers y un chat**. Además debe ha
 
 ### Entrada de datos y límites vigentes
 
-No tenemos datos ERP/CRM. El MVP funciona sin esos sistemas: chat pegado/cargado, vouchers/audio subidos manualmente, registros/CSV y semilla ficticia de pedidos, costos, vencimientos y caja. Sin conectores, credenciales ni exportaciones ERP/CRM en B0–B8. La base propia es autoridad para la demo y conserva procedencia; no acredita sustituir el registro oficial empresarial. C-03 conserva extracción real IA cuando está disponible y revisión humana; entrada manual no se presenta como integración.
+No tenemos datos ERP/CRM. El MVP funciona sin esos sistemas: chat pegado/cargado, vouchers/audio subidos manualmente, registros/CSV y semilla ficticia de pedidos, costos, vencimientos y caja. Sin conectores, credenciales ni exportaciones ERP/CRM en B0–B8. La base propia es autoridad para la demo y conserva procedencia; no acredita sustituir el registro oficial empresarial. C-03 conserva extracción real IA cuando está disponible y revisión humana; entrada manual no se presenta como integración. D-005 añade la entrada por WhatsApp (Evolution API + n8n) con un número y un contacto de prueba; la carga manual queda como respaldo.
 
 ## 2. Equipo: quién construye qué
 
@@ -83,7 +87,7 @@ No tenemos datos ERP/CRM. El MVP funciona sin esos sistemas: chat pegado/cargado
 - Germán conecta y estabiliza el frontend; Miguel conecta captura y servicios; Andrés controla persistencia y cálculo. Cada frontera tiene una única fórmula y un contrato compartido.
 - Cada persona prueba su módulo. Andrés coordina QA integrado; no queda como único responsable de encontrar errores ajenos.
 - Cada checkpoint dura como máximo 10 minutos: avance verificable, bloqueo y siguiente dependencia. Los cambios de alcance se resuelven en conjunto, sin convertir a Isabella en PM de tiempo completo.
-- Trabajar en ramas propias y dividir archivos. En un checkout compartido, evitar escritores simultáneos sobre el mismo archivo. Por D-005, el trabajo de Miguel usa Backend/ de este checkout y cerebro/ conserva documentos; BD/ es diseño de Andrés, Frontend/ el trabajo frontend. No crear otro repo.
+- Trabajar en ramas propias y dividir archivos. En un checkout compartido, evitar escritores simultáneos sobre el mismo archivo. Por D-006, el trabajo de Miguel usa Backend/ de este checkout y cerebro/ conserva documentos; BD/ es diseño de Andrés, Frontend/ el trabajo frontend. No crear otro repo.
 
 **Fundamento de roles:** [contexto del equipo](../fuentes/contexto-equipo-hackathon-2026.md), USR-EQUIPO-002. Las tareas concretas son una propuesta de este roadmap.
 
@@ -109,7 +113,7 @@ Margen del pedido y agrupaciones, producción propia/tercerizada, centro product
 
 ### Infraestructura recomendada para empezar
 
-La base propuesta queda definida: **React + TypeScript + Vite en Cloudflare Workers Static Assets; Spring Boot/Java en Render (Docker) como único backend; Supabase para PostgreSQL, Auth y Storage privado; Gemini API para captura; GitHub Actions y pruebas para integrar.** Spring Boot se elige por dirección del usuario y experiencia confirmada de Miguel/Andrés en Spring. No requiere datos de ERP/CRM; no hay dependencias de esos conectores. Es la recomendación para este equipo y ventana de desarrollo, pendiente de una prueba de acceso y despliegue; no acredita servicios ya contratados.
+La base propuesta queda definida: **React + TypeScript + Vite en Cloudflare Workers Static Assets; Spring Boot/Java en Render (Docker) como único backend; Supabase para PostgreSQL, Auth y Storage privado; Gemini API para captura; GitHub Actions y pruebas para integrar.** Spring Boot se elige por dirección del usuario y experiencia confirmada de Miguel/Andrés en Spring. No requiere datos de ERP/CRM; no hay dependencias de esos conectores. Es la recomendación para este equipo y ventana de desarrollo, pendiente de una prueba de acceso y despliegue; no acredita servicios ya contratados. D-005 añade n8n y Evolution API para WhatsApp; Spring sigue siendo el único backend con reglas.
 
 - **Germán:** frontend técnico, configuración SPA/HTTPS, sesión, cliente de API y hosting web.
 - **Isabella:** interfaz, reglas funcionales y validación de cómo se muestran revisión, saldo, margen y caja.
@@ -124,8 +128,8 @@ La base propuesta queda definida: **React + TypeScript + Vite en Cloudflare Work
 2. **API:** Spring Boot/Java 21, Spring MVC/Security y contrato OpenAPI versionado; Render Web Service; JWT verificado y claves IA solo en servidor. [Spring Boot](https://docs.spring.io/spring-boot/system-requirements.html), [Render Docker](https://render.com/docs/docker).
 3. **Base:** PostgreSQL con Spring Data JPA/Hibernate, JDBC PostgreSQL, migraciones Flyway y RLS/grants por organización; contexto de organización verificado por Spring Security/servicios Spring, rol runtime limitado y esquema de negocio no expuesto a Data API. Pago, aplicación y auditoría se confirman en una transacción Spring `@Transactional`/PostgreSQL, no en llamadas independientes del navegador. [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security).
 4. **Evidencias:** Storage privado con rutas por organización y enlaces autorizados; no publicar fotos de vouchers. [Storage](https://supabase.com/docs/guides/storage/buckets/fundamentals).
-5. **IA:** Gemini API, modelo inicial configurable `gemini-3.5-flash-lite`, JSON validado y confirmación humana. Probar texto/imagen/audio antes de fijar configuración. La IA no confirma fondos ni calcula el saldo. [Modelo](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite).
-6. **Alertas:** reglas y trabajos persistidos en PostgreSQL; Render Cron Job ejecutando el mismo código Java en modo job al estabilizar vencimientos, sin worker largo en memoria. Los envíos reales dependen de canal autorizado. [Cron](https://render.com/docs/cronjobs).
+5. **IA:** Gemini API, modelo inicial configurable `gemini-3.5-flash-lite`, JSON validado y confirmación humana. Probar texto/imagen/audio antes de fijar configuración. La IA no confirma fondos ni calcula el saldo. Por D-005 la llamada a la IA se hace desde n8n y Spring valida el JSON recibido. [Modelo](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite).
+6. **Alertas:** reglas y trabajos persistidos en PostgreSQL; Render Cron Job ejecutando el mismo código Java en modo job al estabilizar vencimientos, sin worker largo en memoria. Por D-005, los envíos al cliente salen por n8n (WF3) y Evolution API, solo al contacto de prueba. [Cron](https://render.com/docs/cronjobs).
 7. **QA y CI:** Vitest para frontend, JUnit/Spring Boot Test/MockMvc y PostgreSQL para API y transacciones y Playwright para el recorrido móvil; GitHub Actions ejecuta typecheck, pruebas y build.
 
 #### Entornos y despliegue
@@ -134,7 +138,7 @@ Desarrollo local y proyecto remoto de **demo con datos ficticios**. El piloto re
 
 Antes de H1 deben estar desplegados una página, una API Spring Boot autenticada y un pedido persistente. El primer recorrido de infraestructura es **sesión → carga privada → extracción revisable → pedido consultable**. Si falla, se resuelve antes de sumar funcionalidades. Migraciones y lockfile se versionan; backups de base y evidencias se tratan por separado antes de datos reales.
 
-Web móvil forma parte del objetivo. Instalación PWA, n8n, Kafka, Jenkins, Pinecone, Kotlin y servidores adicionales quedan fuera de la base inicial. Si un servicio recomendado no puede desplegarse en la prueba del primer bloque, documentar una única alternativa disponible; no construir dos plataformas a la vez.
+Web móvil forma parte del objetivo. n8n y Evolution API entran por D-005. Instalación PWA, Kafka, Jenkins, Pinecone, Kotlin y servidores adicionales quedan fuera de la base inicial. Si un servicio recomendado no puede desplegarse en la prueba del primer bloque, documentar una única alternativa disponible; no construir dos plataformas a la vez.
 
 ### Fronteras de backend
 
@@ -303,13 +307,13 @@ La cobertura se verifica con evidencias; una casilla en un plan no demuestra una
 - Confirmar stack, cuentas, presupuesto/API de IA y mecanismo de despliegue con pruebas mínimas.
 - Revisar un ejemplo de pedido/pago con el mentor, si está disponible, y precisar costos, políticas y datos.
 - Registrar si 80% y 30% tienen cálculo válido; mientras tanto quedan fuera de afirmaciones cuantificadas de impacto.
-- Definir inicio de crédito y plazos configurables: la idea usa 15/30 días y la entrevista menciona 30/45. No suponer una única regla real.
+- Plazo de crédito de 15 a 30 días por orden, contado desde el despacho, con una sola obligación y sin cuotas (definido por Isabel, 10/10/2026). La entrevista menciona 30/45; no es la regla del MVP.
 - Confirmar organización/entidad/marca de la semilla ficticia sin inventar RUC. Datos y conectores ERP/CRM quedan fuera del MVP por D-004; no condicionan el plan.
 
 ### Recortes en orden
 
-1. Mantener alertas y estados de cuenta dentro de la aplicación; no añadir envío real por WhatsApp/correo sin acceso y configuración comprobados.
-2. Conservar entrada manual de chat/vouchers/audio, registros/CSV y semilla ficticia; ningún conector ERP/CRM entra al MVP, tampoco como contingencia.
+1. Mantener alertas internas y estados de cuenta dentro de la aplicación; el envío por WhatsApp se limita al número y contacto de prueba de D-005, sin correo.
+2. Conservar entrada manual de chat/vouchers/audio, registros/CSV y semilla ficticia como respaldo de la entrada por WhatsApp; ningún conector ERP/CRM entra al MVP, tampoco como contingencia.
 3. Reducir refinamientos visuales, personalización, gráficos extra e instalación PWA; conservar revisión, saldo, margen y cuatro semanas.
 4. Reducir cantidad de escenarios del recorrido principal, conservando las excepciones como pruebas. No quitar el centro productivo del alcance sin identificar una brecha frente a C-06.
 5. Si falla IA, permitir edición manual y mantener la muestra preprocesada como respaldo identificado. Eso permite probar finanzas, pero **no** acredita captura con IA ni cumplimiento completo de C-03/C-04.
