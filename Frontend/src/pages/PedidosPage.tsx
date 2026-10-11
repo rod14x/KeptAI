@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { Link, useSearchParams } from "react-router";
-import { CalendarBlank, ChatCircleText, CheckCircle, Factory, Hourglass, NotePencil, Truck, UploadSimple, WarningCircle } from "@phosphor-icons/react";
+import { CalendarBlank, ChatCircleText, CheckCircle, Factory, Hourglass, NotePencil, Truck, UploadSimple, WarningCircle } from "../components/ui/icons";
 import { getOrderBoard, getOrders, type OrderBoardDTO, type OrderCard, type OrderColumnId, type OrderRow } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { SCOPE_LABEL, useScope } from "../context/ScopeContext";

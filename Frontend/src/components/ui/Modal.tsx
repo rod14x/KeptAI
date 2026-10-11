@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { X } from "@phosphor-icons/react";
+import { X } from "./icons";
 import { DialogShell } from "./Dialog";
 
 export function Modal({ open, title, subtitle, onClose, children }: { open: boolean; title: string; subtitle?: string; onClose: () => void; children: ReactNode }) {

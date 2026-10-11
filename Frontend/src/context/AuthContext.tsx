@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserId(p.id);
         setSignedOut(false);
         resolve(p);
-      }, 600);
+      }, 250);
     });
 
   const signOut = () => {

@@ -20,7 +20,7 @@ import {
   WarningCircle,
   XCircle,
   IdentificationCard,
-} from "@phosphor-icons/react";
+} from "../components/ui/icons";
 import { getCustomer, type CustomerDetailDTO, type TimelineItem } from "../api/client";
 import { actions } from "../api/store";
 import { useApi } from "../hooks/useApi";

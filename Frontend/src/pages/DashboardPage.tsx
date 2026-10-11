@@ -3,7 +3,7 @@ import { MotionLink, Stagger, itemVariants, listVariants, press } from "../compo
 import { PageHeader } from "../components/ui/PageHeader";
 import { useState } from "react";
 import { Link } from "react-router";
-import { ArrowRight, Bank, CaretDown, CaretRight, HandCoins, ChartLineUp, Info, MagnifyingGlass, Receipt, Sparkle, Wallet, WarningCircle } from "@phosphor-icons/react";
+import { ArrowRight, Bank, CaretDown, CaretRight, HandCoins, ChartLineUp, Info, MagnifyingGlass, Receipt, Sparkle, Wallet, WarningCircle } from "../components/ui/icons";
 import { getDashboard, type AssistantNote, type DashboardDTO } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { SCOPE_LABEL, useScope } from "../context/ScopeContext";

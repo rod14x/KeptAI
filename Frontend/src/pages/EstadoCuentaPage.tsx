@@ -1,7 +1,7 @@
 import { motion } from "motion/react";
 import { Stagger, itemVariants, listVariants } from "../components/motion/primitives";
 import { useParams } from "react-router";
-import { CalendarBlank, CheckCircle, Clock, LinkBreak, WarningCircle } from "@phosphor-icons/react";
+import { CalendarBlank, CheckCircle, Clock, LinkBreak, WarningCircle } from "../components/ui/icons";
 import { getStatement, type StatementDTO } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { Chip, type Tone } from "../components/ui/Chip";

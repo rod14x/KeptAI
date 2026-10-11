@@ -1,4 +1,4 @@
-import { Image, Microphone, EyeSlash } from "@phosphor-icons/react";
+import { Image, Microphone, EyeSlash } from "../ui/icons";
 import type { ChatMessage, Evidence } from "../../api/schemas";
 import { cx, formatDateTime, formatMoney } from "../../lib/format";
 

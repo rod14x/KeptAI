@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
-import { List, X } from "@phosphor-icons/react";
+import { List, X } from "../ui/icons";
 import { overlayVariants, softSpring } from "../motion/primitives";
 
 const DRAWER_IN = { x: "-100%" };
@@ -11,10 +11,25 @@ import { ScopeSelector } from "./ScopeSelector";
 import { SearchBox } from "./SearchBox";
 import { Logo } from "./Logo";
 import { UserMenu } from "./UserMenu";
+import { useAuth } from "../../context/AuthContext";
+import { prefetch } from "../../lib/prefetch";
 
 export function AppLayout() {
   const [drawer, setDrawer] = useState(false);
   const { pathname } = useLocation();
+  const { person } = useAuth();
+
+  // Con la sesión abierta, precargar en segundo plano las pantallas que usa este rol.
+  useEffect(() => {
+    if (!person) return;
+    const byRole = {
+      vendedor: ["pedidos", "orden", "clientes", "cliente", "captura", "perfil"],
+      administracion: ["pedidos", "orden", "conciliacion", "cobranza", "clientes", "cliente", "captura", "resultado", "perfil"],
+      gerencia: ["pedidos", "orden", "clientes", "cliente", "resultado", "cobranza", "perfil"],
+      jefe_taller: ["taller", "perfil"],
+    } as const;
+    prefetch([...byRole[person.role]]);
+  }, [person?.role]); // eslint-disable-line react-hooks/exhaustive-deps
   const current = [...NAV].reverse().find((n) => (n.end ? pathname === n.to : pathname.startsWith(n.to)));
 
   useEffect(() => {
@@ -56,7 +71,7 @@ export function AppLayout() {
 
       <div className="flex min-w-0 flex-col lg:py-3 lg:pr-3">
         <div className="flex min-h-[100dvh] flex-col bg-panel lg:min-h-[calc(100dvh-24px)] lg:rounded-[24px] lg:ring-1 lg:ring-line/70">
-          <header className="sticky top-0 z-20 border-b border-line/80 bg-panel/90 backdrop-blur-md lg:rounded-t-[24px]">
+          <header className="sticky top-0 z-20 border-b border-line/80 bg-panel lg:rounded-t-[24px]">
             <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:h-[72px] lg:px-8">
               <button
                 onClick={() => setDrawer(true)}

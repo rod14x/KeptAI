@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { motion, type HTMLMotionProps } from "motion/react";
-import { CircleNotch } from "@phosphor-icons/react";
+import { CircleNotch } from "./icons";
 import { spring } from "../motion/primitives";
 import { cx } from "../../lib/format";
 

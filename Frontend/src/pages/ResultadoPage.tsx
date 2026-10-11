@@ -5,7 +5,7 @@ import { Segmented } from "../components/ui/Segmented";
 import { Meter } from "../components/ui/Meter";
 import { Fragment, useState } from "react";
 import { Link } from "react-router";
-import { ArrowRight, CaretDown, DownloadSimple, Factory, Info, Printer, Storefront, Stack } from "@phosphor-icons/react";
+import { ArrowRight, CaretDown, DownloadSimple, Factory, Info, Printer, Storefront, Stack } from "../components/ui/icons";
 import { getResults, ordersCsv, type ResultRow, type ResultsDTO } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { SCOPE_LABEL, useScope } from "../context/ScopeContext";

@@ -1,4 +1,4 @@
-import { Lock } from "@phosphor-icons/react";
+import { Lock } from "../ui/icons";
 import type { Scope } from "../../api/schemas";
 import { SCOPE_LABEL, useScope } from "../../context/ScopeContext";
 import { Segmented } from "../ui/Segmented";

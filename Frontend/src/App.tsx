@@ -5,10 +5,11 @@ import { ScopeProvider } from "./context/ScopeContext";
 import { ToastProvider } from "./context/ToastContext";
 import { AppLayout } from "./components/layout/AppLayout";
 import { EmptyState, Skeleton } from "./components/ui/States";
+// El login es la puerta de entrada: va en el bundle inicial para evitar una descarga encadenada.
+import { LoginPage } from "./pages/LoginPage";
 
 // Cada pantalla se descarga al abrirla: el primer render no paga Recharts ni páginas que el rol no usa.
 const page = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, name: K) => lazy(() => load().then((m) => ({ default: m[name] })));
-const LoginPage = page(() => import("./pages/LoginPage"), "LoginPage");
 const DashboardPage = page(() => import("./pages/DashboardPage"), "DashboardPage");
 const PedidosPage = page(() => import("./pages/PedidosPage"), "PedidosPage");
 const ConciliacionPage = page(() => import("./pages/ConciliacionPage"), "ConciliacionPage");

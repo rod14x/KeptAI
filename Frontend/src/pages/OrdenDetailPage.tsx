@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { Link, useParams } from "react-router";
-import { ArrowLeft, ChatCircleText, Check, CheckCircle, Factory, Hourglass, Info, LockOpen, Prohibit, Robot, Truck, UploadSimple, WarningCircle } from "@phosphor-icons/react";
+import { ArrowLeft, ChatCircleText, Check, CheckCircle, Factory, Hourglass, Info, LockOpen, Prohibit, Robot, Truck, UploadSimple, WarningCircle } from "../components/ui/icons";
 import { getOrder, MESSAGE_LABEL, type OrderDetailDTO } from "../api/client";
 import { actions, type PaymentTerms } from "../api/store";
 import { PLAZO_MAX, PLAZO_MIN } from "../api/schemas";

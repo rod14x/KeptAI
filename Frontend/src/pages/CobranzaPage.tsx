@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { Link, useSearchParams } from "react-router";
-import { ArrowClockwise, Bell, ChatCircleText, CheckCircle, Info } from "@phosphor-icons/react";
+import { ArrowClockwise, Bell, ChatCircleText, CheckCircle, Info } from "../components/ui/icons";
 import { getCobranza, MESSAGE_LABEL, type AlertRow, type MessageRow, type ReceivableRow } from "../api/client";
 import { actions } from "../api/store";
 import { useApi } from "../hooks/useApi";

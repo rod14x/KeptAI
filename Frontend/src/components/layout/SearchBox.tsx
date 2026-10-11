@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
-import { MagnifyingGlass } from "@phosphor-icons/react";
+import { MagnifyingGlass } from "../ui/icons";
 import { popVariants } from "../motion/primitives";
 import { getState } from "../../api/store";
 import { cx, formatMoney } from "../../lib/format";

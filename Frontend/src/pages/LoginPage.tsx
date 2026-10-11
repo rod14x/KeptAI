@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useState, type FormEvent } from "react";
 import { motion } from "motion/react";
 import { Item, Stagger, itemVariants, listVariants } from "../components/motion/primitives";
 import { DialogShell } from "../components/ui/Dialog";
@@ -6,17 +6,16 @@ import { DialogShell } from "../components/ui/Dialog";
 const ERROR_IN = { opacity: 0, y: -4 };
 const ERROR_SHOW = { opacity: 1, y: 0 };
 import { Navigate, useLocation, useNavigate } from "react-router";
-import { Eye, EyeSlash, X } from "@phosphor-icons/react";
+import { Eye, EyeSlash, X } from "../components/ui/icons";
 import { Logo } from "../components/layout/Logo";
 import { Button } from "../components/ui/Button";
 import { DemoBadge } from "../components/ui/States";
-import { CashFlowChart } from "../components/charts/CashFlowChart";
-import { buildWeeks } from "../api/client";
-import { createSeed } from "../api/seed";
+import { Skeleton } from "../components/ui/States";
+import { prefetch } from "../lib/prefetch";
 import { useAuth } from "../context/AuthContext";
 import { cx } from "../lib/format";
 
-const PREVIEW_WEEKS = buildWeeks(createSeed(), "consolidado");
+const LoginPreviewChart = lazy(() => import("../components/charts/LoginPreviewChart"));
 
 const DEMO_ACCOUNTS = [
   { label: "Gerencia", email: "patricia.zapata@keptai.pe" },
@@ -32,6 +31,9 @@ export function LoginPage() {
   const from = (location.state as { from?: string } | null)?.from ?? "/";
   const [open, setOpen] = useState(Boolean((location.state as { from?: string } | null)?.from));
 
+  // Mientras la persona escribe, se descarga el dashboard: entrar es inmediato.
+  useEffect(() => prefetch(["dashboard"]), []);
+
   if (person) return <Navigate to={from} replace />;
 
   return (
@@ -42,7 +44,7 @@ export function LoginPage() {
       <div aria-hidden="true" className="pointer-events-none absolute right-[18%] top-[58%] -z-10 size-28 rounded-full bg-white/70" />
 
       <div className="mx-auto flex max-w-[1280px] flex-col px-4 pt-4 sm:px-6 lg:px-8">
-        <nav className="flex h-[72px] items-center justify-between rounded-[22px] bg-white/80 px-4 shadow-[0_1px_2px_rgb(23_23_26/0.04)] ring-1 ring-white backdrop-blur sm:px-6">
+        <nav className="flex h-[72px] items-center justify-between rounded-[22px] bg-white/80 px-4 shadow-[0_1px_2px_rgb(23_23_26/0.04)] ring-1 ring-white sm:px-6">
           <Logo />
           <Button size="sm" onClick={() => setOpen(true)}>
             Acceder
@@ -66,7 +68,7 @@ export function LoginPage() {
           </motion.section>
 
           <motion.section variants={itemVariants} aria-label="Vista previa del panel" className="relative">
-            <div className="rounded-[28px] bg-white/60 p-2.5 shadow-[var(--shadow-lift)] ring-1 ring-white backdrop-blur lg:rotate-[-1.2deg]">
+            <div className="rounded-[28px] bg-white/70 p-2.5 shadow-[var(--shadow-lift)] ring-1 ring-white lg:rotate-[-1.2deg]">
               <div className="rounded-[22px] bg-card p-5 ring-1 ring-line/70 sm:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -76,7 +78,9 @@ export function LoginPage() {
                   <DemoBadge />
                 </div>
                 <div className="mt-4">
-                  <CashFlowChart weeks={PREVIEW_WEEKS} compact />
+                  <Suspense fallback={<Skeleton className="h-[284px] rounded-2xl" />}>
+                    <LoginPreviewChart />
+                  </Suspense>
                 </div>
               </div>
             </div>
@@ -84,7 +88,7 @@ export function LoginPage() {
         </Stagger>
       </div>
 
-      <DialogShell open={open} onClose={() => setOpen(false)} labelledBy="login-title" overlayClassName="bg-[#2a2440]/30 backdrop-blur-md" panelClassName="max-w-[460px] rounded-[28px] p-6 sm:p-9">
+      <DialogShell open={open} onClose={() => setOpen(false)} labelledBy="login-title" overlayClassName="bg-[#2a2440]/45" panelClassName="max-w-[460px] rounded-[28px] p-6 sm:p-9">
         <LoginForm from={from} onClose={() => setOpen(false)} />
       </DialogShell>
     </div>

@@ -34,7 +34,7 @@ import type { Preferences } from "../lib/preferences";
 // Cliente de datos. Hoy lee el store de demostración con una latencia simulada;
 // al integrar Spring, cada función pasa a ser un fetch a VITE_API_BASE_URL con el mismo DTO.
 
-const LATENCY_MS = 240;
+const LATENCY_MS = 120;
 
 function respond<T>(build: (s: DemoState) => T): Promise<T> {
   return new Promise((resolve, reject) => {

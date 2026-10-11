@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-import { ArrowLeft, Bank, CheckCircle, CopySimple, Info, LinkSimple, NotePencil, Trash, WarningCircle, ChatCircleText, UploadSimple } from "@phosphor-icons/react";
+import { ArrowLeft, Bank, CheckCircle, CopySimple, Info, LinkSimple, NotePencil, Trash, WarningCircle, ChatCircleText, UploadSimple } from "../components/ui/icons";
 import { getEvidence, getQueue, queueGroup, type EvidenceDetailDTO, type PaymentCard, type QueueFilter } from "../api/client";
 import { actions, type ActionResult } from "../api/store";
 import type { FieldKey, Person } from "../api/schemas";

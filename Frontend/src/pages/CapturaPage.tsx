@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { motion } from "motion/react";
 import { useNavigate, useSearchParams } from "react-router";
-import { Image, Info, Receipt, UploadSimple, NotePencil } from "@phosphor-icons/react";
+import { Image, Info, Receipt, UploadSimple, NotePencil } from "../components/ui/icons";
 import { getState } from "../api/store";
 import { actions } from "../api/store";
 import { isConfirmed, orderBalance } from "../api/domain";

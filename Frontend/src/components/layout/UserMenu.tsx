@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { popVariants, spring } from "../motion/primitives";
-import { CaretDown, ClockCounterClockwise, GearSix, SignOut, SlidersHorizontal, UserCircle } from "@phosphor-icons/react";
+import { CaretDown, ClockCounterClockwise, GearSix, SignOut, SlidersHorizontal, UserCircle } from "../ui/icons";
 import { Avatar } from "../ui/Avatar";
 import { useAuth } from "../../context/AuthContext";
 import { ROLE_LABEL } from "../../lib/permissions";

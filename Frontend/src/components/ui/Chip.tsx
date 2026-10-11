@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { CheckCircle, CircleHalf, Clock, CopySimple, Factory, Flag, Hourglass, LinkBreak, NotePencil, PaperPlaneTilt, Prohibit, Scales, Truck, WarningCircle, XCircle } from "@phosphor-icons/react";
+import { CheckCircle, CircleHalf, Clock, CopySimple, Factory, Flag, Hourglass, LinkBreak, NotePencil, PaperPlaneTilt, Prohibit, Scales, Truck, WarningCircle, XCircle } from "./icons";
 import type { OrderState, OutgoingMessage } from "../../api/schemas";
 import type { CreditStatus, MatchKind, OrderFinance } from "../../api/domain";
 import { cx } from "../../lib/format";

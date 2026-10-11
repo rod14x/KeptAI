@@ -61,7 +61,7 @@ export function DialogShell({
             tabIndex={-1}
             variants={overlayVariants}
             onClick={() => closeRef.current()}
-            className={cx("absolute inset-0 bg-ink/35 backdrop-blur-[2px]", overlayClassName)}
+            className={cx("absolute inset-0 bg-ink/40", overlayClassName)}
           />
           <motion.div
             ref={panel}

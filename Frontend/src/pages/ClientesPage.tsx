@@ -4,7 +4,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { Segmented } from "../components/ui/Segmented";
 import { Meter } from "../components/ui/Meter";
 import { useMemo, useState } from "react";
-import { CaretRight, HandCoins, MagnifyingGlass } from "@phosphor-icons/react";
+import { CaretRight, HandCoins, MagnifyingGlass } from "../components/ui/icons";
 import { getCustomers, type CustomerRow } from "../api/client";
 import type { CreditStatus } from "../api/domain";
 import { useApi } from "../hooks/useApi";

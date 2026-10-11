@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Factory, Hourglass, Truck } from "@phosphor-icons/react";
+import { Factory, Hourglass, Truck } from "../components/ui/icons";
 import { getTaller, type TallerOrder } from "../api/client";
 import { actions } from "../api/store";
 import { useApi } from "../hooks/useApi";

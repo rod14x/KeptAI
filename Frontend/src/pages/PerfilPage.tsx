@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { Stagger, itemVariants, listVariants, spring } from "../components/motion/primitives";
 import { Segmented } from "../components/ui/Segmented";
 import { Link, useSearchParams } from "react-router";
-import { CalendarBlank, Check, EnvelopeSimple, Lock, Minus, FloppyDisk, Storefront } from "@phosphor-icons/react";
+import { CalendarBlank, Check, EnvelopeSimple, Lock, Minus, FloppyDisk, Storefront } from "../components/ui/icons";
 import { getProfile, type ProfileDTO } from "../api/client";
 import { actions } from "../api/store";
 import type { Scope } from "../api/schemas";

@@ -1,7 +1,7 @@
 import { NavLink } from "react-router";
 import { motion } from "motion/react";
 import { spring } from "../motion/primitives";
-import { ArrowCounterClockwise, Bell, ChartPieSlice, Factory, Kanban, Receipt, SquaresFour, UploadSimple, UsersThree } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, Bell, ChartPieSlice, Factory, Kanban, Receipt, SquaresFour, UploadSimple, UsersThree } from "../ui/icons";
 import type { Role } from "../../api/schemas";
 import { Logo } from "./Logo";
 import { useAuth } from "../../context/AuthContext";

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { motion, type HTMLMotionProps } from "motion/react";
 import { itemVariants } from "../motion/primitives";
-import { ArrowClockwise, CloudSlash, Flask, Tray } from "@phosphor-icons/react";
+import { ArrowClockwise, CloudSlash, Flask, Tray } from "./icons";
 import { Button } from "./Button";
 import { cx, formatMoney } from "../../lib/format";
 
