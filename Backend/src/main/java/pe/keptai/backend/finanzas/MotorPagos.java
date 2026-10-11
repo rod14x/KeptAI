@@ -2,7 +2,6 @@ package pe.keptai.backend.finanzas;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -10,37 +9,21 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Supplier;
-import org.slf4j.MDC;
-import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 import pe.keptai.backend.finanzas.MotorFinancieroException.Codigo;
 import pe.keptai.backend.finanzas.ResultadosPago.*;
-import pe.keptai.backend.web.RequestIdFilter;
 
-/**
- * Motor de pagos (Andres, roadmap §2): verificar, detectar/marcar duplicado, aplicar y anular.
- * Cada operacion es una transaccion: contexto RLS local, bloqueo pago -> obligacion (mismo orden que el trigger V5),
- * reglas, estados derivados, alertas y auditoria se confirman o revierten juntos. El saldo se calcula, nunca se recibe.
- * La idempotencia HTTP (Idempotency-Key, solicitud_idempotente) la coordina el adapter MIG-05/07 alrededor de estas llamadas.
- */
-public class MotorPagos {
+public class MotorPagos extends TransaccionFinanciera {
 
 	private static final Set<String> ESCRITURA = Set.of("ADMIN");
 	private static final Set<String> LECTURA_PAGOS = Set.of("VENDEDOR", "ADMIN", "GERENTE", "INGESTA", "SCHEDULER");
 	private static final Set<String> LECTURA_SALDOS = Set.of("VENDEDOR", "ADMIN", "GERENTE", "SCHEDULER");
 
-	private final JdbcTemplate jdbc;
-	private final TransactionTemplate tx;
-
 	public MotorPagos(JdbcTemplate jdbc, PlatformTransactionManager transactionManager) {
-		this.jdbc = jdbc;
-		this.tx = new TransactionTemplate(transactionManager);
+		super(jdbc, transactionManager);
 	}
 
-	/** Registra la verificacion de fondos (simulada y rotulada en la demo). No aplica ni cambia saldos. */
 	public Verificacion verificarPago(ContextoFinanciero ctx, UUID pagoId) {
 		return enTransaccion(ctx, ESCRITURA, () -> {
 			PagoFila p = bloquearPago(pagoId);
@@ -64,12 +47,10 @@ public class MotorPagos {
 		});
 	}
 
-	/** Pago anterior con la misma referencia, monto y fecha (regla de duplicado D-005). Solo consulta. */
 	public Optional<UUID> detectarDuplicado(ContextoFinanciero ctx, UUID pagoId) {
 		return enTransaccion(ctx, LECTURA_PAGOS, () -> buscarOriginal(leerPago(pagoId, false)));
 	}
 
-	/** Marca un pago recibido como duplicado del original y abre la alerta de revision. Idempotente. */
 	public Duplicado marcarDuplicado(ContextoFinanciero ctx, UUID pagoId) {
 		return enTransaccion(ctx, ESCRITURA, () -> {
 			PagoFila p = bloquearPago(pagoId);
@@ -101,10 +82,6 @@ public class MotorPagos {
 		});
 	}
 
-	/**
-	 * Aplica un pago verificado a una obligacion. Rechaza duplicado, no verificado, huerfano, otra moneda/cliente y
-	 * sobreaplicacion; repetir la misma aplicacion tras consumir el pago se rechaza sin alterar la deuda.
-	 */
 	public Aplicacion aplicarPago(ContextoFinanciero ctx, UUID pagoId, UUID obligacionId, BigDecimal monto) {
 		BigDecimal importe = validarImporte(monto);
 		return enTransaccion(ctx, ESCRITURA, () -> {
@@ -173,7 +150,6 @@ public class MotorPagos {
 		});
 	}
 
-	/** Anula una aplicacion con motivo; no borra historia. Reanular se rechaza y no resta dos veces. */
 	public Anulacion anularAplicacion(ContextoFinanciero ctx, UUID aplicacionId, String motivo) {
 		if (motivo == null || motivo.isBlank() || motivo.length() > 500) {
 			throw new MotorFinancieroException(Codigo.VALIDATION_ERROR, "Motivo obligatorio (maximo 500 caracteres)");
@@ -229,34 +205,6 @@ public class MotorPagos {
 	private record ObligacionFila(UUID id, BigDecimal monto, String moneda, String estado, UUID clienteId) {
 	}
 
-	private <T> T enTransaccion(ContextoFinanciero ctx, Set<String> roles, Supplier<T> trabajo) {
-		try {
-			return tx.execute(estado -> {
-				jdbc.queryForObject("""
-						SELECT set_config('app.organizacion_id', ?, true) || set_config('app.usuario_id', ?, true)
-						       || set_config('app.servicio_id', ?, true)""", String.class,
-						ctx.organizacionId().toString(), texto(ctx.usuarioId()), texto(ctx.servicioId()));
-				String actor = jdbc.queryForObject("SELECT keptai_private.actor_actual()", String.class);
-				if (actor == null) {
-					throw new MotorFinancieroException(Codigo.FORBIDDEN,
-							"Sin usuario o servicio activo en la organizacion");
-				}
-				if (!roles.contains(actor)) {
-					throw new MotorFinancieroException(Codigo.FORBIDDEN, "El rol " + actor + " no puede ejecutar esta operacion");
-				}
-				return trabajo.get();
-			});
-		} catch (MotorFinancieroException e) {
-			throw e;
-		} catch (DataAccessException e) {
-			throw traducir(e);
-		}
-	}
-
-	private static String texto(UUID id) {
-		return id == null ? "" : id.toString();
-	}
-
 	private PagoFila leerPago(UUID pagoId, boolean bloquear) {
 		List<PagoFila> filas = jdbc.query("""
 				SELECT id, cliente_id, monto, moneda, fecha_pago, codigo_operacion, fase, estado_conciliacion,
@@ -291,7 +239,6 @@ public class MotorPagos {
 		return filas.get(0);
 	}
 
-	/** Original = pago anterior (creado_en, id) no duplicado con la misma referencia, monto y fecha. */
 	private Optional<UUID> buscarOriginal(PagoFila p) {
 		if (p.codigoOperacion() == null || p.codigoOperacion().isBlank()) {
 			return Optional.empty();
@@ -317,7 +264,6 @@ public class MotorPagos {
 				 WHERE obligacion_id = ? AND anulada_en IS NULL""", BigDecimal.class, obligacionId);
 	}
 
-	/** Estado persistido coherente con el saldo calculado y la fecha local de la organizacion. */
 	private void recalcularObligacion(UUID obligacionId) {
 		jdbc.update("""
 				UPDATE keptai.obligacion_cobro o
@@ -331,7 +277,6 @@ public class MotorPagos {
 				 WHERE o.id = ? AND s.obligacion_id = o.id AND org.id = o.organizacion_id""", obligacionId);
 	}
 
-	/** APLICADO si todo lo aplicado salda sus obligaciones; PARCIAL si alguna sigue con saldo. */
 	private void recalcularPago(UUID pagoId) {
 		jdbc.update("""
 				UPDATE keptai.pago p
@@ -380,20 +325,6 @@ public class MotorPagos {
 		return filas.get(0);
 	}
 
-	/** Auditoria append-only en la misma transaccion; actor USUARIO = usuario del contexto (politica V7). */
-	private void auditar(ContextoFinanciero ctx, String operacion, String entidad, UUID entidadId, String cambiosSql,
-			Object... parametros) {
-		Object[] args = new Object[5 + parametros.length];
-		args[0] = ctx.usuarioId();
-		args[1] = operacion;
-		args[2] = entidad;
-		args[3] = entidadId;
-		System.arraycopy(parametros, 0, args, 4, parametros.length);
-		args[args.length - 1] = MDC.get(RequestIdFilter.MDC_KEY);
-		jdbc.update("INSERT INTO keptai.evento_auditoria (organizacion_id, usuario_id, actor, operacion, entidad, entidad_id, cambios, request_id) "
-				+ "VALUES (keptai.app_organizacion_actual(), ?, 'USUARIO', ?, ?, ?, " + cambiosSql + ", ?)", args);
-	}
-
 	private static BigDecimal validarImporte(BigDecimal monto) {
 		if (monto == null || monto.signum() <= 0) {
 			throw new MotorFinancieroException(Codigo.VALIDATION_ERROR, "El importe debe ser positivo");
@@ -402,27 +333,5 @@ public class MotorPagos {
 			throw new MotorFinancieroException(Codigo.VALIDATION_ERROR, "El importe admite como maximo dos decimales");
 		}
 		return monto.setScale(2, RoundingMode.UNNECESSARY);
-	}
-
-	/** Errores SQL de invariantes/permisos/bloqueos a codigos de dominio; el resto se propaga. */
-	private static RuntimeException traducir(DataAccessException e) {
-		Throwable t = e;
-		while (t != null && !(t instanceof SQLException)) {
-			t = t.getCause();
-		}
-		String estado = t == null ? null : ((SQLException) t).getSQLState();
-		String detalle = t == null ? e.getMessage() : t.getMessage();
-		if (estado == null) {
-			return e;
-		}
-		return switch (estado) {
-			case "42501" -> new MotorFinancieroException(Codigo.FORBIDDEN, "Operacion no autorizada por la base", e);
-			case "23514" -> detalle != null && detalle.contains("Sobreaplicacion")
-					? new MotorFinancieroException(Codigo.INSUFFICIENT_BALANCE, "Sobreaplicacion rechazada por la base", e)
-					: new MotorFinancieroException(Codigo.INVALID_STATE, "Invariante financiero rechazado por la base", e);
-			case "40P01", "40001", "55P03" ->
-					new MotorFinancieroException(Codigo.CONCURRENCY_CONFLICT, "Conflicto de concurrencia; reintentar", e);
-			default -> e;
-		};
 	}
 }

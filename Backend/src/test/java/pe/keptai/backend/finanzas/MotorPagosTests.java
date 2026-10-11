@@ -17,7 +17,7 @@ import pe.keptai.backend.finanzas.MotorFinancieroException.Codigo;
 import pe.keptai.backend.finanzas.ResultadosPago.*;
 import static org.assertj.core.api.Assertions.*;
 
-/** Motor de pagos sobre V1-V7 + semilla, con login runtime real (sin propiedad ni BYPASSRLS): QA-03..06, VAL-01/03/04/05. */
+/** Motor de pagos sobre V1-V8 + semilla, con login runtime real (sin propiedad ni BYPASSRLS): QA-03..06, VAL-01/03/04/05. */
 class MotorPagosTests {
  static final PostgreSQLContainer PG=new PostgreSQLContainer("postgres:17-alpine");
  static final UUID A=u("10000000-0000-4000-8000-000000000001"), B=u("10000000-0000-4000-8000-000000000002");

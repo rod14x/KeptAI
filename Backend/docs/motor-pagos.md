@@ -51,7 +51,34 @@ Coinciden con los códigos de dominio propuestos en `openapi.yaml`:
 - **Mapeo a DTOs del contrato** (`PaymentDtos`, `ReceivableDtos`) y paginación.
 - **`display_code` de pagos (V-00x):** no hay columna en V7. Hay que acordar dónde guardarlo.
 
+## Motor de cobranza (AND-COBRANZA-001)
+
+`MotorCobranza` usa la misma base transaccional (`TransaccionFinanciera`).
+
+| Método | Rol | Qué hace |
+|---|---|---|
+| `registrarDespacho(ctx, ordenId, fecha, actaStoragePath)` | ADMIN, JEFE_TALLER | Inserta el acta. El trigger V8 exige orden liberada o en producción, la pasa a DESPACHADA, fija `vence_en = fecha + plazo` y recalcula el estado. `venceEn` llega null al taller, que no lee obligaciones. |
+| `evaluarCobranza(ctx, fechaCorte)` | ADMIN, SCHEDULER | Corrida idempotente del job (ver detalle abajo). |
+
+`evaluarCobranza` hace, en este orden:
+1. Recalcula estados (MORA, PAGADA…) con `keptai_private.actualizar_estados_cobranza()`.
+2. Abre una alerta MORA_TEMPRANA por obligación a los +3 días.
+3. Programa recordatorios −3, 0 y +3 en `envio_notificacion`, a las 09:00 hora local y con clave `obligacion:tipo`. Solo programa fechas que aún no pasaron y solo si el cliente tiene `canal_whatsapp`.
+4. Cancela los recordatorios pendientes de deudas saldadas o anuladas.
+
+Errores nuevos: un despacho repetido o una orden no liberada devuelven `INVALID_STATE` con el mensaje de la base; una orden inexistente devuelve `NOT_FOUND`. El envío por WhatsApp lo hace WF3 a partir del outbox; el texto se genera al enviar y no se guarda (D-007).
+
+**Para MIG-07:** falta un `@Scheduled`, o un Render Cron, que llame a `evaluarCobranza` con un `ContextoFinanciero.servicio` de alcance SCHEDULER por organización, con la fecha local de Lima.
+
 ## Pruebas
+
+`MotorCobranzaTests` (7) verifica:
+- despacho del taller → vencimiento y orden despachada;
+- despacho antiguo → MORA;
+- reglas: roles, acta, fecha previa al inicio de producción, orden inexistente, repetido, borrador y acta inmutable;
+- job idempotente con horarios exactos;
+- mora temprana a los +3 días;
+- corrección de estados y cancelación de recordatorios.
 
 `MotorPagosTests` (10) usa PostgreSQL 17, V1→V7 por Flyway, la semilla demo y el login `motor_app` miembro de `keptai_runtime`. Cubre:
 - **QA-03:** recibido sin verificar.

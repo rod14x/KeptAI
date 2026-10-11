@@ -8,7 +8,7 @@ import org.junit.jupiter.api.*;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import static org.assertj.core.api.Assertions.*;
 
-/** Migraciones reales V1-V7, rol no propietario, tenant y transacciones reales; sin Supabase remoto. */
+/** Migraciones reales V1-V8, rol no propietario, tenant y transacciones reales; sin Supabase remoto. */
 class SchemaRlsTests {
  static final PostgreSQLContainer PG=new PostgreSQLContainer("postgres:17-alpine");
  static final String A="10000000-0000-4000-8000-000000000001", B="10000000-0000-4000-8000-000000000002";
@@ -54,7 +54,7 @@ class SchemaRlsTests {
  }
  static String application(String id,String amount){return "INSERT INTO aplicacion_pago(id,organizacion_id,pago_id,obligacion_id,monto_aplicado,aplicado_por) VALUES ('"+id+"','"+A+"','"+PA+"','"+RA+"',"+amount+",'"+UA+"')";}
  @Test void migrationsAndPrivacy()throws Exception{try(Connection c=owner()){
-  assertThat(scalar(c,"SELECT count(*) FROM keptai.flyway_schema_history WHERE success AND version IS NOT NULL")).isEqualTo("7");
+  assertThat(scalar(c,"SELECT count(*) FROM keptai.flyway_schema_history WHERE success AND version IS NOT NULL")).isEqualTo("8");
   assertThat(scalar(c,"SELECT count(*) FROM information_schema.tables WHERE table_schema='keptai' AND table_name IN ('mensaje','mensaje_saliente','contacto','nota_cliente')")).isEqualTo("0");
   assertThat(scalar(c,"SELECT count(*) FROM information_schema.columns WHERE table_schema='keptai' AND column_name IN ('contenido_texto','texto','mensaje_id')")).isEqualTo("0");
   assertThat(scalar(c,"SELECT count(*) FROM pg_tables WHERE schemaname='keptai' AND tablename<>'flyway_schema_history' AND NOT rowsecurity")).isEqualTo("0");

@@ -1,6 +1,7 @@
 -- KeptAI - Semilla ficticia reiniciable (roadmap PROP-ROADMAP-001 §6). Responsable: Andres.
 -- DATOS FICTICIOS DE DEMOSTRACION: no son registros de Corpotex. Mismos UUID/importes que Backend/docs/openapi.yaml.
--- Ejecutar como migrador/propietario sobre V7 (BD/local/db.sh seed). No es migracion Flyway.
+-- Ejecutar como migrador/propietario sobre V8 (BD/local/db.sh seed). No es migracion Flyway.
+-- Sigue el flujo real: credito -> produccion -> obligacion -> despacho (V8 fija vence_en) -> pagos -> estados recalculados.
 -- Reiniciable: borra y recrea solo las organizaciones DEMO de abajo. Aborta si esos UUID pertenecen a otra organizacion.
 -- No crea comprobantes: no existe archivo en Storage (DB-DEF-001 §8). Cargo interno 320 requiere V8 (transferencia_interna).
 BEGIN;
@@ -10,8 +11,8 @@ DO $$ BEGIN
  IF current_setting('keptai.permitir_semilla', true) IS DISTINCT FROM 'demo' THEN
   RAISE EXCEPTION 'Semilla bloqueada: ejecutar con SET keptai.permitir_semilla = ''demo'' (db.sh seed lo hace)';
  END IF;
- IF NOT EXISTS (SELECT 1 FROM keptai.flyway_schema_history WHERE version = '7' AND success) THEN
-  RAISE EXCEPTION 'La semilla requiere el esquema V7';
+ IF NOT EXISTS (SELECT 1 FROM keptai.flyway_schema_history WHERE version = '8' AND success) THEN
+  RAISE EXCEPTION 'La semilla requiere el esquema V8 (despacho fija vencimiento)';
  END IF;
  IF EXISTS (SELECT 1 FROM keptai.organizacion
             WHERE id IN ('10000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000002')
@@ -82,8 +83,8 @@ INSERT INTO cliente (id, organizacion_id, razon_social, tipo) VALUES
  ('33333333-3333-4333-8333-333333333333', '10000000-0000-4000-8000-000000000002', 'Cliente de otra organizacion', 'EMPRESA');
 
 -- ---------------------------------------------------------------------------
--- Pedidos. Se insertan como PENDIENTE_APROBACION; tras la decision de credito del vendedor
--- pasan a CERRADA/DESPACHADA (el gate fn_validar_liberacion exige credito aprobado).
+-- Pedidos. Se insertan como PENDIENTE_APROBACION; tras la decision de credito del vendedor pasan a
+-- EN_PRODUCCION (el gate fn_validar_liberacion exige credito aprobado) y el despacho los deja DESPACHADA.
 -- ---------------------------------------------------------------------------
 INSERT INTO orden (id, organizacion_id, ref, cliente_id, marca_id, vendedor_id, estado, condicion_pago, plazo_dias,
                    total, tipo_produccion, fecha_entrega_solicitada, fecha_inicio_produccion, origen, creado_en, actualizado_en) VALUES
@@ -109,8 +110,8 @@ INSERT INTO aprobacion_credito (id, organizacion_id, orden_id, aprobado_por, dec
  ('16000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002',
   '70000000-0000-4000-8000-000000000001', 'APROBADO', false, 0, 30, 'Cliente sin saldo vencido (demo)', '2026-08-20 11:00-05', '2026-08-20 10:30-05');
 
-UPDATE orden SET estado = 'CERRADA',    actualizado_en = '2026-10-02 10:30-05' WHERE id = 'a0000000-0000-4000-8000-000000000001';
-UPDATE orden SET estado = 'DESPACHADA', actualizado_en = '2026-09-05 16:00-05' WHERE id = 'a0000000-0000-4000-8000-000000000002';
+UPDATE orden SET estado = 'EN_PRODUCCION'
+ WHERE id IN ('a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002');
 
 -- Produccion: P-001 propia (4 etapas), P-002 tercerizada.
 INSERT INTO orden_etapa (id, organizacion_id, orden_id, unidad_id, etapa, estado, responsable_id, cantidad_procesada, merma, inicio, fin) VALUES
@@ -120,15 +121,16 @@ INSERT INTO orden_etapa (id, organizacion_id, orden_id, unidad_id, etapa, estado
  ('17000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', '13000000-0000-4000-8000-000000000001', 'CALIDAD',           'TERMINADA', '70000000-0000-4000-8000-000000000004', 10, 0, '2026-09-17 08:00-05', '2026-09-18 12:00-05'),
  ('17000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', '13000000-0000-4000-8000-000000000002', 'CONFECCION',        'TERMINADA', '70000000-0000-4000-8000-000000000004', 50, 0, '2026-08-22 08:00-05', '2026-09-03 17:00-05');
 
--- Despacho fija el vencimiento: vence_en = fecha_despacho + plazo_dias (P-001: 20/09+30; P-002: 05/09+30).
+-- Una sola obligacion por orden, por el total confirmado (D-005); sin vencimiento hasta el despacho.
+INSERT INTO obligacion_cobro (id, organizacion_id, orden_id, monto, plazo_dias, vence_en, creado_en, actualizado_en) VALUES
+ ('b0000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', 300.00, 30, NULL, '2026-09-01 11:00-05', '2026-09-01 11:00-05'),
+ ('b0000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', 500.00, 30, NULL, '2026-08-20 11:00-05', '2026-08-20 11:00-05');
+
+-- El despacho fija el vencimiento (trigger V8): P-001 20/09+30 = 20/10; P-002 05/09+30 = 05/10.
 INSERT INTO despacho (id, organizacion_id, orden_id, fecha_despacho, registrado_por, creado_en) VALUES
  ('18000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', '2026-09-20', '70000000-0000-4000-8000-000000000004', '2026-09-20 15:00-05'),
  ('18000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', '2026-09-05', '70000000-0000-4000-8000-000000000004', '2026-09-05 15:00-05');
-
--- Una sola obligacion por orden, por el total confirmado (D-005).
-INSERT INTO obligacion_cobro (id, organizacion_id, orden_id, monto, plazo_dias, vence_en, estado, creado_en, actualizado_en) VALUES
- ('b0000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', 300.00, 30, '2026-10-20', 'PAGADA', '2026-09-01 11:00-05', '2026-10-02 10:30-05'),
- ('b0000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', 500.00, 30, '2026-10-05', 'MORA',   '2026-08-20 11:00-05', '2026-10-06 00:00-05');
+UPDATE orden SET estado = 'CERRADA' WHERE id = 'a0000000-0000-4000-8000-000000000001';
 
 -- Costos reales (P-001 propio 200+80+60 = 340; P-002 tercero 350) y cierre explicito del costeo.
 INSERT INTO costo_orden (id, organizacion_id, orden_id, concepto, monto, origen, fuente, registrado_por, creado_en) VALUES
@@ -171,5 +173,8 @@ INSERT INTO apertura_caja (id, organizacion_id, fecha, importe, fuente) VALUES
 INSERT INTO egreso_caja (id, organizacion_id, concepto, fecha_prevista, monto, estado, fuente) VALUES
  ('1b000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'Compra de telas (ficticio)',   '2026-10-14', 250.00, 'PREVISTO', 'semilla_demo'),
  ('1b000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 'Planilla quincenal (ficticio)', '2026-10-28', 300.00, 'PREVISTO', 'semilla_demo');
+
+-- Estados de obligacion derivados de saldo y fecha local (P-001 PAGADA, P-002 MORA), como hace el motor.
+DO $$ BEGIN PERFORM keptai_private.recalcular_obligaciones(id, NULL) FROM semilla_org; END $$;
 
 COMMIT;

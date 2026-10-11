@@ -8,7 +8,7 @@ import org.junit.jupiter.api.*;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import static org.assertj.core.api.Assertions.*;
 
-/** Semilla ficticia BD/semilla/semilla_demo.sql sobre V1-V7 reales: cifras del roadmap §6, reinicio, guarda y aislamiento. */
+/** Semilla ficticia BD/semilla/semilla_demo.sql sobre V1-V8 reales: cifras del roadmap §6, reinicio, guarda y aislamiento. */
 class SemillaDemoTests {
  static final PostgreSQLContainer PG=new PostgreSQLContainer("postgres:17-alpine");
  static final String A="10000000-0000-4000-8000-000000000001", B="10000000-0000-4000-8000-000000000002";

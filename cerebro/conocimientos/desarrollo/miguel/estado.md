@@ -209,3 +209,12 @@ MIG-03-A completa dentro de su alcance: propiedades, CORS y matriz; JWT/API key/
 - Verificación real: `MotorPagosTests` 10/10 con PostgreSQL 17, V1→V7, semilla y login runtime miembro de `keptai_runtime`. Cubre QA-03/04/06, parcial, duplicado, anulación y re-aplicación, roles y aislamiento, reversión ante fallo de auditoría (se comprobó la causa raíz) y concurrencia (mismo pago y dos pagos contra una obligación). `MotorFinancieroAutoConfigurationTests` 2/2. Suite completa: **183 tests, 0 fallos**. Backend local reiniciado con perfil local: health UP.
 - Pendiente: idempotencia HTTP y DTOs (adapter MIG-05/07); `display_code` de pagos sin columna; QA-05 completo (huérfano y diferencia de monto en la clasificación de candidatos) cuando se exponga la conciliación; reapertura de alertas tras una anulación (scheduler).
 - Próximo de Andrés: despacho → vencimiento y alertas de mora; luego V8 (asignación por ítem y transferencia interna), margen por marca/línea, centro productivo, caja de 4 semanas y CSV.
+
+## AND-COBRANZA-001 — Despacho → vencimiento y job de cobranza (11/10/2026, Andrés)
+
+- Commit previo `895b092` (semilla + motor de pagos) publicado en `origin/andres/motor-financiero` a pedido de Andrés.
+- Entrega: `BD/migrations/V8__despacho_vencimiento_cobranza.sql`, `MotorCobranza`, `ResultadosCobranza` y `TransaccionFinanciera` (base común extraída de `MotorPagos`; la auditoría ahora registra el actor según la identidad). La semilla se reordenó al flujo real y exige V8. Docs: `Backend/docs/motor-pagos.md` (sección de cobranza), BD README y diccionario V8.
+- Ajuste mínimo en un archivo de Miguel: `SchemaRlsTests` pasa a esperar 8 migraciones (antes 7), solo porque V8 se agrega.
+- Verificación real: `MotorCobranzaTests` 7/7, `MotorPagosTests` 10/10, `SemillaDemoTests` 6/6, `SchemaRlsTests` 15/15. Suite completa **190 tests, 0 fallos**. Local migrado a V8 y resembrado: P-001 PAGADA (vence 20/10), P-002 MORA (vence 05/10, saldo 400). Backend local reiniciado: health UP.
+- Pendiente: aplicar V8 en Supabase (remoto en V7 con baseline); `@Scheduled`/cron que invoque `evaluarCobranza` (adapter de Miguel o job de Render); la semilla no crea `canal_whatsapp` para no programar envíos a números reales.
+- Próximo de Andrés: V9 (`asignacion_costo_item`, `transferencia_interna`), margen por marca/línea, centro productivo, caja de 4 semanas y CSV.
