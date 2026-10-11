@@ -1,0 +1,18 @@
+{
+  "note": "Consumo real de la extracción semántica: Graphify imprime 0 por defecto; entrada/salida no están disponibles por separado.",
+  "runs": [
+    {
+      "date": "2026-10-10",
+      "files": 33,
+      "extraction_agents": 3,
+      "agent_total_tokens": [
+        157026,
+        134452,
+        59372
+      ],
+      "agent_total_tokens_sum": 350850,
+      "input_tokens": null,
+      "output_tokens": null
+    }
+  ]
+}

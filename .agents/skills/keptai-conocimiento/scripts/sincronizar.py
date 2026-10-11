@@ -9,7 +9,28 @@ from pathlib import Path
 
 SKILL = Path(__file__).resolve().parents[1]
 DEST = SKILL / "references" / "cerebro"
+TECH_DEST = SKILL / "references"  # BD/ y Middleware/ reflejan la raíz del repo, para que los enlaces relativos funcionen
 MANIFEST = SKILL / "references" / "manifest.json"
+
+# Evidencia técnica de Andrés/Isabel incluida como datos (no ejecutable): carpeta -> extensiones.
+TECH_SOURCES = (("BD", {".md", ".sql"}), ("Middleware", {".md", ".json"}), ("Backend/docs", {".md", ".yaml"}))
+
+# Valores de ejemplo con forma de teléfono: se enmascaran de forma determinista al empaquetar.
+REDACTIONS = (
+    (re.compile(rb"\b51\d{9}\b"), b"51XXXXXXXXX"),
+    (re.compile(rb"\b51\d{9}@s\.whatsapp\.net"), b"51XXXXXXXXX@s.whatsapp.net"),
+    (re.compile(rb'("numero"\s*:\s*")9\d{8}(")'), rb"\g<1>9XXXXXXXX\g<2>"),
+)
+# Señales de secretos que NUNCA se copian: si aparecen tras sanear, el empaquetado falla.
+SECRET_PATTERNS = (
+    re.compile(rb"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"),
+    re.compile(rb"\bsk-[A-Za-z0-9]{20,}"),
+    re.compile(rb"\bAIza[0-9A-Za-z_-]{30,}"),
+    re.compile(rb"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+    re.compile(rb"postgres(?:ql)?://[^\s:/@]+:[^\s@]+@"),
+    re.compile(rb"\b51\d{9}\b"),
+)
+SECRET_FIELDS = {"evoKey", "apiKey", "llmKey", "sharedSecret"}
 
 
 def digest(data):
@@ -17,16 +38,69 @@ def digest(data):
 
 
 def source_files(repo):
+    source_root = repo / "cerebro" if (repo / "cerebro" / "conocimientos" / "INDICE.md").is_file() else repo
     result = {}
     for folder, extensions in (("conocimientos", {".md"}),
                                ("diagramas", {".md", ".excalidraw", ".png"})):
-        for path in sorted((repo / folder).rglob("*")):
+        for path in sorted((source_root / folder).rglob("*")):
             if path.is_file() and path.suffix.lower() in extensions:
                 if path.is_symlink() or not path.resolve().is_relative_to(repo):
                     raise ValueError(f"Fuente fuera del repo o enlace simbólico: {path}")
-                result[path.relative_to(repo).as_posix()] = path.read_bytes()
+                result[path.relative_to(source_root).as_posix()] = path.read_bytes()
     if "conocimientos/INDICE.md" not in result:
         raise ValueError("La ruta no contiene conocimientos/INDICE.md")
+    return result
+
+
+def sanitize(data):
+    for pattern, replacement in REDACTIONS:
+        data = pattern.sub(replacement, data)
+    return data
+
+
+def _json_secrets(node, found):
+    if isinstance(node, dict):
+        if node.get("name") in SECRET_FIELDS and isinstance(node.get("value"), str) \
+                and not node["value"].startswith("CAMBIAR_"):
+            found.append(node["name"])
+        for value in node.values():
+            _json_secrets(value, found)
+    elif isinstance(node, list):
+        for value in node:
+            _json_secrets(value, found)
+
+
+def assert_safe(relative, data):
+    for pattern in SECRET_PATTERNS:
+        if pattern.search(data):
+            raise ValueError(f"Posible secreto o teléfono real en {relative}; no se empaqueta")
+    if relative.endswith(".json"):
+        found = []
+        _json_secrets(json.loads(data.decode("utf-8")), found)
+        if found:
+            raise ValueError(f"Valor no marcador en campos secretos {sorted(set(found))} de {relative}")
+
+
+def technical_files(repo):
+    """Evidencia técnica sanada: {ruta relativa a references/: (bytes_empaquetados, sha_fuente)}."""
+    result = {}
+    if repo is None:
+        return result
+    for folder, extensions in TECH_SOURCES:
+        base = repo / folder
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*")):
+            if folder == "Backend/docs" and "tools" in path.relative_to(base).parts:
+                continue  # solo contrato/documentacion, no venv ni dependencias
+            if path.is_file() and path.suffix.lower() in extensions:
+                if path.is_symlink() or not path.resolve().is_relative_to(repo):
+                    raise ValueError(f"Fuente fuera del repo o enlace simbólico: {path}")
+                raw = path.read_bytes()
+                clean = sanitize(raw)
+                relative = path.relative_to(repo).as_posix()
+                assert_safe(relative, clean)
+                result[relative] = (clean, digest(raw))
     return result
 
 
@@ -63,6 +137,17 @@ def check(repo):
         raise ValueError(f"El paquete no coincide con su manifiesto: {changed}")
     packaged = {p: (DEST / p).read_bytes() for p in expected}
     ids = coverage(packaged)
+    tech_expected = {e["path"]: e for e in metadata.get("technical_files", [])}
+    tech_actual = {p.relative_to(TECH_DEST).as_posix(): p
+                   for folder, _ in TECH_SOURCES if (TECH_DEST / folder).is_dir()
+                   for p in (TECH_DEST / folder).rglob("*") if p.is_file()}
+    if set(tech_actual) != set(tech_expected):
+        raise ValueError(f"Evidencia técnica no coincide con el manifiesto: {sorted(set(tech_actual) ^ set(tech_expected))}")
+    for relative, path in tech_actual.items():
+        data = path.read_bytes()
+        if digest(data) != tech_expected[relative]["sha256"]:
+            raise ValueError(f"Evidencia técnica modificada: {relative}")
+        assert_safe(relative, data)
     if repo is not None:
         originals = {p: digest(data) for p, data in source_files(repo).items()}
         changed = sorted(set(originals) ^ set(expected) |
@@ -74,8 +159,14 @@ def check(repo):
         diagram_changes = [p for p in changed if p.startswith("diagramas/")]
         if diagram_changes:
             print(f"AVISO: los diagramas locales difieren de la instantánea incluida: {diagram_changes}. Revisar antes de regenerar; el paquete conserva los antecedentes revisados.")
-    mode = "integridad y equivalencia de documentos de negocio con el repo" if repo else "integridad local; remoto no consultado"
-    print(f"OK: {len(expected)} archivos; {len(ids)} registros; {mode}.")
+        tech_sources = {p: sha for p, (_, sha) in technical_files(repo).items()}
+        tech_diff = sorted(set(tech_sources) ^ set(tech_expected) |
+                           {p for p in tech_sources.keys() & tech_expected.keys()
+                            if tech_sources[p] != tech_expected[p]["source_sha256"]})
+        if tech_diff:
+            raise ValueError(f"Regenerar: la evidencia técnica y la copia difieren: {tech_diff}")
+    mode = "integridad y equivalencia de documentos de negocio y evidencia técnica con el repo" if repo else "integridad local; remoto no consultado"
+    print(f"OK: {len(expected)} archivos; {len(tech_expected)} de evidencia técnica; {len(ids)} registros; {mode}.")
 
 
 def sync(repo, preserve_historical_diagrams=False):
@@ -100,7 +191,18 @@ def sync(repo, preserve_historical_diagrams=False):
         if target.is_symlink() or not target.resolve().is_relative_to(DEST.resolve()):
             raise ValueError(f"Destino fuera del paquete: {target}")
         target.write_bytes(data)
-    uncommitted = git_output(repo, ["status", "--porcelain", "--", "conocimientos", "diagramas"])
+    tech = technical_files(repo)
+    stale = {p.relative_to(TECH_DEST).as_posix()
+             for folder, _ in TECH_SOURCES if (TECH_DEST / folder).is_dir()
+             for p in (TECH_DEST / folder).rglob("*") if p.is_file()} - tech.keys()
+    if stale:
+        raise ValueError(f"Hay copias técnicas sin fuente. Revisar antes de retirar: {sorted(stale)}")
+    for relative, (data, _) in tech.items():
+        target = TECH_DEST / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+    source_prefix = "cerebro/" if (repo / "cerebro/conocimientos/INDICE.md").is_file() else ""
+    uncommitted = git_output(repo, ["status", "--porcelain", "--", source_prefix + "conocimientos", source_prefix + "diagramas"])
     metadata = {
         "schema_version": 1,
         "source_repository": "https://github.com/rod14x/KeptAI",
@@ -112,6 +214,10 @@ def sync(repo, preserve_historical_diagrams=False):
         "interview_ids": ids,
         "files": [{"path": p, "bytes": len(data), "sha256": digest(data)}
                   for p, data in sorted(files.items())],
+        "technical_note": "BD/ y Middleware/ se incluyen como datos sanados (rutas relativas a references/); su copia puede diferir de la fuente solo por el enmascarado de REDACTIONS. No acreditan ejecución en Supabase, n8n ni Evolution.",
+        "technical_files": [{"path": p, "bytes": len(data), "sha256": digest(data),
+                             "source_sha256": sha, "sanitized": digest(data) != sha}
+                            for p, (data, sha) in sorted(tech.items())],
     }
     MANIFEST.write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     check(repo)
@@ -125,7 +231,7 @@ def main():
                         help="Conservar diagramas sin fuente solo si su hash coincide con el manifiesto previo")
     args = parser.parse_args()
     repo = args.repo.resolve() if args.repo else SKILL.parents[2]
-    if not (repo / "conocimientos" / "INDICE.md").is_file():
+    if not ((repo / "conocimientos" / "INDICE.md").is_file() or (repo / "cerebro/conocimientos/INDICE.md").is_file()):
         if args.repo or not args.check:
             parser.error("Indicar --repo con la raíz del cerebro; no se encontró conocimientos/INDICE.md")
         repo = None

@@ -1,0 +1,9 @@
+server:
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+    include-exception: false
+logging:
+  level:
+    root: INFO
