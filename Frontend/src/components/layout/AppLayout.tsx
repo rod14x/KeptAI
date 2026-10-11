@@ -77,7 +77,7 @@ export function AppLayout() {
               animate={DRAWER_SHOW}
               exit={DRAWER_IN}
               transition={softSpring}
-              className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] overflow-y-auto bg-card shadow-[var(--shadow-lift)]"
+              className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] overflow-y-auto rounded-r-lg bg-card shadow-[var(--shadow-lift)]"
             >
               <button
                 onClick={() => setDrawer(false)}
@@ -93,7 +93,7 @@ export function AppLayout() {
       </AnimatePresence>
 
       <div className="flex min-w-0 flex-col">
-        <div className="flex min-h-[100dvh] flex-col">
+        <div className="flex min-h-[100dvh] min-h-screen-dynamic flex-col">
           <header className="app-topbar sticky top-0 z-20">
             <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-9">
               {hasNav && (
@@ -122,7 +122,7 @@ export function AppLayout() {
               {person?.role !== "jefe_taller" && <SearchBox className="min-w-0 flex-1 md:hidden" />}
             </div>
           </header>
-          <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 px-4 py-7 sm:px-6 lg:px-9 lg:py-9">
+          <main id="main-content" tabIndex={-1} className="main-container min-w-0 flex-1 px-4 py-7 sm:px-6 lg:px-9 lg:py-9">
             <Outlet />
           </main>
         </div>

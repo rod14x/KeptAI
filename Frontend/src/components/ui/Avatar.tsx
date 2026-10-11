@@ -6,7 +6,7 @@ export function Avatar({ name, size = "md", ring = false }: { name: string; size
     <span
       title={name}
       aria-hidden="true"
-      className={cx("inline-flex shrink-0 select-none items-center justify-center rounded-lg bg-violet-tint font-semibold text-violet-ink", dims, ring && "ring-2 ring-card")}
+      className={cx("inline-flex shrink-0 select-none items-center justify-center rounded-full bg-violet-tint font-semibold text-violet-ink", dims, ring && "ring-2 ring-card")}
     >
       {initials(name)}
     </span>

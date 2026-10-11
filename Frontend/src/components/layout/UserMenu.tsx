@@ -92,14 +92,14 @@ export function UserMenu() {
           style={{ transformOrigin: "top right" }}
           aria-label="Cuenta"
           onKeyDown={onMenuKey}
-          className="absolute right-0 top-[calc(100%+8px)] z-40 w-72 overflow-hidden rounded-xl bg-card p-1.5 shadow-[var(--shadow-lift)] ring-1 ring-line"
+          className="absolute right-0 top-[calc(100%+8px)] z-40 w-72 overflow-hidden rounded-md bg-card p-1.5 shadow-[var(--shadow-lift)] ring-1 ring-line"
         >
           <div className="flex items-center gap-3 px-3 pb-3 pt-2.5">
             <Avatar name={person.name} size="lg" />
             <div className="min-w-0">
               <p className="truncate text-sm font-bold">{person.name}</p>
               <p className="truncate text-xs text-muted">{person.email}</p>
-              <span className="mt-1 inline-flex rounded-md bg-violet-tint px-2 py-0.5 text-[11px] font-semibold text-violet-ink">{ROLE_LABEL[person.role]}</span>
+              <span className="mt-1 inline-flex rounded-sm bg-violet-tint px-2 py-0.5 text-[11px] font-semibold text-violet-ink">{ROLE_LABEL[person.role]}</span>
             </div>
           </div>
           <div className="my-1 h-px bg-line-soft" />

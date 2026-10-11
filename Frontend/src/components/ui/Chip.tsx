@@ -17,7 +17,7 @@ const TONE_CLASS: Record<Tone, string> = {
 
 export function Chip({ tone, icon, children, className }: { tone: Tone; icon?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <span className={cx("inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium leading-snug", TONE_CLASS[tone], className)}>
+    <span className={cx("inline-flex items-center gap-1 whitespace-nowrap rounded-sm px-2 py-1 text-xs font-medium leading-snug", TONE_CLASS[tone], className)}>
       {icon}
       {children}
     </span>
@@ -55,11 +55,11 @@ export function ActivityChip({ status }: { status: "completado" | "pendiente" | 
 
 export function PriorityTag({ priority }: { priority: "urgente" | "normal" }) {
   return priority === "urgente" ? (
-    <Chip tone="bad" icon={<Flag size={12} weight="fill" />} className="rounded-md px-1.5 py-0.5">
+    <Chip tone="bad" icon={<Flag size={12} weight="fill" />} className="rounded-sm px-1.5 py-0.5">
       Urgente
     </Chip>
   ) : (
-    <Chip tone="violet" icon={<Flag size={12} weight="fill" />} className="rounded-md px-1.5 py-0.5">
+    <Chip tone="violet" icon={<Flag size={12} weight="fill" />} className="rounded-sm px-1.5 py-0.5">
       Normal
     </Chip>
   );

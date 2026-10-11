@@ -78,7 +78,7 @@ export function DialogShell({
             ref={panel}
             variants={dialogVariants}
             className={cx(
-              "relative max-h-[92dvh] w-full overflow-y-auto rounded-xl bg-card shadow-[var(--shadow-lift)]",
+              "relative max-h-[92dvh] w-full overflow-y-auto rounded-lg bg-card shadow-[var(--shadow-lift)]",
               panelClassName,
             )}
           >
