@@ -297,3 +297,16 @@ Las vistas usan `security_invoker`, así que respetan el RLS de quien consulta.
 - **`aplicacion_pago`:** immutable en referencias/importe/autor/fecha. Corrección solo anulación con motivo y nueva aplicación; no reapertura, borrado o insertar ya anulada. Se bloquean filas padre y se valida cliente, moneda, fondos, límite de pago y obligación.
 - **RLS:** organización + usuario o servicio activo; tabla organización read-only para runtime; usuario/catálogos sin mutación runtime; aplicación por ADMIN; costos/taller por ADMIN o JEFE_TALLER; INGESTA solo recibe pagos sin fondos verificados. Spring restringe además campos y recursos concretos.
 - **Vistas:** `v_margen_orden.margen_venta_real` = venta − costo real cerrado; `margen_real_cobrado` = cobrado − costo real cerrado. Ambas null mientras no cierre; nunca certificar costo cero por ausencia.
+
+## Cambios vigentes V7 (DB-REV-003)
+
+Sin tablas ni columnas nuevas. Agrega funciones, triggers y políticas:
+- **`keptai_private.usuario_actual()`:** UUID de `app.usuario_id` o null. Solo es válido junto con `actor_actual()` no nulo.
+- **`keptai_private.validar_autoria(cols...)`** (trigger `tg_autoria`): `aprobado_por`, `verificado_por`, `aplicado_por`, `anulada_por`, `revisado_por` y `registrado_por` (despacho/costo) solo pueden fijarse al usuario autenticado. Los servicios no las fijan.
+- **`proteger_pago/obligacion/orden`** (DEFINER): con aplicaciones vigentes no cambian monto/moneda/cliente/fase/duplicado del pago, monto/moneda/orden/anulación de la obligación ni total/cliente/condición/moneda de la orden. `costos_*_completos=true` solo lo marcan ADMIN/JEFE_TALLER.
+- **RLS:**
+  - `aprobacion_credito` solo la escribe VENDEDOR.
+  - INGESTA actualiza orden, ítems y resumen solo en BORRADOR.
+  - Lecturas por mínimo privilegio: caja solo ADMIN/GERENTE/SCHEDULER; INGESTA sin obligaciones, aplicaciones ni créditos; JEFE_TALLER solo órdenes liberadas y auditoría de `orden`, `orden_etapa`, `costo_orden` y `despacho`.
+  - `evento_auditoria.actor` coherente con la identidad: USUARIO+propio, SISTEMA sin usuario, N8N/SCHEDULER según servicio.
+- **`v_margen_orden`:** mismas columnas; solo devuelve filas a VENDEDOR, ADMIN y GERENTE.
