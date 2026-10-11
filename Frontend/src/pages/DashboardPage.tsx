@@ -183,7 +183,7 @@ function Kpis({ d, canResult }: { d: DashboardDTO; canResult: boolean }) {
           <span>
             {d.marginCents == null
               ? "Costeo incompleto: no hay margen hasta cerrar los costos reales."
-              : `${d.orderCount} ${d.orderCount === 1 ? "pedido" : "pedidos"}. Resultado económico, no dinero cobrado.`}
+              : `${d.orderCount} ${d.orderCount === 1 ? "pedido con costeo cerrado" : "pedidos con costeo cerrado"}. Resultado económico, no dinero cobrado.`}
           </span>
         </Kpi>
       ) : (

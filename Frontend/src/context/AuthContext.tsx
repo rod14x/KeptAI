@@ -118,8 +118,8 @@ const lazyAuth: AuthClient = (() => {
 
 function personFrom(identity: SessionIdentity): Person {
   const role = ROLE_FROM_API[identity.role];
-  // El contrato no expone nombre, marca ni fecha de alta: el nombre visible sale del correo de la sesión; marca y fecha quedan sin dato.
-  return { id: identity.userId, name: identity.email.split("@")[0] || "Usuario", email: identity.email, role, title: ROLE_LABEL[role], brand: null, since: null };
+  // Nombre de /me (usuario.nombre); sin él, el del correo de la sesión. Marca y fecha de alta no están en el contrato.
+  return { id: identity.userId, name: identity.name || identity.email.split("@")[0] || "Usuario", email: identity.email, role, title: ROLE_LABEL[role], brand: null, since: null };
 }
 
 function ApiAuthProvider({ children }: { children: ReactNode }) {

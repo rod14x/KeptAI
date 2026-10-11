@@ -253,11 +253,11 @@ function SplitView({ d, nextHref }: { d: EvidenceDetailDTO; nextHref: string | n
         </span>
       </p>
     );
-  } else if (ev.status === "recibido" && d.match === "duplicado" && !capabilities.discardPayment) {
+  } else if (ev.status === "recibido" && d.match === "duplicado" && (d.duplicateMarked || !capabilities.markDuplicate)) {
     primary = (
       <p className="flex items-start gap-2 rounded-xl bg-panel px-4 py-3 text-[13px] text-muted ring-1 ring-line">
         <CopySimple size={18} weight="bold" className="mt-px shrink-0" />
-        <span>El backend lo clasificó como duplicado: queda en revisión y no se descuenta.</span>
+        <span>{d.duplicateMarked ? "Marcado como duplicado" : "El backend lo clasificó como duplicado"}: queda en revisión y no se descuenta.</span>
       </p>
     );
   } else if (ev.status === "recibido" && d.match === "duplicado") {
@@ -270,7 +270,7 @@ function SplitView({ d, nextHref }: { d: EvidenceDetailDTO; nextHref: string | n
         onClick={() =>
           setPending({
             title: `Marcar ${ev.ref} como duplicado`,
-            body: `Tiene el mismo código, monto y fecha que ${d.duplicateOfId}. Se guarda en el historial y no reduce el saldo.`,
+            body: `Tiene el mismo código, monto y fecha que ${d.duplicateOfRef ?? "otro comprobante"}. Se guarda en el historial y no reduce el saldo.`,
             label: "Marcar duplicado",
             tone: "danger",
             run: () => commands.markDuplicate(ev.id, me),
@@ -384,9 +384,13 @@ function SplitView({ d, nextHref }: { d: EvidenceDetailDTO; nextHref: string | n
             <CopySimple size={18} weight="bold" className="mt-px shrink-0" />
             <span>
               Mismo código de operación, monto y fecha que{" "}
-              <Link to={`/conciliacion/${d.duplicateOfId}`} className="font-bold underline">
-                {d.duplicateOfId}
-              </Link>
+              {d.duplicateOfId ? (
+                <Link to={`/conciliacion/${d.duplicateOfId}`} className="font-bold underline">
+                  {d.duplicateOfRef ?? "otro comprobante"}
+                </Link>
+              ) : (
+                "otro comprobante"
+              )}
               . Queda en revisión y no se descuenta.
             </span>
           </p>
@@ -638,11 +642,13 @@ function OrderBlock({
       <p className="flex items-center gap-2 text-sm font-bold text-warn">
         <WarningCircle size={18} weight="bold" /> ¿De qué pedido es este pago?
       </p>
-      <p className="mt-1 text-[13px] text-ink-soft">Elige el pedido. Si no corresponde a ninguno, descártalo desde "Más opciones".</p>
+      <p className="mt-1 text-[13px] text-ink-soft">
+        Elige el pedido.{capabilities.discardPayment ? ' Si no corresponde a ninguno, descártalo desde "Más opciones".' : " Si no corresponde a ninguno, queda en revisión."}
+      </p>
       {!canEdit ? (
         <p className="mt-3 text-[13px] text-muted">Administración elige el pedido.</p>
       ) : d.openOrders.length === 0 ? (
-        <p className="mt-3 text-[13px] text-muted">No hay pedidos con saldo en esta marca.</p>
+        <p className="mt-3 text-[13px] text-muted">No hay pedidos con saldo que coincidan con este pago.</p>
       ) : (
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <label htmlFor="order-select" className="sr-only">

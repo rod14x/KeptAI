@@ -182,7 +182,7 @@ export const OutgoingMessageSchema = z.object({
   id: z.string(),
   customerId: z.string(),
   orderId: z.string().nullable(),
-  tipo: z.enum(["cobranza_preventiva", "cobranza_vencimiento", "mora_temprana", "estado_cuenta", "confirmacion_pago", "resumen_orden"]),
+  tipo: z.enum(["cobranza_preventiva", "cobranza_vencimiento", "mora_temprana", "estado_cuenta", "confirmacion_pago", "resumen_orden", "recompra", "resumen_vendedor"]),
   estado: z.enum(["pendiente", "enviado", "error", "cancelado"]),
   programadoPara: z.string(),
   intentos: z.number().int(),

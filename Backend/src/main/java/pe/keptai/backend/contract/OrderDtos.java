@@ -2,9 +2,11 @@ package pe.keptai.backend.contract;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
@@ -15,7 +17,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import pe.keptai.backend.contract.CommonDtos.NonNegativeMoney;
+import pe.keptai.backend.contract.CommonDtos.PersonRef;
 import pe.keptai.backend.contract.CommonDtos.PositiveMoney;
+import pe.keptai.backend.contract.ContractEnums.CustomerType;
 import pe.keptai.backend.contract.ContractEnums.DataOrigin;
 import pe.keptai.backend.contract.ContractEnums.OrderSource;
 import pe.keptai.backend.contract.ContractEnums.OrderStatus;
@@ -32,9 +36,30 @@ public final class OrderDtos {
 	private OrderDtos() {
 	}
 
+	/**
+	 * Referencia al cliente. {@code type}, {@code tax_id} y {@code credit_limit} (INT-FE-API-002) salen de {@code cliente};
+	 * son nulos si no constan. La linea de credito es referencia para el vendedor: no bloquea (D-005).
+	 */
 	public record CustomerRef(
 			@JsonProperty("id") @NotNull UUID id,
-			@JsonProperty("name") @NotBlank @Size(max = 200) String name) {
+			@JsonProperty("name") @NotBlank @Size(max = 200) String name,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("type") CustomerType type,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("tax_id") @Size(max = 11) String taxId,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("credit_limit") @Valid NonNegativeMoney creditLimit) {
+
+		/** Referencia sin ficha (estado de cuenta, candidatos). */
+		public static CustomerRef of(UUID id, String name) {
+			return new CustomerRef(id, name, null, null, null);
+		}
+	}
+
+	/** Item del pedido ({@code orden_item}), INT-FE-API-002. {@code detail} resume tela, talla y logo. */
+	public record OrderItem(
+			@JsonProperty("description") @NotBlank @Size(max = 500) String description,
+			@JsonProperty("quantity") @NotNull @Min(1) @Max(1_000_000) Integer quantity,
+			@JsonProperty("unit_price") @NotNull @Valid NonNegativeMoney unitPrice,
+			@JsonProperty("product_line") @Size(max = 100) String productLine,
+			@JsonProperty("detail") @Size(max = 300) String detail) {
 	}
 
 	/**
@@ -61,7 +86,10 @@ public final class OrderDtos {
 			@JsonProperty("due_date") LocalDate dueDate,
 			@JsonProperty("source_evidence_id") UUID sourceEvidenceId,
 			@JsonProperty("data_origin") @NotNull DataOrigin dataOrigin,
-			@JsonProperty("created_at") @NotNull OffsetDateTime createdAt) {
+			@JsonProperty("created_at") @NotNull OffsetDateTime createdAt,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("seller") @Valid PersonRef seller,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("items") @Size(max = 100) List<@Valid OrderItem> items,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("dispatched_by") @Valid PersonRef dispatchedBy) {
 
         @JsonIgnore
         @AssertTrue(message = "fuera de borrador exige cliente, venta y condicion de pago")

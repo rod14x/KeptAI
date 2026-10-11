@@ -11,7 +11,11 @@ import pe.keptai.backend.contract.CommonDtos;
 import pe.keptai.backend.contract.CommonDtos.Money;
 import pe.keptai.backend.contract.CommonDtos.NonNegativeMoney;
 import pe.keptai.backend.contract.CommonDtos.PositiveMoney;
+import pe.keptai.backend.contract.ContractEnums.AlertResolution;
 import pe.keptai.backend.contract.ContractEnums.AlertRule;
+import pe.keptai.backend.contract.ContractEnums.CustomerType;
+import pe.keptai.backend.contract.ContractEnums.NotificationStatus;
+import pe.keptai.backend.contract.ContractEnums.NotificationType;
 import pe.keptai.backend.contract.ContractEnums.AlertStatus;
 import pe.keptai.backend.contract.ContractEnums.AuditActor;
 import pe.keptai.backend.contract.ContractEnums.CostComponent;
@@ -83,7 +87,30 @@ public final class PanelMapping {
 			"MANO_OBRA", CostComponent.LABOR, "TERCERO", CostComponent.OUTSOURCED, "CIF", CostComponent.OVERHEAD,
 			"LOGISTICA", CostComponent.LOGISTICS);
 
+	static final Map<String, CustomerType> CUSTOMER_TYPE = Map.of("COLEGIO", CustomerType.SCHOOL, "EMPRESA",
+			CustomerType.COMPANY, "PERSONA", CustomerType.PERSON);
+
+	static final Map<String, NotificationType> NOTIFICATION_TYPE = Map.of("COBRANZA_PREVENTIVA",
+			NotificationType.COLLECTION_PREVENTIVE, "COBRANZA_VENCIMIENTO", NotificationType.COLLECTION_DUE, "MORA_TEMPRANA",
+			NotificationType.EARLY_ARREARS, "RECOMPRA", NotificationType.REPURCHASE, "ESTADO_CUENTA",
+			NotificationType.ACCOUNT_STATEMENT, "CONFIRMACION_PAGO", NotificationType.PAYMENT_CONFIRMATION,
+			"RESUMEN_VENDEDOR", NotificationType.SELLER_SUMMARY);
+
+	static final Map<String, NotificationStatus> NOTIFICATION_STATUS = Map.of("PENDIENTE", NotificationStatus.PENDING,
+			"ENVIADO", NotificationStatus.SENT, "ERROR", NotificationStatus.ERROR, "CANCELADO", NotificationStatus.CANCELLED);
+
+	/** Textos con que MotorPagos cierra alertas al aplicar un pago; cualquier otra nota es un cierre manual. */
+	private static final java.util.List<String> PAYMENT_RESOLUTIONS = java.util.List.of("Pago verificado aplicado",
+			"Obligacion saldada con pago aplicado");
+
 	private PanelMapping() {
+	}
+
+	static AlertResolution alertResolution(String resolucion) {
+		if (resolucion == null) {
+			return null;
+		}
+		return PAYMENT_RESOLUTIONS.contains(resolucion) ? AlertResolution.PAYMENT_APPLIED : AlertResolution.MANUAL;
 	}
 
 	/** Fecha de negocio vigente (America/Lima): fecha de corte por defecto. */

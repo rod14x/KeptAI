@@ -82,6 +82,10 @@ public final class AccessPolicy {
 		panel("getCreditDecision", HttpMethod.GET, "/api/v1/orders/{order_id}/credit-decision", VENDEDOR, ADMIN, GERENTE),
 		panel("submitCreditDecision", HttpMethod.POST, "/api/v1/orders/{order_id}/credit-decision", VENDEDOR),
 		panel("registerDispatch", HttpMethod.POST, "/api/v1/orders/{order_id}/dispatch", ADMIN, JEFE_TALLER),
+		// INT-FE-API-002: cierre manual de alertas y marca de duplicado (ADMIN, como escribe RLS) y bitácora de envíos.
+		panel("resolveCollectionAlert", HttpMethod.POST, "/api/v1/collection-alerts/{alert_id}/resolution", ADMIN),
+		panel("markPaymentDuplicate", HttpMethod.POST, "/api/v1/payments/{payment_id}/duplicate", ADMIN),
+		panel("listNotifications", HttpMethod.GET, "/api/v1/notifications", VENDEDOR, ADMIN, GERENTE),
 		service("n8nIngestOrder", HttpMethod.POST, "/api/v1/ordenes/ingesta", INGESTA),
 		closed("n8nConfirmOrder", HttpMethod.POST, "/api/v1/ordenes/confirmar", Kind.SERVICE, CONFIRMAR),
 		service("n8nReceiveVoucher", HttpMethod.POST, "/api/v1/pagos/voucher", INGESTA),

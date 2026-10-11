@@ -56,7 +56,9 @@ class AuthorizationMatrixTests {
 			Map.entry("registerPaymentVerification", 400), Map.entry("applyPayment", 400), Map.entry("listReceivables", 503),
 			Map.entry("getReceivable", 503), Map.entry("listCollectionAlerts", 503), Map.entry("getCustomerStatement", 503),
 			Map.entry("getResultsSummary", 503), Map.entry("getMarginReport", 400), Map.entry("getProductionCenterResults", 503),
-			Map.entry("getCashForecast", 503), Map.entry("exportOrdersCsv", 503), Map.entry("listAuditEvents", 503));
+			Map.entry("getCashForecast", 503), Map.entry("exportOrdersCsv", 503), Map.entry("listAuditEvents", 503),
+			Map.entry("resolveCollectionAlert", 400), Map.entry("markPaymentDuplicate", 503),
+			Map.entry("listNotifications", 503));
 
 	/** Servicios que el contrato permite en cada operación abierta de n8n. */
 	static final Map<String, AccessRole> SERVICE_SCOPE = Map.of("n8nIngestOrder", AccessRole.INGESTA, "n8nReceiveVoucher", AccessRole.INGESTA);
@@ -110,7 +112,7 @@ class AuthorizationMatrixTests {
 	@Test
 	void everyOperationIsAuthorizedOnlyForItsDeclaredActors() throws Exception {
 		List<Op> ops = operations();
-		assertThat(ops).hasSize(37);
+		assertThat(ops).hasSize(40);
 		int checks = 0;
 		for (Op op : ops) {
 			String path = concrete(op.path());
@@ -130,7 +132,7 @@ class AuthorizationMatrixTests {
 				checks++;
 			}
 		}
-		assertThat(checks).isEqualTo(37 * 6);
+		assertThat(checks).isEqualTo(40 * 6);
 	}
 
 	@Test

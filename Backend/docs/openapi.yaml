@@ -1934,6 +1934,136 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /api/v1/collection-alerts/{alert_id}/resolution:
+    post:
+      tags:
+      - Cobranza
+      operationId: resolveCollectionAlert
+      summary: Cerrar manualmente una alerta interna de cobranza (INT-FE-API-002).
+      description: 'Administración registra por qué cierra la alerta. Solo una alerta abierta se resuelve; una cerrada da
+        409 `INVALID_STATE`. No cambia saldos ni envía mensajes al cliente.
+
+        '
+      x-keptai-owner: miguel_adapter_andres_engine
+      x-keptai-status: proposed
+      x-keptai-task: MIG-07
+      x-keptai-proposed-roles:
+      - ADMIN
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/AlertId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveAlertRequest'
+      responses:
+        '200':
+          description: Alerta resuelta.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionAlert'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/payments/{payment_id}/duplicate:
+    post:
+      tags:
+      - Pagos
+      operationId: markPaymentDuplicate
+      summary: Marcar un pago recibido como duplicado de uno anterior (motor de Andrés, INT-FE-API-002).
+      description: '`MotorPagos.marcarDuplicado`: exige un pago anterior con la misma referencia, monto y fecha (si no, 409
+        `INVALID_STATE`); el pago queda en revisión con una alerta `payment_in_review` y nunca se aplica. Sin cuerpo.
+
+        '
+      x-keptai-owner: miguel_adapter_andres_engine
+      x-keptai-status: proposed
+      x-keptai-task: MIG-07
+      x-keptai-proposed-roles:
+      - ADMIN
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/PaymentId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Pago marcado como duplicado.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/notifications:
+    get:
+      tags:
+      - Cobranza
+      operationId: listNotifications
+      summary: Bitácora de envíos de cobranza programados por el scheduler (WF3), sin texto (INT-FE-API-002).
+      description: Solo metadatos de `envio_notificacion` (tipo, estado, programación, intentos); la base no guarda mensajes
+        (D-007).
+      x-keptai-owner: miguel_adapter_andres_engine
+      x-keptai-status: proposed
+      x-keptai-task: MIG-07
+      x-keptai-proposed-roles:
+      - VENDEDOR
+      - ADMIN
+      - GERENTE
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Cursor'
+      - name: order_id
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/Uuid'
+      - name: customer_id
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/Uuid'
+      responses:
+        '200':
+          description: Página de envíos.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 components:
   securitySchemes:
     bearerAuth:
@@ -2030,6 +2160,12 @@ components:
         $ref: '#/components/schemas/Uuid'
     ReceivableId:
       name: receivable_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    AlertId:
+      name: alert_id
       in: path
       required: true
       schema:
@@ -2303,6 +2439,17 @@ components:
       - organization_id
       - role
       properties:
+        # INT-FE-API-002 UserContext: nombres de la base (usuario.nombre, organizacion.nombre); solo informativos.
+        name:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
+        organization_name:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
         user_id:
           $ref: '#/components/schemas/Uuid'
         organization_id:
@@ -2988,6 +3135,21 @@ components:
       - id
       - name
       properties:
+        # INT-FE-API-002 CustomerRef: ficha del cliente (cliente.tipo, ruc_dni, limite_credito); nulos si el rol no la ve.
+        type:
+          oneOf:
+          - $ref: '#/components/schemas/CustomerType'
+          - type: 'null'
+        tax_id:
+          type:
+          - string
+          - 'null'
+          maxLength: 11
+        credit_limit:
+          oneOf:
+          - $ref: '#/components/schemas/NonNegativeMoney'
+          - type: 'null'
+          description: Referencia para el vendedor; no bloquea (D-005).
         id:
           $ref: '#/components/schemas/Uuid'
         name:
@@ -3029,6 +3191,20 @@ components:
       - data_origin
       - created_at
       properties:
+        # INT-FE-API-002 Order: vendedor, ítems (orden_item) y autor del acta de despacho.
+        seller:
+          oneOf:
+          - $ref: '#/components/schemas/PersonRef'
+          - type: 'null'
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        dispatched_by:
+          oneOf:
+          - $ref: '#/components/schemas/PersonRef'
+          - type: 'null'
         id:
           $ref: '#/components/schemas/Uuid'
         display_code:
@@ -3217,6 +3393,12 @@ components:
       - verified_at
       - note
       properties:
+        # INT-FE-API-002 PaymentVerification: nombre de quien verificó (usuario.nombre).
+        verified_by_name:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
         method:
           $ref: '#/components/schemas/VerificationMethod'
         is_simulated:
@@ -3261,6 +3443,12 @@ components:
       - data_origin
       - created_at
       properties:
+        # INT-FE-API-002 Payment: aplicaciones vigentes del pago (aplicacion_pago), con su pedido.
+        applications:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/PaymentAllocation'
         id:
           $ref: '#/components/schemas/Uuid'
         display_code:
@@ -3566,6 +3754,12 @@ components:
       - days_overdue
       - status
       properties:
+        # INT-FE-API-002 Receivable: pagos aplicados vigentes de la obligación.
+        applications:
+          type: array
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/ReceivableApplication'
         id:
           $ref: '#/components/schemas/Uuid'
         order_id:
@@ -3703,6 +3897,17 @@ components:
       - created_at
       - closed_at
       properties:
+        # INT-FE-API-002 CollectionAlert: nombre del responsable y nota de cierre (alerta_cobranza.resolucion).
+        responsible_name:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
+        resolution_note:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
         id:
           $ref: '#/components/schemas/Uuid'
         receivable_id:
@@ -3839,6 +4044,12 @@ components:
       - reason
       - decided_at
       properties:
+        # INT-FE-API-002 CreditAuthorization: nombre de quien decidió.
+        responsible_name:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
         status:
           $ref: '#/components/schemas/CreditAuthorizationStatus'
         responsible_user_id:
@@ -4088,6 +4299,12 @@ components:
       - missing_cost_components
       - orders_count
       properties:
+        # INT-FE-API-002 MarginRow: margen percibido = cobrado aplicado - costo real cerrado (v_margen_orden.margen_real_cobrado);
+        # nulo si el costeo no está cerrado o la agrupación no lo admite (línea).
+        perceived_margin:
+          oneOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
         group_key:
           type: string
           minLength: 1
@@ -4403,6 +4620,12 @@ components:
       - request_id
       - changes
       properties:
+        # INT-FE-API-002 AuditEvent: nombre visible del actor (usuario.nombre o servicio).
+        actor_name:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
         id:
           $ref: '#/components/schemas/Uuid'
         occurred_at:
@@ -5253,6 +5476,217 @@ components:
         error:
           type: string
           const: no autorizado
+    # ---- INT-FE-API-002: extensiones para el panel conectado (todos los datos salen de la base) ----
+    PersonRef:
+      type: object
+      additionalProperties: false
+      description: Persona de la organización (usuario.id y usuario.nombre); nunca credenciales ni correo.
+      required:
+      - id
+      - name
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+    CustomerType:
+      type: string
+      enum:
+      - school
+      - company
+      - person
+    OrderItem:
+      type: object
+      additionalProperties: false
+      description: Ítem del pedido (orden_item). `detail` resume tela, talla y logo cuando existen.
+      required:
+      - description
+      - quantity
+      - unit_price
+      - product_line
+      - detail
+      properties:
+        description:
+          type: string
+          minLength: 1
+          maxLength: 500
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        unit_price:
+          $ref: '#/components/schemas/NonNegativeMoney'
+        product_line:
+          type:
+          - string
+          - 'null'
+          maxLength: 100
+        detail:
+          type:
+          - string
+          - 'null'
+          maxLength: 300
+    PaymentAllocation:
+      type: object
+      additionalProperties: false
+      description: Aplicación vigente de un pago a una obligación (aplicacion_pago sin anular).
+      required:
+      - application_id
+      - receivable_id
+      - order_id
+      - order_code
+      - amount
+      - applied_at
+      - applied_by
+      properties:
+        application_id:
+          $ref: '#/components/schemas/Uuid'
+        receivable_id:
+          $ref: '#/components/schemas/Uuid'
+        order_id:
+          $ref: '#/components/schemas/Uuid'
+        order_code:
+          type: string
+          pattern: ^[A-Z]{1,5}-[0-9]{1,9}$
+        amount:
+          $ref: '#/components/schemas/PositiveMoney'
+        applied_at:
+          type: string
+          format: date-time
+        applied_by:
+          oneOf:
+          - $ref: '#/components/schemas/PersonRef'
+          - type: 'null'
+    ReceivableApplication:
+      type: object
+      additionalProperties: false
+      description: Pago aplicado (vigente) a la obligación, con su canal y autor.
+      required:
+      - application_id
+      - payment_id
+      - payment_code
+      - channel
+      - amount
+      - applied_at
+      - applied_by
+      properties:
+        application_id:
+          $ref: '#/components/schemas/Uuid'
+        payment_id:
+          $ref: '#/components/schemas/Uuid'
+        payment_code:
+          type:
+          - string
+          - 'null'
+          pattern: ^[A-Z]{1,5}-[0-9]{1,9}$
+        channel:
+          $ref: '#/components/schemas/PaymentChannel'
+        amount:
+          $ref: '#/components/schemas/PositiveMoney'
+        applied_at:
+          type: string
+          format: date-time
+        applied_by:
+          oneOf:
+          - $ref: '#/components/schemas/PersonRef'
+          - type: 'null'
+    NotificationType:
+      type: string
+      enum:
+      - collection_preventive
+      - collection_due
+      - early_arrears
+      - repurchase
+      - account_statement
+      - payment_confirmation
+      - seller_summary
+    NotificationStatus:
+      type: string
+      enum:
+      - pending
+      - sent
+      - error
+      - cancelled
+    Notification:
+      type: object
+      additionalProperties: false
+      description: 'Envío programado o realizado por WF3 (envio_notificacion). Solo metadatos de entrega: la base no guarda
+        el texto del mensaje (D-007).'
+      required:
+      - id
+      - customer
+      - order_id
+      - order_code
+      - type
+      - status
+      - scheduled_for
+      - attempts
+      - sent_at
+      - last_error
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        customer:
+          oneOf:
+          - $ref: '#/components/schemas/CustomerRef'
+          - type: 'null'
+        order_id:
+          oneOf:
+          - $ref: '#/components/schemas/Uuid'
+          - type: 'null'
+        order_code:
+          type:
+          - string
+          - 'null'
+          pattern: ^[A-Z]{1,5}-[0-9]{1,9}$
+        type:
+          $ref: '#/components/schemas/NotificationType'
+        status:
+          $ref: '#/components/schemas/NotificationStatus'
+        scheduled_for:
+          type: string
+          format: date-time
+        attempts:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        sent_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        last_error:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
+    NotificationPage:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - page
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+          maxItems: 100
+        page:
+          $ref: '#/components/schemas/PageInfo'
+    ResolveAlertRequest:
+      type: object
+      additionalProperties: false
+      description: Cierre manual de una alerta interna por Administración; la nota queda en alerta_cobranza.resolucion.
+      required:
+      - note
+      properties:
+        note:
+          type: string
+          minLength: 1
+          maxLength: 500
   examples:
     UserContextDemo:
       summary: Contexto ficticio.

@@ -14,15 +14,21 @@ import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 import pe.keptai.backend.contract.AuditDtos.AuditChange;
 import pe.keptai.backend.contract.AuditDtos.AuditEvent;
+import pe.keptai.backend.contract.CommonDtos.NonNegativeMoney;
 import pe.keptai.backend.contract.CommonDtos.PageResponse;
-import pe.keptai.backend.contract.ContractEnums.AlertResolution;
+import pe.keptai.backend.contract.CommonDtos.PersonRef;
+import pe.keptai.backend.contract.ContractEnums.AuditActor;
 import pe.keptai.backend.contract.ContractEnums.CreditAuthorizationStatus;
 import pe.keptai.backend.contract.ContractEnums.DueBucket;
 import pe.keptai.backend.contract.ContractEnums.MatchReason;
@@ -35,25 +41,30 @@ import pe.keptai.backend.contract.ContractEnums.VerificationMethod;
 import pe.keptai.backend.contract.ContractJson;
 import pe.keptai.backend.contract.OrderDtos.CustomerRef;
 import pe.keptai.backend.contract.OrderDtos.Order;
+import pe.keptai.backend.contract.OrderDtos.OrderItem;
 import pe.keptai.backend.contract.PaymentDtos.Payment;
+import pe.keptai.backend.contract.PaymentDtos.PaymentAllocation;
 import pe.keptai.backend.contract.PaymentDtos.PaymentVerification;
 import pe.keptai.backend.contract.PaymentDtos.ReconciliationCandidate;
 import pe.keptai.backend.contract.PaymentDtos.ReconciliationResult;
 import pe.keptai.backend.contract.ReceivableDtos.CollectionAlert;
 import pe.keptai.backend.contract.ReceivableDtos.CreditAuthorization;
 import pe.keptai.backend.contract.ReceivableDtos.CustomerStatement;
+import pe.keptai.backend.contract.ReceivableDtos.Notification;
 import pe.keptai.backend.contract.ReceivableDtos.Receivable;
+import pe.keptai.backend.contract.ReceivableDtos.ReceivableApplication;
 import pe.keptai.backend.contract.ReceivableDtos.StatementApplication;
 import pe.keptai.backend.contract.ReceivableDtos.StatementOrder;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Lecturas del panel (MIG-06/07, INT-FE-API-001) sobre las tablas y vistas de Andrés, siempre dentro de
+ * Lecturas del panel (MIG-06/07, INT-FE-API-001/002) sobre las tablas y vistas de Andrés, siempre dentro de
  * {@link PanelContext#read}: RLS decide qué filas ve cada rol (JEFE_TALLER no ve clientes ni obligaciones, INGESTA no
  * entra por aquí). Saldo y cobrado salen de {@code v_saldo_obligacion}; la mora del cliente de {@code v_cliente_mora}.
  * Estado de la cuenta por cobrar y tramo de vencimiento se derivan con la misma regla que
- * {@code recalcular_obligaciones} (V8) para no depender de que el job haya corrido.
+ * {@code recalcular_obligaciones} (V8) para no depender de que el job haya corrido. Los detalles (ítems, aplicaciones)
+ * se cargan por lote para la página completa, no fila por fila.
  */
 @Component
 public class PanelQueries {
@@ -65,17 +76,36 @@ public class PanelQueries {
 
 	private static final String HOY = "timezone(org.zona_horaria, now())::date";
 
+	/** Código legible de los pagos: V-NNN por orden de llegada en la organización (la tabla pago no tiene etiqueta). */
+	private static final String NUMERADOS = "numerados AS (SELECT p.id, row_number() OVER (ORDER BY p.creado_en, p.id) AS n FROM keptai.pago p)";
+
 	private final PanelContext panel;
 
 	public PanelQueries(PanelContext panel) {
 		this.panel = panel;
 	}
 
+	/* ------------------------------------------------------------------ Identidad */
+
+	/** Nombre del usuario y de su organización; nulos si la base no está disponible (perfil sin datos). */
+	public record IdentityNames(String name, String organizationName) {
+	}
+
+	public IdentityNames identityNames() {
+		return panel.read(() -> panel.jdbc().query("""
+				SELECT u.nombre, org.nombre
+				  FROM keptai.usuario u JOIN keptai.organizacion org ON org.id = u.organizacion_id
+				 WHERE u.id = nullif(current_setting('app.usuario_id', true), '')::uuid""",
+				(rs, i) -> new IdentityNames(rs.getString(1), rs.getString(2))).stream().findFirst()
+			.orElse(new IdentityNames(null, null)));
+	}
+
 	/* ------------------------------------------------------------------ Órdenes */
 
 	private static final String ORDERS = """
 			WITH base AS (
-			  SELECT o.id, o.ref, o.cliente_id, c.razon_social AS cliente, m.nombre AS marca,
+			  SELECT o.id, o.ref, o.cliente_id, c.razon_social AS cliente, c.tipo AS cliente_tipo, c.ruc_dni,
+			         c.limite_credito, m.nombre AS marca,
 			         (SELECT string_agg(DISTINCT l.nombre, ', ' ORDER BY l.nombre)
 			            FROM keptai.orden_item i
 			            JOIN keptai.linea_producto l ON l.organizacion_id = i.organizacion_id AND l.id = i.linea_id
@@ -88,12 +118,15 @@ public class PanelQueries {
 			              WHEN ob.vence_en < %1$s THEN 'overdue'
 			              WHEN coalesce(s.cobrado, 0) > 0 THEN 'partially_paid'
 			              ELSE 'pending' END AS cxc,
+			         v.id AS vendedor_id, v.nombre AS vendedor, ud.id AS despachador_id, ud.nombre AS despachador,
 			         org.nombre LIKE 'DEMO %%' AS demo, o.creado_en
 			    FROM keptai.orden o
 			    JOIN keptai.organizacion org ON org.id = o.organizacion_id
 			    LEFT JOIN keptai.cliente c ON c.organizacion_id = o.organizacion_id AND c.id = o.cliente_id
 			    LEFT JOIN keptai.marca m ON m.organizacion_id = o.organizacion_id AND m.id = o.marca_id
+			    LEFT JOIN keptai.usuario v ON v.organizacion_id = o.organizacion_id AND v.id = o.vendedor_id
 			    LEFT JOIN keptai.despacho d ON d.organizacion_id = o.organizacion_id AND d.orden_id = o.id
+			    LEFT JOIN keptai.usuario ud ON ud.organizacion_id = d.organizacion_id AND ud.id = d.registrado_por
 			    LEFT JOIN keptai.obligacion_cobro ob ON ob.organizacion_id = o.organizacion_id AND ob.orden_id = o.id
 			    LEFT JOIN keptai.v_saldo_obligacion s ON s.obligacion_id = ob.id
 			)
@@ -112,8 +145,8 @@ public class PanelQueries {
 			throw PanelException.badRequest("Valor no válido para receivable_status");
 		}
 		String cxc = receivableStatus == null || receivableStatus.isBlank() ? null : receivableStatus;
-		return panel.read(() -> page.page(panel.jdbc().query(ORDERS, (rs, i) -> order(rs), null, null, customerId,
-				customerId, estado, estado, cxc, cxc, page.fetch(), page.offset())));
+		return panel.read(() -> page.page(withItems(panel.jdbc().query(ORDERS, (rs, i) -> order(rs), null, null,
+				customerId, customerId, estado, estado, cxc, cxc, page.fetch(), page.offset()))));
 	}
 
 	public Order order(UUID id) {
@@ -127,7 +160,7 @@ public class PanelQueries {
 		if (rows.isEmpty()) {
 			throw PanelException.notFound("Pedido no encontrado");
 		}
-		return rows.get(0);
+		return withItems(rows).get(0);
 	}
 
 	private static Order order(ResultSet rs) throws SQLException {
@@ -137,8 +170,9 @@ public class PanelQueries {
 		LocalDate despacho = rs.getObject("fecha_despacho", LocalDate.class);
 		String condicion = rs.getString("condicion_pago");
 		return new Order(rs.getObject("id", UUID.class), rs.getString("ref"),
-				cliente != null && nombre != null ? new CustomerRef(cliente, nombre) : null, rs.getString("marca"),
-				rs.getString("linea"), PanelMapping.productionMode(rs.getString("tipo_produccion")),
+				cliente != null && nombre != null ? customer(cliente, nombre, rs.getString("cliente_tipo"),
+						rs.getString("ruc_dni"), rs.getBigDecimal("limite_credito")) : null,
+				rs.getString("marca"), rs.getString("linea"), PanelMapping.productionMode(rs.getString("tipo_produccion")),
 				positive(rs.getBigDecimal("total")), PanelMapping.ORDER_STATUS.get(rs.getString("estado")),
 				PanelMapping.SOURCE.get(rs.getString("origen")),
 				condicion == null ? null : PanelMapping.CONDITION.get(condicion), (Integer) rs.getObject("plazo_dias"),
@@ -147,7 +181,35 @@ public class PanelQueries {
 				rs.getObject("fecha_inicio_produccion", LocalDate.class), despacho,
 				cxc == null ? null : receivableStatus(cxc), despacho == null ? null : rs.getObject("vence_en", LocalDate.class),
 				null, PanelMapping.dataOrigin(rs.getBoolean("demo"), rs.getString("origen")),
-				lima(rs.getObject("creado_en", OffsetDateTime.class)));
+				lima(rs.getObject("creado_en", OffsetDateTime.class)),
+				person(rs.getObject("vendedor_id", UUID.class), rs.getString("vendedor")), List.of(),
+				person(rs.getObject("despachador_id", UUID.class), rs.getString("despachador")));
+	}
+
+	/** Agrega los ítems ({@code orden_item}) de toda la página en una sola consulta. */
+	private List<Order> withItems(List<Order> orders) {
+		if (orders.isEmpty()) {
+			return orders;
+		}
+		Map<UUID, List<OrderItem>> items = new HashMap<>();
+		byIds("""
+				SELECT i.orden_id, i.descripcion, i.cantidad, i.precio_unit, l.nombre, i.tela, i.talla, i.logo
+				  FROM keptai.orden_item i
+				  LEFT JOIN keptai.linea_producto l ON l.organizacion_id = i.organizacion_id AND l.id = i.linea_id
+				 WHERE i.orden_id = ANY(?)
+				 ORDER BY i.orden_id, i.descripcion, i.id""", ids(orders.stream().map(Order::id)), (rs, n) -> {
+			String detalle = Stream.of(rs.getString(6), rs.getString(7), rs.getString(8))
+				.filter(s -> s != null && !s.isBlank()).collect(Collectors.joining(" · "));
+			items.computeIfAbsent(rs.getObject(1, UUID.class), k -> new ArrayList<>())
+				.add(new OrderItem(rs.getString(2), rs.getInt(3), nonNegativeOrZero(rs.getBigDecimal(4)), rs.getString(5),
+						detalle.isEmpty() ? null : truncate(detalle, 300)));
+			return null;
+		});
+		return orders.stream().map(o -> new Order(o.id(), o.displayCode(), o.customer(), o.brand(), o.productLine(),
+				o.productionMode(), o.sale(), o.status(), o.source(), o.paymentCondition(), o.creditTermDays(),
+				o.advanceRequired(), o.requestedDeliveryDate(), o.productionStartDate(), o.dispatchDate(), o.receivableStatus(),
+				o.dueDate(), o.sourceEvidenceId(), o.dataOrigin(), o.createdAt(), o.seller(),
+				List.copyOf(items.getOrDefault(o.id(), List.of())), o.dispatchedBy())).toList();
 	}
 
 	private static ReceivableStatus receivableStatus(String v) {
@@ -164,9 +226,9 @@ public class PanelQueries {
 
 	private static final String RECEIVABLES = """
 			WITH base AS (
-			  SELECT ob.id, ob.orden_id, o.ref, o.cliente_id, c.razon_social AS cliente, ob.monto,
-			         coalesce(s.cobrado, 0) AS cobrado, coalesce(s.saldo, ob.monto) AS saldo, ob.plazo_dias, ob.vence_en,
-			         %1$s AS hoy,
+			  SELECT ob.id, ob.orden_id, o.ref, o.cliente_id, c.razon_social AS cliente, c.tipo AS cliente_tipo, c.ruc_dni,
+			         c.limite_credito, ob.monto, coalesce(s.cobrado, 0) AS cobrado, coalesce(s.saldo, ob.monto) AS saldo,
+			         ob.plazo_dias, ob.vence_en, %1$s AS hoy,
 			         CASE WHEN ob.estado = 'ANULADA' THEN 'voided'
 			              WHEN coalesce(s.saldo, ob.monto) = 0 THEN 'paid'
 			              WHEN ob.vence_en < %1$s THEN 'overdue'
@@ -197,8 +259,8 @@ public class PanelQueries {
 			throw PanelException.badRequest("Valor no válido para due_bucket");
 		}
 		String tramo = dueBucket == null || dueBucket.isBlank() ? null : dueBucket;
-		return panel.read(() -> page.page(panel.jdbc().query(RECEIVABLES, (rs, i) -> receivable(rs), null, null,
-				customerId, customerId, tramo, tramo, page.fetch(), page.offset())));
+		return panel.read(() -> page.page(withApplications(panel.jdbc().query(RECEIVABLES, (rs, i) -> receivable(rs),
+				null, null, customerId, customerId, tramo, tramo, page.fetch(), page.offset()))));
 	}
 
 	public Receivable receivable(UUID id) {
@@ -211,14 +273,13 @@ public class PanelQueries {
 		if (rows.isEmpty()) {
 			throw PanelException.notFound("Cuenta por cobrar no encontrada");
 		}
-		return rows.get(0);
+		return withApplications(rows).get(0);
 	}
 
 	private static Receivable receivable(ResultSet rs) throws SQLException {
 		LocalDate vence = rs.getObject("vence_en", LocalDate.class);
 		LocalDate hoy = rs.getObject("hoy", LocalDate.class);
-		String tramo = rs.getString("tramo");
-		DueBucket bucket = switch (tramo) {
+		DueBucket bucket = switch (rs.getString("tramo")) {
 			case "awaiting_dispatch" -> DueBucket.AWAITING_DISPATCH;
 			case "overdue" -> DueBucket.OVERDUE;
 			case "due_today" -> DueBucket.DUE_TODAY;
@@ -226,33 +287,75 @@ public class PanelQueries {
 		};
 		int atraso = bucket == DueBucket.OVERDUE ? (int) Math.min(36_500, ChronoUnit.DAYS.between(vence, hoy)) : 0;
 		return new Receivable(rs.getObject("id", UUID.class), rs.getObject("orden_id", UUID.class), rs.getString("ref"),
-				new CustomerRef(rs.getObject("cliente_id", UUID.class), rs.getString("cliente")),
+				customer(rs.getObject("cliente_id", UUID.class), rs.getString("cliente"), rs.getString("cliente_tipo"),
+						rs.getString("ruc_dni"), rs.getBigDecimal("limite_credito")),
 				positive(rs.getBigDecimal("monto")), nonNegativeOrZero(rs.getBigDecimal("cobrado")),
 				nonNegativeOrZero(rs.getBigDecimal("saldo")), Math.min(365, rs.getInt("plazo_dias")),
-				TermStartEvent.DISPATCH, vence, bucket, atraso, receivableStatus(rs.getString("estado")));
+				TermStartEvent.DISPATCH, vence, bucket, atraso, receivableStatus(rs.getString("estado")), List.of());
+	}
+
+	/** Pagos aplicados vigentes de las obligaciones de la página (una sola consulta). */
+	private List<Receivable> withApplications(List<Receivable> receivables) {
+		if (receivables.isEmpty()) {
+			return receivables;
+		}
+		Map<UUID, List<ReceivableApplication>> apps = new HashMap<>();
+		byIds("WITH " + NUMERADOS + """
+				SELECT a.obligacion_id, a.id, a.pago_id, n.n, p.medio, a.monto_aplicado, a.aplicado_en, u.id, u.nombre
+				  FROM keptai.aplicacion_pago a
+				  JOIN keptai.pago p ON p.organizacion_id = a.organizacion_id AND p.id = a.pago_id
+				  JOIN numerados n ON n.id = a.pago_id
+				  LEFT JOIN keptai.usuario u ON u.organizacion_id = a.organizacion_id AND u.id = a.aplicado_por
+				 WHERE a.obligacion_id = ANY(?) AND a.anulada_en IS NULL
+				 ORDER BY a.aplicado_en, a.id""", ids(receivables.stream().map(Receivable::id)), (rs, n) -> {
+			apps.computeIfAbsent(rs.getObject(1, UUID.class), k -> new ArrayList<>())
+				.add(new ReceivableApplication(rs.getObject(2, UUID.class), rs.getObject(3, UUID.class),
+						"V-%03d".formatted(rs.getLong(4)), PanelMapping.CHANNEL.get(rs.getString(5)),
+						positive(rs.getBigDecimal(6)), lima(rs.getObject(7, OffsetDateTime.class)),
+						person(rs.getObject(8, UUID.class), rs.getString(9))));
+			return null;
+		});
+		return receivables.stream().map(r -> new Receivable(r.id(), r.orderId(), r.orderCode(), r.customer(),
+				r.originalAmount(), r.appliedAmount(), r.balance(), r.creditTermDays(), r.termStartEvent(), r.dueDate(),
+				r.dueBucket(), r.daysOverdue(), r.status(), List.copyOf(apps.getOrDefault(r.id(), List.of())))).toList();
 	}
 
 	/* ------------------------------------------------------------------ Alertas */
 
+	private static final String ALERTS = """
+			SELECT a.id, a.obligacion_id, a.pago_id, a.regla, a.estado, a.responsable_id, a.resolucion, a.creado_en,
+			       a.cerrada_en, u.nombre AS responsable
+			  FROM keptai.alerta_cobranza a
+			  LEFT JOIN keptai.usuario u ON u.organizacion_id = a.organizacion_id AND u.id = a.responsable_id
+			 WHERE (CAST(? AS uuid) IS NULL OR a.id = CAST(? AS uuid))
+			   AND (CAST(? AS text) IS NULL OR a.estado = CAST(? AS text))
+			 ORDER BY a.creado_en DESC, a.id LIMIT ? OFFSET ?""";
+
 	public PageResponse<CollectionAlert> alerts(PageRequest page, String status) {
 		String estado = PanelMapping.orNull(PanelMapping.ALERT_STATUS_SQL, status, "status");
-		return panel.read(() -> page.page(panel.jdbc().query("""
-				SELECT id, obligacion_id, pago_id, regla, estado, responsable_id, resolucion, creado_en, cerrada_en
-				  FROM keptai.alerta_cobranza
-				 WHERE (CAST(? AS text) IS NULL OR estado = CAST(? AS text))
-				 ORDER BY creado_en DESC, id LIMIT ? OFFSET ?""", (rs, i) -> {
-			String est = rs.getString("estado");
-			String resolucion = rs.getString("resolucion");
-			boolean abierta = "ABIERTA".equals(est);
-			OffsetDateTime cierre = rs.getObject("cerrada_en", OffsetDateTime.class);
-			return new CollectionAlert(rs.getObject("id", UUID.class), rs.getObject("obligacion_id", UUID.class),
-					rs.getObject("pago_id", UUID.class), PanelMapping.ALERT_RULE.get(rs.getString("regla")),
-					PanelMapping.ALERT_STATUS.get(est), rs.getObject("responsable_id", UUID.class),
-					abierta || resolucion == null ? null
-							: resolucion.toLowerCase().contains("pago") ? AlertResolution.PAYMENT_APPLIED
-									: AlertResolution.MANUAL,
-					lima(rs.getObject("creado_en", OffsetDateTime.class)), abierta ? null : lima(cierre));
-		}, estado, estado, page.fetch(), page.offset())));
+		return panel.read(() -> page.page(panel.jdbc().query(ALERTS, (rs, i) -> alert(rs), null, null, estado, estado,
+				page.fetch(), page.offset())));
+	}
+
+	CollectionAlert alertInTx(UUID id) {
+		List<CollectionAlert> rows = panel.jdbc().query(ALERTS, (rs, i) -> alert(rs), id, id, null, null, 1, 0);
+		if (rows.isEmpty()) {
+			throw PanelException.notFound("Alerta no encontrada");
+		}
+		return rows.get(0);
+	}
+
+	private static CollectionAlert alert(ResultSet rs) throws SQLException {
+		String est = rs.getString("estado");
+		String resolucion = rs.getString("resolucion");
+		boolean abierta = "ABIERTA".equals(est);
+		return new CollectionAlert(rs.getObject("id", UUID.class), rs.getObject("obligacion_id", UUID.class),
+				rs.getObject("pago_id", UUID.class), PanelMapping.ALERT_RULE.get(rs.getString("regla")),
+				PanelMapping.ALERT_STATUS.get(est), rs.getObject("responsable_id", UUID.class),
+				abierta ? null : PanelMapping.alertResolution(resolucion),
+				lima(rs.getObject("creado_en", OffsetDateTime.class)),
+				abierta ? null : lima(rs.getObject("cerrada_en", OffsetDateTime.class)), rs.getString("responsable"),
+				abierta || resolucion == null ? null : truncate(resolucion, 500));
 	}
 
 	/* ------------------------------------------------------------------ Pagos */
@@ -262,7 +365,8 @@ public class PanelQueries {
 			  SELECT p.*, row_number() OVER (ORDER BY p.creado_en, p.id) AS n FROM keptai.pago p
 			)
 			SELECT p.id, p.n, p.fase, p.estado_conciliacion, p.medio, p.codigo_operacion, p.cliente_id, c.razon_social,
-			       p.fecha_pago, p.monto, p.verificado_por, p.verificado_en, p.duplicado_de_pago_id, p.creado_en,
+			       p.fecha_pago, p.monto, p.verificado_por, uv.nombre AS verificador, p.verificado_en, p.duplicado_de_pago_id,
+			       p.creado_en,
 			       coalesce((SELECT sum(a.monto_aplicado) FROM keptai.aplicacion_pago a
 			                  WHERE a.organizacion_id = p.organizacion_id AND a.pago_id = p.id AND a.anulada_en IS NULL), 0)
 			         AS aplicado,
@@ -274,6 +378,7 @@ public class PanelQueries {
 			  FROM numerados p
 			  JOIN keptai.organizacion org ON org.id = p.organizacion_id
 			  LEFT JOIN keptai.cliente c ON c.organizacion_id = p.organizacion_id AND c.id = p.cliente_id
+			  LEFT JOIN keptai.usuario uv ON uv.organizacion_id = p.organizacion_id AND uv.id = p.verificado_por
 			 WHERE (CAST(? AS uuid) IS NULL OR p.id = CAST(? AS uuid))
 			   AND (CAST(? AS text) IS NULL OR p.fase = CAST(? AS text))
 			   AND (CAST(? AS text) IS NULL OR p.estado_conciliacion = CAST(? AS text))
@@ -283,8 +388,8 @@ public class PanelQueries {
 	public PageResponse<Payment> payments(PageRequest page, String phase, String reconciliationStatus) {
 		String fase = PanelMapping.orNull(PanelMapping.PHASE_SQL, phase, "phase");
 		String conc = PanelMapping.orNull(PanelMapping.RECONCILIATION_SQL, reconciliationStatus, "reconciliation_status");
-		return panel.read(() -> page.page(panel.jdbc().query(PAYMENTS, (rs, i) -> payment(rs).payment(), null, null,
-				fase, fase, conc, conc, page.fetch(), page.offset())));
+		return panel.read(() -> page.page(withAllocations(panel.jdbc().query(PAYMENTS, (rs, i) -> payment(rs), null,
+				null, fase, fase, conc, conc, page.fetch(), page.offset())).stream().map(PaymentRow::payment).toList()));
 	}
 
 	public Payment payment(UUID id) {
@@ -300,7 +405,7 @@ public class PanelQueries {
 		if (rows.isEmpty()) {
 			throw PanelException.notFound("Pago no encontrado");
 		}
-		return rows.get(0);
+		return withAllocations(rows).get(0);
 	}
 
 	private record PaymentRow(Payment payment, UUID clienteId, String cliente) {
@@ -315,7 +420,8 @@ public class PanelQueries {
 		boolean verificado = !"RECIBIDO".equals(fase) && !"DUPLICADO".equals(conc) && verificador != null;
 		// El motor registra toda verificacion de la demo como simulada (sin banco); se rotula igual (D-009, MotorPagos).
 		PaymentVerification verificacion = verificado ? new PaymentVerification(VerificationMethod.SIMULATED_DEMO, true,
-				verificador, lima(rs.getObject("verificado_en", OffsetDateTime.class)), null) : null;
+				verificador, lima(rs.getObject("verificado_en", OffsetDateTime.class)), null, rs.getString("verificador"))
+				: null;
 		PaymentPhase phase = PanelMapping.PHASE.get(fase);
 		if (!verificado) {
 			phase = PaymentPhase.RECEIVED;
@@ -331,8 +437,40 @@ public class PanelQueries {
 				"DUPLICADO".equals(conc) ? rs.getObject("duplicado_de_pago_id", UUID.class) : null, uuids(rs, "evidencias"),
 				verificacion,
 				confianza == null ? null : confianza.movePointRight(3).setScale(0, java.math.RoundingMode.HALF_UP).intValue(),
-				PanelMapping.dataOrigin(rs.getBoolean("demo"), null), lima(rs.getObject("creado_en", OffsetDateTime.class)));
+				PanelMapping.dataOrigin(rs.getBoolean("demo"), null), lima(rs.getObject("creado_en", OffsetDateTime.class)),
+				List.of());
 		return new PaymentRow(p, cliente, rs.getString("razon_social"));
+	}
+
+	/** Aplicaciones vigentes de los pagos de la página, con su pedido y autor (una sola consulta). */
+	private List<PaymentRow> withAllocations(List<PaymentRow> rows) {
+		if (rows.isEmpty()) {
+			return rows;
+		}
+		Map<UUID, List<PaymentAllocation>> allocations = new HashMap<>();
+		byIds("""
+				SELECT a.pago_id, a.id, a.obligacion_id, o.id, o.ref, a.monto_aplicado, a.aplicado_en, u.id, u.nombre
+				  FROM keptai.aplicacion_pago a
+				  JOIN keptai.obligacion_cobro ob ON ob.organizacion_id = a.organizacion_id AND ob.id = a.obligacion_id
+				  JOIN keptai.orden o ON o.organizacion_id = ob.organizacion_id AND o.id = ob.orden_id
+				  LEFT JOIN keptai.usuario u ON u.organizacion_id = a.organizacion_id AND u.id = a.aplicado_por
+				 WHERE a.pago_id = ANY(?) AND a.anulada_en IS NULL
+				 ORDER BY a.aplicado_en, a.id""", ids(rows.stream().map(r -> r.payment().id())), (rs, n) -> {
+			allocations.computeIfAbsent(rs.getObject(1, UUID.class), k -> new ArrayList<>())
+				.add(new PaymentAllocation(rs.getObject(2, UUID.class), rs.getObject(3, UUID.class), rs.getObject(4, UUID.class),
+						rs.getString(5), positive(rs.getBigDecimal(6)), lima(rs.getObject(7, OffsetDateTime.class)),
+						person(rs.getObject(8, UUID.class), rs.getString(9))));
+			return null;
+		});
+		return rows.stream().map(r -> {
+			Payment p = r.payment();
+			List<PaymentAllocation> mine = allocations.getOrDefault(p.id(), List.of());
+			return new PaymentRow(new Payment(p.id(), p.displayCode(), p.phase(), p.reconciliationStatus(), p.channel(),
+					p.operationReference(), p.payerName(), p.paidAt(), p.receivedAmount(), p.verifiedAmount(), p.appliedAmount(),
+					p.unappliedAmount(), p.duplicateOfPaymentId(), p.evidenceIds(), p.verification(),
+					p.modelReportedConfidencePermille(), p.dataOrigin(), p.createdAt(),
+					List.copyOf(mine.size() > 20 ? mine.subList(0, 20) : mine)), r.clienteId(), r.cliente());
+		}).toList();
 	}
 
 	private static List<UUID> uuids(ResultSet rs, String column) throws SQLException {
@@ -392,7 +530,7 @@ public class PanelQueries {
 				.filter(a -> !yaAplicadas.contains(a.id()))
 				.sorted(Comparator.comparing((Abierta a) -> a.saldo() == importe ? 0 : 1))
 				.map(a -> new ReconciliationCandidate(a.id(), a.orden(), a.ref(), row.cliente(),
-						pe.keptai.backend.contract.CommonDtos.NonNegativeMoney.pen(a.saldo()), null,
+						NonNegativeMoney.pen(a.saldo()), null,
 						List.of(a.saldo() == importe ? MatchReason.AMOUNT_EQUAL
 								: importe < a.saldo() ? MatchReason.AMOUNT_BELOW_BALANCE : MatchReason.AMOUNT_ABOVE_BALANCE)))
 				.toList();
@@ -418,18 +556,21 @@ public class PanelQueries {
 
 	/* ------------------------------------------------------------------ Crédito */
 
+	private static final String CREDIT_COLUMNS = """
+			o.estado, a.decision, a.aprobado_por, ua.nombre AS aprobador, a.aviso_mora_mostrado, a.saldo_referencia,
+			a.plazo_dias, a.anticipo_pct, a.motivo, a.decidido_en,
+			(SELECT coalesce(sum(m.saldo_vencido), 0) FROM keptai.v_cliente_mora m
+			  WHERE m.organizacion_id = o.organizacion_id AND m.cliente_id = o.cliente_id) AS vencido""";
+
 	public CreditAuthorization creditDecision(UUID orderId) {
 		return panel.read(() -> creditDecisionInTx(orderId));
 	}
 
 	CreditAuthorization creditDecisionInTx(UUID orderId) {
-		List<CreditAuthorization> rows = panel.jdbc().query("""
-				SELECT o.estado, a.decision, a.aprobado_por, a.aviso_mora_mostrado, a.saldo_referencia, a.plazo_dias,
-				       a.anticipo_pct, a.motivo, a.decidido_en,
-				       (SELECT coalesce(sum(m.saldo_vencido), 0) FROM keptai.v_cliente_mora m
-				         WHERE m.organizacion_id = o.organizacion_id AND m.cliente_id = o.cliente_id) AS vencido
+		List<CreditAuthorization> rows = panel.jdbc().query("SELECT " + CREDIT_COLUMNS + """
 				  FROM keptai.orden o
 				  LEFT JOIN keptai.aprobacion_credito a ON a.organizacion_id = o.organizacion_id AND a.orden_id = o.id
+				  LEFT JOIN keptai.usuario ua ON ua.organizacion_id = a.organizacion_id AND ua.id = a.aprobado_por
 				 WHERE o.id = ?""", (rs, i) -> credit(rs, rs.getString("estado")), orderId);
 		if (rows.isEmpty()) {
 			throw PanelException.notFound("Pedido no encontrado");
@@ -444,7 +585,7 @@ public class PanelQueries {
 			boolean pendiente = decision != null || estadoOrden == null
 					|| List.of("BORRADOR", "PENDIENTE_APROBACION").contains(estadoOrden);
 			return new CreditAuthorization(pendiente ? CreditAuthorizationStatus.PENDING : CreditAuthorizationStatus.NOT_REQUIRED,
-					null, false, nonNegativeOrZero(vencido), null, null, null, null);
+					null, false, nonNegativeOrZero(vencido), null, null, null, null, null);
 		}
 		BigDecimal pct = rs.getBigDecimal("anticipo_pct");
 		return new CreditAuthorization(
@@ -452,7 +593,7 @@ public class PanelQueries {
 				rs.getObject("aprobado_por", UUID.class), rs.getBoolean("aviso_mora_mostrado"),
 				nonNegativeOrZero(rs.getBigDecimal("saldo_referencia")), (Integer) rs.getObject("plazo_dias"),
 				pct == null ? null : pct.movePointRight(2).intValueExact(), rs.getString("motivo"),
-				lima(rs.getObject("decidido_en", OffsetDateTime.class)));
+				lima(rs.getObject("decidido_en", OffsetDateTime.class)), rs.getString("aprobador"));
 	}
 
 	/* ------------------------------------------------------------------ Estado de cuenta */
@@ -460,14 +601,16 @@ public class PanelQueries {
 	public CustomerStatement statement(UUID customerId) {
 		return panel.read(() -> {
 			List<Map<String, Object>> cliente = panel.jdbc().queryForList("""
-					SELECT c.razon_social, org.nombre LIKE 'DEMO %' AS demo
+					SELECT c.razon_social, c.tipo, c.ruc_dni, c.limite_credito, org.nombre LIKE 'DEMO %' AS demo
 					  FROM keptai.cliente c JOIN keptai.organizacion org ON org.id = c.organizacion_id WHERE c.id = ?""",
 					customerId);
 			if (cliente.isEmpty()) {
 				throw PanelException.notFound("Cliente no encontrado");
 			}
-			CustomerRef ref = new CustomerRef(customerId, (String) cliente.get(0).get("razon_social"));
-			boolean demo = Boolean.TRUE.equals(cliente.get(0).get("demo"));
+			Map<String, Object> c = cliente.get(0);
+			CustomerRef ref = customer(customerId, (String) c.get("razon_social"), (String) c.get("tipo"),
+					(String) c.get("ruc_dni"), (BigDecimal) c.get("limite_credito"));
+			boolean demo = Boolean.TRUE.equals(c.get("demo"));
 			List<StatementOrder> orders = panel.jdbc().query("""
 					SELECT o.id, o.ref, o.total, coalesce(s.cobrado, 0), coalesce(s.saldo, ob.monto), ob.vence_en
 					  FROM keptai.obligacion_cobro ob
@@ -479,8 +622,7 @@ public class PanelQueries {
 							nonNegativeOrZero(rs.getBigDecimal(4)), nonNegativeOrZero(rs.getBigDecimal(5)),
 							rs.getObject(6, LocalDate.class)),
 					customerId);
-			List<StatementApplication> applications = panel.jdbc().query("""
-					WITH numerados AS (SELECT p.id, row_number() OVER (ORDER BY p.creado_en, p.id) AS n FROM keptai.pago p)
+			List<StatementApplication> applications = panel.jdbc().query("WITH " + NUMERADOS + """
 					SELECT n.n, o.ref, a.monto_aplicado, a.aplicado_en
 					  FROM keptai.aplicacion_pago a
 					  JOIN numerados n ON n.id = a.pago_id
@@ -491,13 +633,10 @@ public class PanelQueries {
 					(rs, i) -> new StatementApplication("V-%03d".formatted(rs.getLong(1)), rs.getString(2),
 							positive(rs.getBigDecimal(3)), lima(rs.getObject(4, OffsetDateTime.class))),
 					customerId);
-			List<CreditAuthorization> credito = panel.jdbc().query("""
-					SELECT o.estado, a.decision, a.aprobado_por, a.aviso_mora_mostrado, a.saldo_referencia, a.plazo_dias,
-					       a.anticipo_pct, a.motivo, a.decidido_en,
-					       (SELECT coalesce(sum(m.saldo_vencido), 0) FROM keptai.v_cliente_mora m
-					         WHERE m.organizacion_id = o.organizacion_id AND m.cliente_id = o.cliente_id) AS vencido
+			List<CreditAuthorization> credito = panel.jdbc().query("SELECT " + CREDIT_COLUMNS + """
 					  FROM keptai.aprobacion_credito a
 					  JOIN keptai.orden o ON o.organizacion_id = a.organizacion_id AND o.id = a.orden_id
+					  LEFT JOIN keptai.usuario ua ON ua.organizacion_id = a.organizacion_id AND ua.id = a.aprobado_por
 					 WHERE o.cliente_id = ?
 					 ORDER BY a.decidido_en DESC NULLS LAST, a.creado_en DESC LIMIT 1""",
 					(rs, i) -> credit(rs, rs.getString("estado")), customerId);
@@ -508,27 +647,60 @@ public class PanelQueries {
 			LocalDate next = orders.stream().filter(o -> o.dueDate() != null && o.balance().amountCents() > 0)
 				.map(StatementOrder::dueDate).min(LocalDate::compareTo).orElse(null);
 			CreditAuthorization ca = credito.isEmpty() ? new CreditAuthorization(CreditAuthorizationStatus.NOT_REQUIRED,
-					null, false, nonNegativeOrZero(vencido), null, null, null, null) : credito.get(0);
-			return new CustomerStatement(ref, lima(OffsetDateTime.now()),
-					pe.keptai.backend.contract.CommonDtos.NonNegativeMoney.pen(total), next, orders, applications, ca,
-					PanelMapping.dataOrigin(demo, null));
+					null, false, nonNegativeOrZero(vencido), null, null, null, null, null) : credito.get(0);
+			return new CustomerStatement(ref, lima(OffsetDateTime.now()), NonNegativeMoney.pen(total), next, orders,
+					applications, ca, PanelMapping.dataOrigin(demo, null));
 		});
+	}
+
+	/* ------------------------------------------------------------------ Envíos de cobranza (WF3) */
+
+	public PageResponse<Notification> notifications(PageRequest page, UUID orderId, UUID customerId) {
+		return panel.read(() -> page.page(panel.jdbc().query("""
+				SELECT e.id, e.cliente_id, c.razon_social, c.tipo, c.ruc_dni, c.limite_credito, e.orden_id, o.ref, e.tipo AS envio,
+				       e.estado, e.programado_para, e.intentos, e.enviado_en, e.ultimo_error
+				  FROM keptai.envio_notificacion e
+				  LEFT JOIN keptai.cliente c ON c.organizacion_id = e.organizacion_id AND c.id = e.cliente_id
+				  LEFT JOIN keptai.orden o ON o.organizacion_id = e.organizacion_id AND o.id = e.orden_id
+				 WHERE (CAST(? AS uuid) IS NULL OR e.orden_id = CAST(? AS uuid))
+				   AND (CAST(? AS uuid) IS NULL OR e.cliente_id = CAST(? AS uuid))
+				 ORDER BY e.programado_para DESC, e.id LIMIT ? OFFSET ?""", (rs, i) -> {
+			UUID cliente = rs.getObject("cliente_id", UUID.class);
+			String nombre = rs.getString("razon_social");
+			String error = rs.getString("ultimo_error");
+			return new Notification(rs.getObject("id", UUID.class),
+					cliente == null || nombre == null ? null : customer(cliente, nombre, rs.getString("tipo"),
+							rs.getString("ruc_dni"), rs.getBigDecimal("limite_credito")),
+					rs.getObject("orden_id", UUID.class), rs.getString("ref"),
+					PanelMapping.NOTIFICATION_TYPE.get(rs.getString("envio")),
+					PanelMapping.NOTIFICATION_STATUS.get(rs.getString("estado")),
+					lima(rs.getObject("programado_para", OffsetDateTime.class)), Math.min(1000, rs.getInt("intentos")),
+					lima(rs.getObject("enviado_en", OffsetDateTime.class)), error == null ? null : truncate(error, 500));
+		}, orderId, orderId, customerId, customerId, page.fetch(), page.offset())));
 	}
 
 	/* ------------------------------------------------------------------ Auditoría */
 
 	public PageResponse<AuditEvent> audit(PageRequest page, UUID entityId) {
 		return panel.read(() -> page.page(panel.jdbc().query("""
-				SELECT id, ocurrido_en, actor, usuario_id, operacion, entidad, entidad_id, request_id, cambios::text AS cambios
-				  FROM keptai.evento_auditoria
-				 WHERE (CAST(? AS uuid) IS NULL OR entidad_id = CAST(? AS uuid))
-				 ORDER BY ocurrido_en DESC, id LIMIT ? OFFSET ?""", (rs, i) -> {
-			var actor = PanelMapping.AUDIT_ACTOR.get(rs.getString("actor"));
+				SELECT e.id, e.ocurrido_en, e.actor, e.usuario_id, u.nombre, e.operacion, e.entidad, e.entidad_id,
+				       e.request_id, e.cambios::text AS cambios
+				  FROM keptai.evento_auditoria e
+				  LEFT JOIN keptai.usuario u ON u.organizacion_id = e.organizacion_id AND u.id = e.usuario_id
+				 WHERE (CAST(? AS uuid) IS NULL OR e.entidad_id = CAST(? AS uuid))
+				 ORDER BY e.ocurrido_en DESC, e.id LIMIT ? OFFSET ?""", (rs, i) -> {
+			AuditActor actor = PanelMapping.AUDIT_ACTOR.get(rs.getString("actor"));
 			UUID usuario = rs.getObject("usuario_id", UUID.class);
+			String actorName = switch (actor) {
+				case USER -> rs.getString("nombre");
+				case N8N -> "n8n";
+				case SCHEDULER -> "Programador de cobranza";
+				case SYSTEM -> "Sistema";
+			};
 			return new AuditEvent(rs.getObject("id", UUID.class), lima(rs.getObject("ocurrido_en", OffsetDateTime.class)),
-					actor, actor == pe.keptai.backend.contract.ContractEnums.AuditActor.USER ? usuario : null,
-					rs.getString("operacion"), rs.getString("entidad"), rs.getObject("entidad_id", UUID.class),
-					rs.getString("request_id"), changes(rs.getString("cambios")));
+					actor, actor == AuditActor.USER ? usuario : null, rs.getString("operacion"), rs.getString("entidad"),
+					rs.getObject("entidad_id", UUID.class), rs.getString("request_id"), changes(rs.getString("cambios")),
+					actorName);
 		}, entityId, entityId, page.fetch(), page.offset())));
 	}
 
@@ -546,6 +718,30 @@ public class PanelQueries {
 			}
 		});
 		return List.copyOf(out);
+	}
+
+	/* ------------------------------------------------------------------ Utilidades */
+
+	static CustomerRef customer(UUID id, String name, String tipo, String rucDni, BigDecimal limite) {
+		return new CustomerRef(id, name, tipo == null ? null : PanelMapping.CUSTOMER_TYPE.get(tipo),
+				rucDni == null || rucDni.isBlank() ? null : rucDni.strip(), nonNegative(limite));
+	}
+
+	static PersonRef person(UUID id, String name) {
+		return id == null || name == null || name.isBlank() ? null : new PersonRef(id, truncate(name, 200));
+	}
+
+	private static String truncate(String s, int max) {
+		return s.length() > max ? s.substring(0, max) : s;
+	}
+
+	private static List<UUID> ids(Stream<UUID> ids) {
+		return ids.distinct().toList();
+	}
+
+	/** Consulta con un único parámetro {@code uuid[]} (para {@code = ANY(?)}); el mapeador acumula en su propio mapa. */
+	private void byIds(String sql, List<UUID> ids, RowMapper<Void> mapper) {
+		panel.jdbc().query(sql, ps -> ps.setArray(1, ps.getConnection().createArrayOf("uuid", ids.toArray())), mapper);
 	}
 
 }

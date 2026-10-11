@@ -21,26 +21,29 @@ Los cuatro roles son los de `usuario.rol`; `service_n8n` es una credencial técn
 | `correctDraft` | PATCH | `/api/v1/drafts/{draft_id}` | `miguel` | MIG-06 | VENDEDOR, ADMIN | Propuesta, no implementado |
 | `confirmDraft` | POST | `/api/v1/drafts/{draft_id}/confirmation` | `miguel_adapter_andres_engine` | MIG-06 | VENDEDOR, ADMIN | Propuesta, no implementado |
 | `discardDraft` | POST | `/api/v1/drafts/{draft_id}/discard` | `miguel` | MIG-06 | VENDEDOR, ADMIN | Propuesta, no implementado |
-| `listOrders` | GET | `/api/v1/orders` | `miguel_adapter_andres_engine` | MIG-06 | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | Propuesta, no implementado |
-| `getOrder` | GET | `/api/v1/orders/{order_id}` | `miguel_adapter_andres_engine` | MIG-06 | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | Propuesta, no implementado |
-| `listPayments` | GET | `/api/v1/payments` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN, GERENTE | Propuesta, no implementado |
-| `getPayment` | GET | `/api/v1/payments/{payment_id}` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN, GERENTE | Propuesta, no implementado |
-| `getReconciliationCandidates` | GET | `/api/v1/payments/{payment_id}/reconciliation` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN | Propuesta, no implementado |
-| `registerPaymentVerification` | POST | `/api/v1/payments/{payment_id}/verifications` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN | Propuesta, no implementado |
-| `applyPayment` | POST | `/api/v1/payments/{payment_id}/applications` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN | Propuesta, no implementado |
-| `listReceivables` | GET | `/api/v1/receivables` | `miguel_adapter_andres_engine` | MIG-07 | VENDEDOR, ADMIN, GERENTE | Propuesta, no implementado |
-| `getReceivable` | GET | `/api/v1/receivables/{receivable_id}` | `miguel_adapter_andres_engine` | MIG-07 | VENDEDOR, ADMIN, GERENTE | Propuesta, no implementado |
-| `listCollectionAlerts` | GET | `/api/v1/collection-alerts` | `miguel_adapter_andres_engine` | MIG-07 | VENDEDOR, ADMIN | Propuesta, no implementado |
-| `getCustomerStatement` | GET | `/api/v1/customers/{customer_id}/statement` | `miguel_adapter_andres_engine` | MIG-07 | VENDEDOR, ADMIN, GERENTE | Propuesta, no implementado |
-| `getResultsSummary` | GET | `/api/v1/results/summary` | `miguel_adapter_andres_engine` | MIG-07 | GERENTE | Propuesta, no implementado |
-| `getMarginReport` | GET | `/api/v1/results/margins` | `miguel_adapter_andres_engine` | MIG-07 | GERENTE | Propuesta, no implementado |
-| `getProductionCenterResults` | GET | `/api/v1/results/production-center` | `miguel_adapter_andres_engine` | MIG-07 | GERENTE | Propuesta, no implementado |
-| `getCashForecast` | GET | `/api/v1/results/cash-forecast` | `miguel_adapter_andres_engine` | MIG-07 | GERENTE | Propuesta, no implementado |
-| `exportOrdersCsv` | GET | `/api/v1/reports/orders.csv` | `miguel_adapter_andres_engine` | MIG-07 | GERENTE | Propuesta, no implementado |
-| `listAuditEvents` | GET | `/api/v1/audit-events` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN, GERENTE | Propuesta, no implementado |
-| `getCreditDecision` | GET | `/api/v1/orders/{order_id}/credit-decision` | `miguel_adapter_andres_engine` | MIG-07 | VENDEDOR, ADMIN, GERENTE | Propuesta, no implementado |
-| `submitCreditDecision` | POST | `/api/v1/orders/{order_id}/credit-decision` | `miguel_adapter_andres_engine` | MIG-07 | VENDEDOR | Propuesta, no implementado |
-| `registerDispatch` | POST | `/api/v1/orders/{order_id}/dispatch` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN, JEFE_TALLER | Propuesta, no implementado |
+| `listOrders` | GET | `/api/v1/orders` | `miguel_adapter_andres_engine` | MIG-06 | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `getOrder` | GET | `/api/v1/orders/{order_id}` | `miguel_adapter_andres_engine` | MIG-06 | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `listPayments` | GET | `/api/v1/payments` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN, GERENTE | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `getPayment` | GET | `/api/v1/payments/{payment_id}` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN, GERENTE | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `getReconciliationCandidates` | GET | `/api/v1/payments/{payment_id}/reconciliation` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `registerPaymentVerification` | POST | `/api/v1/payments/{payment_id}/verifications` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `applyPayment` | POST | `/api/v1/payments/{payment_id}/applications` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `listReceivables` | GET | `/api/v1/receivables` | `miguel_adapter_andres_engine` | MIG-07 | VENDEDOR, ADMIN, GERENTE | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `getReceivable` | GET | `/api/v1/receivables/{receivable_id}` | `miguel_adapter_andres_engine` | MIG-07 | VENDEDOR, ADMIN, GERENTE | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `listCollectionAlerts` | GET | `/api/v1/collection-alerts` | `miguel_adapter_andres_engine` | MIG-07 | VENDEDOR, ADMIN | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `getCustomerStatement` | GET | `/api/v1/customers/{customer_id}/statement` | `miguel_adapter_andres_engine` | MIG-07 | VENDEDOR, ADMIN, GERENTE | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `getResultsSummary` | GET | `/api/v1/results/summary` | `miguel_adapter_andres_engine` | MIG-07 | GERENTE | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `getMarginReport` | GET | `/api/v1/results/margins` | `miguel_adapter_andres_engine` | MIG-07 | GERENTE | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `getProductionCenterResults` | GET | `/api/v1/results/production-center` | `miguel_adapter_andres_engine` | MIG-07 | GERENTE | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `getCashForecast` | GET | `/api/v1/results/cash-forecast` | `miguel_adapter_andres_engine` | MIG-07 | GERENTE | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `exportOrdersCsv` | GET | `/api/v1/reports/orders.csv` | `miguel_adapter_andres_engine` | MIG-07 | GERENTE | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `listAuditEvents` | GET | `/api/v1/audit-events` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN, GERENTE | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `getCreditDecision` | GET | `/api/v1/orders/{order_id}/credit-decision` | `miguel_adapter_andres_engine` | MIG-07 | VENDEDOR, ADMIN, GERENTE | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `submitCreditDecision` | POST | `/api/v1/orders/{order_id}/credit-decision` | `miguel_adapter_andres_engine` | MIG-07 | VENDEDOR | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `registerDispatch` | POST | `/api/v1/orders/{order_id}/dispatch` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN, JEFE_TALLER | Propuesta; implementado en INT-FE-API-001 (Spring + PostgreSQL, Auth real pendiente) |
+| `resolveCollectionAlert` | POST | `/api/v1/collection-alerts/{alert_id}/resolution` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN | Propuesta; implementado en INT-FE-API-002 |
+| `markPaymentDuplicate` | POST | `/api/v1/payments/{payment_id}/duplicate` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN | Propuesta; implementado en INT-FE-API-002 con MotorPagos |
+| `listNotifications` | GET | `/api/v1/notifications` | `miguel_adapter_andres_engine` | MIG-07 | VENDEDOR, ADMIN, GERENTE | Propuesta; implementado en INT-FE-API-002 (solo metadatos, D-007) |
 | `n8nIngestOrder` | POST | `/api/v1/ordenes/ingesta` | `miguel` | MIG-05 | service_n8n | Propuesta de creación201/idempotencia pendiente MIG-05; recepción validada HTTP200 implementada |
 | `n8nConfirmOrder` | POST | `/api/v1/ordenes/confirmar` | `miguel_adapter_andres_engine` | MIG-06 | service_n8n | Propuesta, no implementado |
 | `n8nReceiveVoucher` | POST | `/api/v1/pagos/voucher` | `miguel_adapter_andres_engine` | MIG-07 | service_n8n | Propuesta, no implementado |

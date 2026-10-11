@@ -20,20 +20,23 @@ import type { Preferences } from "../lib/preferences";
 import { IN_REVIEW } from "./model";
 
 // DTOs de pantalla: lo que consume cada vista. Ambas fuentes (mock y API) devuelven exactamente esto.
-// Campos null = la fuente no lo provee (por ejemplo, la API no expone ítems ni costos por orden).
+// Campos null = la fuente no lo provee (por ejemplo, la API no expone el desglose de costos ni el contacto de WhatsApp).
 
 /* ---------- Capacidades de la fuente ---------- */
 
 /** Qué puede hacer la fuente activa. La UI oculta o explica lo que no existe todavía en el contrato. */
 export type Capabilities = {
-  /** Bitácora de envio_notificacion: no hay endpoint en el contrato. */
+  /** Bitácora de envio_notificacion (API: GET /notifications, solo metadatos). */
   messagesLog: boolean;
-  /** Resolver alertas: el contrato solo tiene GET /collection-alerts. */
+  /** Cerrar una alerta con nota (API: POST /collection-alerts/{id}/resolution). */
   resolveAlerts: boolean;
+  /** Reintentar un envío fallido: lo hace el scheduler (WF3); la API no lo expone. */
   retryMessages: boolean;
   /** Corregir campos de un pago ya creado (en la API se corrige el borrador antes de confirmar). */
   editPaymentFields: boolean;
-  /** Marcar duplicado o descartar un pago: sin endpoint en el contrato. */
+  /** Marcar un pago como duplicado de otro (API: POST /payments/{id}/duplicate). */
+  markDuplicate: boolean;
+  /** Descartar un pago: sin endpoint en el contrato. */
   discardPayment: boolean;
   /** Alta manual de pedidos: createTextEvidence está fuera del MVP. */
   manualOrderCapture: boolean;
@@ -41,9 +44,9 @@ export type Capabilities = {
   voucherNeedsFile: boolean;
   /** Supuestos de caja, plazo por defecto y precio de transferencia: sin endpoint. */
   settings: boolean;
-  /** Ítems y costos por orden: el DTO Order del contrato no los incluye. */
+  /** Ítems de la orden (API: Order.items desde orden_item). */
   orderItems: boolean;
-  /** Directorio de clientes con línea y tipo: no hay GET /customers; se deriva de órdenes. */
+  /** Directorio propio de clientes: la API no tiene GET /customers; los clientes se derivan de sus órdenes. */
   customerDirectory: boolean;
   resetDemo: boolean;
   /** Demo de login con cuentas de prueba. */
@@ -183,7 +186,8 @@ export type OrderDetailDTO = {
 export type TallerOrder = {
   id: string;
   ref: string;
-  customer: string;
+  /** null = el rol no ve clientes (RLS V7: producción no lee `cliente`). */
+  customer: string | null;
   brand: Brand | null;
   description: string;
   items: Order["items"];
@@ -196,7 +200,8 @@ export type TallerOrder = {
   anticipoPendienteCents: number;
 };
 
-export type TallerDTO = { cutDate: string; enProduccion: TallerOrder[]; retenidas: TallerOrder[]; despachadas: TallerOrder[] };
+/** `retenidas` null = el rol no las ve (RLS V7: producción recibe solo órdenes liberadas). */
+export type TallerDTO = { cutDate: string; enProduccion: TallerOrder[]; retenidas: TallerOrder[] | null; despachadas: TallerOrder[] };
 
 /* ---------- Conciliación ---------- */
 
@@ -234,6 +239,10 @@ export type EvidenceDetailDTO = {
   appliedBy: string | null;
   match: MatchKind;
   duplicateOfId: string | null;
+  /** Código del pago original (V-00X), para mostrarlo en lugar del id. */
+  duplicateOfRef: string | null;
+  /** Ya quedó marcado como duplicado (en revisión, sin descontar); false si solo se detectó. */
+  duplicateMarked: boolean;
   order: { id: string; ref: string; customer: string; line: string | null; saleCents: number | null; balanceCents: number; daysToDue: number | null; dueDate: string | null; seller: string | null } | null;
   missing: string[];
   /** Órdenes con saldo para vincular (mock) o candidatos de conciliación (API). */
@@ -346,7 +355,8 @@ export type ResultsDTO = {
   cutDate: string;
   demo: boolean;
   rows: ResultRow[];
-  byBrand: Array<{ brand: Brand; saleCents: number; marginCents: number | null; perceivedCents: number | null; collectedCents: number }>;
+  /** Margen de los pedidos con costeo cerrado (`orders`); `withoutCost` = confirmados que aún no lo tienen y no suman. */
+  byBrand: Array<{ brand: Brand; saleCents: number; marginCents: number | null; perceivedCents: number | null; collectedCents: number; orders: number; withoutCost: number }>;
   byLine: Array<{ line: string; saleCents: number; marginCents: number | null; orders: number }>;
   workshop: null | {
     orderIds: string[];
@@ -439,4 +449,6 @@ export const MESSAGE_LABEL: Record<OutgoingMessage["tipo"], string> = {
   estado_cuenta: "Estado de cuenta",
   confirmacion_pago: "Confirmación de pago",
   resumen_orden: "Resumen de la orden",
+  recompra: "Invitación a recomprar",
+  resumen_vendedor: "Resumen al vendedor",
 };

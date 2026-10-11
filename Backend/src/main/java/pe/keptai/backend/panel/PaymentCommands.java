@@ -49,6 +49,15 @@ public class PaymentCommands {
 		return queries.payment(paymentId);
 	}
 
+	/**
+	 * Marca un pago recibido como duplicado de uno anterior con la misma referencia, monto y fecha
+	 * ({@code MotorPagos.marcarDuplicado}): queda en revisión con alerta y nunca se aplica (INT-FE-API-002).
+	 */
+	public Payment markDuplicate(UUID paymentId) {
+		motorPagos().marcarDuplicado(panel.financiero(), paymentId);
+		return queries.payment(paymentId);
+	}
+
 	public PaymentApplicationResult apply(UUID paymentId, ApplyPaymentRequest req) {
 		ContextoFinanciero ctx = panel.financiero();
 		Aplicacion a = motorPagos().aplicarPago(ctx, paymentId, req.receivableId(),

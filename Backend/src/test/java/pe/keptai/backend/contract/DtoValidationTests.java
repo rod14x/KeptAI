@@ -243,22 +243,23 @@ class DtoValidationTests {
 		Payment unverifiedApplied = new Payment(applied.id(), applied.displayCode(), PaymentPhase.APPLIED, ReconciliationStatus.APPLIED, applied.channel(),
 				applied.operationReference(), applied.payerName(), applied.paidAt(), applied.receivedAmount(), null,
 				applied.appliedAmount(), applied.unappliedAmount(), null, applied.evidenceIds(), null, applied.modelReportedConfidencePermille(), applied.dataOrigin(),
-				applied.createdAt());
+				applied.createdAt(), List.of());
 		assertThat(messages(unverifiedApplied)).contains("la fase del pago no coincide con sus verificaciones o importes aplicados");
 		// recibido con importe aplicado: rechazado
 		Payment receivedButApplied = new Payment(applied.id(), applied.displayCode(), PaymentPhase.RECEIVED, ReconciliationStatus.PENDING, applied.channel(), null,
 				null, null, applied.receivedAmount(), null, applied.appliedAmount(), NonNegativeMoney.pen(0), null, List.of(), null,
-				applied.modelReportedConfidencePermille(), applied.dataOrigin(), applied.createdAt());
+				applied.modelReportedConfidencePermille(), applied.dataOrigin(), applied.createdAt(), List.of());
 		assertThat(messages(receivedButApplied)).isNotEmpty();
 		// duplicado sin referencia al original
 		Payment orphanDuplicate = new Payment(duplicate.id(), duplicate.displayCode(), PaymentPhase.RECEIVED, ReconciliationStatus.DUPLICATE, duplicate.channel(),
 				null, null, null, duplicate.receivedAmount(), null, NonNegativeMoney.pen(0), duplicate.unappliedAmount(), null,
-				List.of(), null, duplicate.modelReportedConfidencePermille(), duplicate.dataOrigin(), duplicate.createdAt());
+				List.of(), null, duplicate.modelReportedConfidencePermille(), duplicate.dataOrigin(), duplicate.createdAt(), List.of());
 		assertThat(messages(orphanDuplicate)).isNotEmpty();
 		// moneda mezclada
 		Payment mixed = new Payment(applied.id(), applied.displayCode(), applied.phase(), applied.reconciliationStatus(), applied.channel(), null, null, null,
 				applied.receivedAmount(), new NonNegativeMoney(30000L, "PEN"), applied.appliedAmount(),
-				new NonNegativeMoney(0L, "USD"), null, List.of(), applied.verification(), applied.modelReportedConfidencePermille(), applied.dataOrigin(), applied.createdAt());
+				new NonNegativeMoney(0L, "USD"), null, List.of(), applied.verification(), applied.modelReportedConfidencePermille(), applied.dataOrigin(), applied.createdAt(),
+				List.of());
 		assertThat(messages(mixed)).contains("todos los importes del pago deben estar en la misma moneda");
 	}
 
@@ -266,7 +267,7 @@ class DtoValidationTests {
 	void simulatedVerificationMustBeLabelledAsSimulated() {
 		Payment p = example("PaymentV001", Payment.class);
 		var v = p.verification();
-		var mislabelled = new PaymentDtos.PaymentVerification(v.method(), false, v.verifiedByUserId(), v.verifiedAt(), v.note());
+		var mislabelled = new PaymentDtos.PaymentVerification(v.method(), false, v.verifiedByUserId(), v.verifiedAt(), v.note(), null);
 		assertThat(messages(mislabelled)).contains("la verificacion simulada debe rotularse is_simulated=true y no puede ser otra");
 	}
 
@@ -275,10 +276,10 @@ class DtoValidationTests {
 		Receivable r = example("ReceivableP002", Receivable.class);
 		assertThat(r.balance().amountCents()).isEqualTo(40000);
 		var notOverdue = new Receivable(r.id(), r.orderId(), r.orderCode(), r.customer(), r.originalAmount(), r.appliedAmount(),
-				r.balance(), r.creditTermDays(), r.termStartEvent(), r.dueDate(), DueBucket.NOT_DUE, 5, r.status());
+				r.balance(), r.creditTermDays(), r.termStartEvent(), r.dueDate(), DueBucket.NOT_DUE, 5, r.status(), List.of());
 		assertThat(messages(notOverdue)).contains("days_overdue solo es mayor que 0 cuando due_bucket=overdue");
 		var paidWithBalance = new Receivable(r.id(), r.orderId(), r.orderCode(), r.customer(), r.originalAmount(), r.appliedAmount(),
-				r.balance(), r.creditTermDays(), r.termStartEvent(), r.dueDate(), r.dueBucket(), r.daysOverdue(), ReceivableStatus.PAID);
+				r.balance(), r.creditTermDays(), r.termStartEvent(), r.dueDate(), r.dueBucket(), r.daysOverdue(), ReceivableStatus.PAID, List.of());
 		assertThat(messages(paidWithBalance)).contains("forma del estado: pagada tiene saldo cero; pendiente no tiene nada aplicado; parcial tiene ambos; mora tiene saldo");
 	}
 
@@ -294,11 +295,11 @@ class DtoValidationTests {
 		assertThat(json.path("margin").isNull()).isTrue();
 		// cero inventado para un costo incompleto: rechazado
 		var zeroed = new MarginRow(row.groupKey(), row.groupId(), row.productionMode(), row.revenue(), NonNegativeMoney.pen(0),
-				Money.pen(20000), CostStatus.INCOMPLETE, row.missingCostComponents(), 1);
+				Money.pen(20000), CostStatus.INCOMPLETE, row.missingCostComponents(), 1, null);
 		assertThat(messages(zeroed)).contains("costos incompletos: total_cost y margin deben ser null y listar lo que falta");
 		// completo sin margen: rechazado
 		var noMargin = new MarginRow("P-9", null, null, NonNegativeMoney.pen(1), NonNegativeMoney.pen(1), null, CostStatus.COMPLETE,
-				List.of(), 1);
+				List.of(), 1, null);
 		assertThat(messages(noMargin)).isNotEmpty();
 	}
 

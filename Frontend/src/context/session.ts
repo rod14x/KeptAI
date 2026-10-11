@@ -36,7 +36,15 @@ export class SessionFailure extends Error {
   }
 }
 
-export type SessionIdentity = { userId: string; organizationId: string; role: UserContextT["role"]; email: string };
+/** `name` y `organizationName` vienen de /me (usuario.nombre, organizacion.nombre); null si el backend no los envía. */
+export type SessionIdentity = {
+  userId: string;
+  organizationId: string;
+  role: UserContextT["role"];
+  email: string;
+  name: string | null;
+  organizationName: string | null;
+};
 
 export type SessionState =
   | { status: "loading" }
@@ -219,7 +227,14 @@ export class SessionController {
       throw new SessionFailure(error);
     }
     if (!this.isCurrent(gen)) throw new SessionFailure(sessionError("invalid-session"));
-    const identity: SessionIdentity = { userId: me.user_id, organizationId: me.organization_id, role: me.role, email: session.email ?? "" };
+    const identity: SessionIdentity = {
+      userId: me.user_id,
+      organizationId: me.organization_id,
+      role: me.role,
+      email: session.email ?? "",
+      name: me.name ?? null,
+      organizationName: me.organization_name ?? null,
+    };
     this.loadingUser = null;
     this.currentUser = session.userId;
     this.set({ status: "authenticated", identity });

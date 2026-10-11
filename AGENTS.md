@@ -27,7 +27,8 @@ Estas instrucciones aplican a este repositorio KeptAI: cerebro/ conserva conocim
 
 ## Resumen vigente de Miguel
 
-- INT-FE-API-001 (11/10/2026, rama `develop`, sin commit): panel conectado a Spring + PostgreSQL. 20 operaciones del contrato con controladores sobre los motores de Andrés; modo api con todos los módulos salvo Carga manual (MIG-04). V10 `crear_obligacion_orden` solo en local, pendiente revisión de Andrés y aplicación en Supabase. Backend 279/279, frontend 108 + build, contrato en vivo 6/6, e2e conectado 30/30. Supabase Auth real sin probar: faltan clave publicable y cuentas (`db.sh link-auth`). Detalle en estado.md.
+- INT-FE-API-002 (11/10/2026, `develop`): diseño unificado (merge b9db4a0), contrato extendido (nombres, ítems, aplicaciones, margen percibido, resolver alerta, marcar duplicado, bitácora de envíos), semilla demo amplia y adaptador api con lecturas por rol. e2e conectado 44/44, contrato en vivo 7/7. Detalle y pendientes en estado.md.
+- INT-FE-API-001 (11/10/2026, rama `develop`): panel conectado a Spring + PostgreSQL. 20 operaciones del contrato con controladores sobre los motores de Andrés; modo api con todos los módulos salvo Carga manual (MIG-04). V10 `crear_obligacion_orden` solo en local, pendiente revisión de Andrés y aplicación en Supabase. Backend 279/279, frontend 108 + build, contrato en vivo 6/6, e2e conectado 30/30. Supabase Auth real sin probar: faltan clave publicable y cuentas (`db.sh link-auth`). Detalle en estado.md.
 
 - Integración a main autorizada11/10/2026: conserva backend215bcad y frontend/pitch vigente. Login/temas/menú mock nuevos compatibles con inicio api y módulos bloqueados, incluido/resumen. Continuación en plan-continuacion-backend-integrado.md; próxima entrega Auth real/membresía, luego D3 y MIG-04..08. Merge no significa endpoints de negocio terminados. Evidencia en estado.md.
 

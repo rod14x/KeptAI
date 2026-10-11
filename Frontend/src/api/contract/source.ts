@@ -1,4 +1,4 @@
-import type { Brand, CollectionAlert, Evidence, MatchKind, Order, OrderFinance, OrderState, Role, Scope } from "../model";
+import type { Brand, CollectionAlert, Customer, Evidence, MatchKind, Order, OrderFinance, OrderState, OutgoingMessage, Role, Scope } from "../model";
 import { inScope } from "../model";
 import { bump, getVersion } from "../events";
 import { addDays, daysBetween, todayIso } from "../../lib/dates";
@@ -6,6 +6,7 @@ import { formatDate, formatMoney } from "../../lib/format";
 import { all, endpoints } from "./endpoints";
 import { HttpError } from "./http";
 import type * as S from "./schemas";
+import { MESSAGE_LABEL } from "../dto";
 import type {
   ActionResult,
   ActivityItem,
@@ -16,12 +17,14 @@ import type {
   CustomerRow,
   CustomerView,
   DataSource,
+  MessageRow,
   OrderCard,
   OrderColumnId,
   OrderRow,
   PaymentCard,
   ReceivableRow,
   ResultRow,
+  ResultsDTO,
   TallerOrder,
   TimelineItem,
   WeekPoint,
@@ -66,13 +69,47 @@ function cached<T>(key: string, load: () => Promise<T>): Promise<T> {
   return value;
 }
 
-const loadOrders = () => cached("orders", () => all.orders());
-const loadReceivables = () => cached("receivables", () => soft(all.receivables(), [] as S.ReceivableT[]));
-const loadPayments = () => cached("payments", () => soft(all.payments(), [] as S.PaymentT[]));
-const loadAlerts = () => cached("alerts", () => soft(all.alerts(), [] as S.CollectionAlertT[]));
-const loadOrderDrafts = () =>
-  cached("drafts", () => soft(all.drafts({ status: "pending_review" }), [] as S.ExtractionDraftT[]).then((d) => d.filter((x) => x.draft_type === "order")));
+/* ---------- Lecturas por rol ---------- */
+
+// Roles que pueden leer cada recurso (AccessPolicy de Spring). Spring decide; aquí solo se evita pedir lo que el rol
+// no puede ver, para no generar un 403 en cada carga. Si /me falla, se intenta igual y el 403 se degrada.
+type ApiRole = S.UserContextT["role"];
+const READS = {
+  payments: ["ADMIN", "GERENTE"],
+  reconciliation: ["ADMIN"],
+  receivables: ["VENDEDOR", "ADMIN", "GERENTE"],
+  alerts: ["VENDEDOR", "ADMIN"],
+  credit: ["VENDEDOR", "ADMIN", "GERENTE"],
+  notifications: ["VENDEDOR", "ADMIN", "GERENTE"],
+  drafts: ["VENDEDOR", "ADMIN"],
+  results: ["GERENTE"],
+  audit: ["ADMIN", "GERENTE"],
+} satisfies Record<string, ApiRole[]>;
+type Read = keyof typeof READS;
+
+/** MIG-06: Spring todavía no expone /drafts (responde 404). Pasar a true cuando exista el endpoint. */
+const DRAFTS_IN_SPRING = false;
+
 const loadMe = () => cached("me", () => endpoints.getMyContext());
+
+async function canRead(what: Read) {
+  const me = await soft(loadMe(), null);
+  return me === null || (READS[what] as readonly ApiRole[]).includes(me.role);
+}
+async function readIf<T>(what: Read, load: () => Promise<T>, fallback: T): Promise<T> {
+  return (await canRead(what)) ? soft(load(), fallback) : fallback;
+}
+
+const loadOrders = () => cached("orders", () => all.orders());
+const loadReceivables = () => cached("receivables", () => readIf("receivables", () => all.receivables(), [] as S.ReceivableT[]));
+const loadPayments = () => cached("payments", () => readIf("payments", () => all.payments(), [] as S.PaymentT[]));
+const loadAlerts = () => cached("alerts", () => readIf("alerts", () => all.alerts(), [] as S.CollectionAlertT[]));
+const loadNotifications = () => cached("notifications", () => readIf("notifications", () => all.notifications(), [] as S.NotificationT[]));
+const loadOrderMargins = () => cached("margins:order", () => readIf("results", () => all.margins({ group_by: "order" }), [] as S.MarginRowT[]));
+const loadOrderDrafts = () =>
+  DRAFTS_IN_SPRING
+    ? cached("drafts", () => readIf("drafts", () => all.drafts({ status: "pending_review" }), [] as S.ExtractionDraftT[]).then((d) => d.filter((x) => x.draft_type === "order")))
+    : Promise.resolve([] as S.ExtractionDraftT[]);
 
 const DRAFT = "draft-";
 
@@ -98,6 +135,15 @@ const MATCH: Record<S.PaymentT["reconciliation_status"], MatchKind> = {
   amount_mismatch: "no_cuadra",
 };
 
+/** Clasificación del motor para un pago todavía sin conciliar (GET /payments/{id}/reconciliation). */
+const CLASS_MATCH: Record<S.ReconciliationResultT["classification"], MatchKind> = {
+  matches: "total",
+  partial: "parcial",
+  duplicate: "duplicado",
+  orphan: "sin_orden",
+  amount_mismatch: "no_cuadra",
+};
+
 const PHASE: Record<S.PaymentT["phase"], Evidence["status"]> = { received: "recibido", bank_verified: "verificado_banco", applied: "aplicado" };
 
 const CHANNEL: Record<S.PaymentT["channel"], string> = {
@@ -116,6 +162,43 @@ const RULE: Record<S.CollectionAlertT["rule"], string> = {
 };
 
 const ALERT_STATE: Record<S.CollectionAlertT["status"], CollectionAlert["estado"]> = { open: "abierta", resolved: "resuelta", cancelled: "cancelada" };
+
+const CUSTOMER_TIPO: Record<NonNullable<S.CustomerRefT["type"]>, Customer["tipo"]> = { school: "colegio", company: "empresa", person: "persona" };
+
+const MESSAGE_TIPO: Record<S.NotificationT["type"], OutgoingMessage["tipo"]> = {
+  collection_preventive: "cobranza_preventiva",
+  collection_due: "cobranza_vencimiento",
+  early_arrears: "mora_temprana",
+  account_statement: "estado_cuenta",
+  payment_confirmation: "confirmacion_pago",
+  repurchase: "recompra",
+  seller_summary: "resumen_vendedor",
+};
+
+const MESSAGE_ESTADO: Record<S.NotificationT["status"], OutgoingMessage["estado"]> = { pending: "pendiente", sent: "enviado", error: "error", cancelled: "cancelado" };
+
+const COMPONENT: Record<string, string> = { raw_materials: "materiales", labor: "mano de obra", outsourced: "terceros", overhead: "indirectos", logistics: "logística" };
+
+/** Operaciones de evento_auditoria (motores de Andrés y comandos del panel) en lenguaje de la vista. */
+const OPERATION: Record<string, { text: string; status: ActivityItem["status"] }> = {
+  CREDITO_APROBADO: { text: "Crédito aprobado", status: "completado" },
+  CREDITO_RECHAZADO: { text: "Crédito rechazado", status: "fallido" },
+  ORDEN_CONFIRMADA_CONTADO: { text: "Orden confirmada al contado", status: "completado" },
+  PAGO_VERIFICADO: { text: "Pago verificado en banco", status: "completado" },
+  PAGO_APLICADO: { text: "Pago descontado de la deuda", status: "completado" },
+  PAGO_DUPLICADO: { text: "Pago marcado como duplicado", status: "fallido" },
+  PAGO_EN_REVISION: { text: "Pago en revisión", status: "pendiente" },
+  APLICACION_ANULADA: { text: "Aplicación de pago anulada", status: "fallido" },
+  DESPACHO_REGISTRADO: { text: "Despacho registrado", status: "entregado" },
+  ALERTA_RESUELTA: { text: "Alerta de cobranza resuelta", status: "completado" },
+  COBRANZA_EVALUADA: { text: "Cobranza evaluada", status: "entregado" },
+  COSTO_REGISTRADO: { text: "Costo registrado", status: "entregado" },
+  COSTO_ASIGNADO: { text: "Costo asignado a ítems", status: "entregado" },
+  COSTOS_REPARTIDOS: { text: "Costos repartidos", status: "entregado" },
+  COSTEO_CERRADO: { text: "Costeo cerrado", status: "entregado" },
+  CARGO_INTERNO_REGISTRADO: { text: "Cargo interno registrado", status: "entregado" },
+  CARGO_INTERNO_ANULADO: { text: "Cargo interno anulado", status: "fallido" },
+};
 
 function finance(o: S.OrderT, r: S.ReceivableT | undefined, today: string): OrderFinance {
   const status = r?.status ?? o.receivable_status;
@@ -138,6 +221,21 @@ function balanceOf(o: S.OrderT, r: S.ReceivableT | undefined) {
 function requiredBeforeProduction(o: S.OrderT) {
   return o.payment_condition === "cash" ? zero(o.sale) : o.advance_required.amount_cents;
 }
+
+/** Descripción del pedido desde sus ítems (orden_item); sin ítems, la línea. */
+function describe(o: S.OrderT) {
+  const items = o.items ?? [];
+  if (!items.length) return o.product_line ?? "Sin descripción";
+  return items.length === 1 ? items[0].description : `${items[0].description} y ${items.length - 1} más`;
+}
+
+/** Último pago aplicado (vigente) entre las obligaciones dadas. */
+function lastApplied(rs: S.ReceivableT[]) {
+  return rs.flatMap((r) => r.applications ?? []).map((a) => a.applied_at).sort().pop() ?? null;
+}
+
+/** Una orden confirmada genera obligación; un borrador, una pendiente o una rechazada todavía no. */
+const confirmed = (o: S.OrderT) => !["draft", "pending_approval", "cancelled"].includes(o.status);
 
 function errorResult(e: unknown): ActionResult {
   if (e instanceof HttpError) {
@@ -166,17 +264,39 @@ async function run(fn: () => Promise<ActionResult>): Promise<ActionResult> {
 
 /* ---------- Construcción de vistas ---------- */
 
-type Ctx = { orders: S.OrderT[]; receivables: S.ReceivableT[]; byOrder: Map<string, S.ReceivableT>; today: string };
+type Ctx = {
+  orders: S.OrderT[];
+  receivables: S.ReceivableT[];
+  orderById: Map<string, S.OrderT>;
+  byOrder: Map<string, S.ReceivableT>;
+  today: string;
+};
 
 async function context(): Promise<Ctx> {
   const [orders, receivables] = await Promise.all([loadOrders(), loadReceivables()]);
-  return { orders, receivables, byOrder: new Map(receivables.map((r) => [r.order_id, r])), today: todayIso() };
+  return {
+    orders,
+    receivables,
+    orderById: new Map(orders.map((o) => [o.id, o])),
+    byOrder: new Map(receivables.map((r) => [r.order_id, r])),
+    today: todayIso(),
+  };
 }
 
 function overdueCustomers(ctx: Ctx) {
   const set = new Set<string>();
   for (const r of ctx.receivables) if (r.due_bucket === "overdue" && r.balance.amount_cents > 0) set.add(r.customer.id);
   return set;
+}
+
+/** Órdenes del cliente, la más reciente primero. */
+function ordersOf(customerId: string | null, ctx: Ctx) {
+  return ctx.orders.filter((o) => o.customer?.id === customerId).sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+/** Ficha del cliente tal como la trae su orden más reciente (o su cuenta por cobrar). */
+function customerRef(customerId: string | null, ctx: Ctx): S.CustomerRefT | null {
+  return ordersOf(customerId, ctx)[0]?.customer ?? ctx.receivables.find((r) => r.customer.id === customerId)?.customer ?? null;
 }
 
 function card(o: S.OrderT, ctx: Ctx, moroso: Set<string>): OrderCard {
@@ -188,7 +308,7 @@ function card(o: S.OrderT, ctx: Ctx, moroso: Set<string>): OrderCard {
     customerId: o.customer?.id ?? null,
     customer: o.customer?.name ?? "Sin cliente",
     brand: toBrand(o.brand),
-    description: o.product_line ?? "Sin descripción",
+    description: describe(o),
     saleCents: cents(o.sale),
     balanceCents: balanceOf(o, r),
     estado: ORDER_STATE[o.status],
@@ -197,7 +317,7 @@ function card(o: S.OrderT, ctx: Ctx, moroso: Set<string>): OrderCard {
     entregaSolicitada: o.requested_delivery_date,
     dueDate: due,
     daysToDue: due ? daysBetween(ctx.today, due) : null,
-    seller: null,
+    seller: o.seller?.name ?? null,
     origen: o.source === "whatsapp" ? "whatsapp" : o.source === "manual" ? "manual" : "historico",
     faltantes: 0,
     clienteEnMora: o.customer ? moroso.has(o.customer.id) : false,
@@ -213,7 +333,7 @@ function row(o: S.OrderT, ctx: Ctx, moroso: Set<string>): OrderRow {
     line: o.product_line,
     despachoOn: o.dispatch_date,
     paidCents: r ? r.applied_amount.amount_cents : 0,
-    lastPaymentAt: null,
+    lastPaymentAt: r ? lastApplied([r]) : null,
     daysLate: r && r.days_overdue > 0 ? r.days_overdue : null,
   };
 }
@@ -274,8 +394,13 @@ const ORDER_COLUMNS: Array<{ id: OrderColumnId; title: string }> = [
   { id: "cobrada", title: "Cobrada" },
 ];
 
-/** Orden del modelo de vista a partir del contrato. Ítems y costos no existen en el DTO Order. */
-function viewOrder(o: S.OrderT, credit: S.CreditAuthorizationT | null): Order {
+const items = (o: S.OrderT): Order["items"] =>
+  (o.items ?? []).map((i) => ({ descripcion: i.description, cantidad: i.quantity, detalle: i.detail ?? "", precioUnitCents: i.unit_price.amount_cents }));
+
+const dispatchOf = (o: S.OrderT): Order["despacho"] => (o.dispatch_date ? { fecha: o.dispatch_date, acta: "Acta registrada", by: o.dispatched_by?.name ?? "Taller" } : null);
+
+/** Orden del modelo de vista a partir del contrato. El desglose de costos no existe en el DTO Order. */
+function viewOrder(o: S.OrderT, credit: S.CreditAuthorizationT | null, margin: S.MarginRowT | null = null): Order {
   const tipo = o.payment_condition === "cash" ? "contado" : o.payment_condition === "advance" ? "anticipo" : "credito";
   return {
     id: o.id,
@@ -284,22 +409,23 @@ function viewOrder(o: S.OrderT, credit: S.CreditAuthorizationT | null): Order {
     // El contrato no garantiza marca; la vista usa card.brand (nullable). Este valor no se muestra.
     brand: toBrand(o.brand) ?? "corpotex",
     line: o.product_line ?? "",
-    description: o.product_line ?? "",
-    items: [],
+    description: describe(o),
+    items: items(o),
     modality: o.production_mode === "own" ? "propia" : "tercerizada",
     saleCents: zero(o.sale),
     costs: { materiales: 0, manoObra: 0, terceros: 0, indirectos: 0 },
-    costOrigin: "teorico",
-    costComplete: false,
+    // El motor solo da margen con costos reales cerrados (v_margen_orden).
+    costOrigin: "real",
+    costComplete: margin?.cost_status === "complete",
     internalChargeCents: null,
-    sellerId: "",
+    sellerId: o.seller?.id ?? "",
     estado: ORDER_STATE[o.status],
     condicionPago: o.payment_condition ? { tipo, plazoDias: o.credit_term_days ?? 0, anticipoPct: credit?.advance_pct_bps != null ? credit.advance_pct_bps / 100 : null } : null,
     credito:
       credit && (credit.status === "approved" || credit.status === "rejected")
         ? {
             decision: credit.status === "approved" ? "aprobado" : "rechazado",
-            by: "Vendedor",
+            by: credit.responsible_name ?? o.seller?.name ?? "Vendedor",
             at: credit.decided_at ?? o.created_at,
             avisoMoraMostrado: credit.arrears_notice_shown,
             saldoReferenciaCents: zero(credit.overdue_balance_reference),
@@ -310,7 +436,7 @@ function viewOrder(o: S.OrderT, credit: S.CreditAuthorizationT | null): Order {
     issuedOn: o.created_at.slice(0, 10),
     fechaEntregaSolicitada: o.requested_delivery_date,
     inicioProduccion: o.production_start_date,
-    despacho: o.dispatch_date ? { fecha: o.dispatch_date, acta: "Registrado", by: "Taller" } : null,
+    despacho: dispatchOf(o),
     dataOrigin: o.data_origin,
   };
 }
@@ -335,37 +461,73 @@ function snapshotFor(customerId: string | null, ctx: Ctx): CreditSnapshot {
   const open = rs.filter((r) => r.balance.amount_cents > 0);
   const overdue = open.filter((r) => r.due_bucket === "overdue");
   const overdueCents = overdue.reduce((s, r) => s + r.balance.amount_cents, 0);
+  const usedCents = open.reduce((s, r) => s + r.balance.amount_cents, 0);
   const soon = open.filter((r) => r.due_date && daysBetween(ctx.today, r.due_date) <= 3);
   const maxOverdueDays = overdue.reduce((m, r) => Math.max(m, r.days_overdue), 0);
-  const orders = ctx.orders.filter((o) => o.customer?.id === customerId);
+  const limit = cents(customerRef(customerId, ctx)?.credit_limit);
+  // Días entre el vencimiento y el último pago de cada obligación pagada (negativo = pagó antes).
+  const closed = rs
+    .filter((r) => r.status === "paid" && r.due_date)
+    .map((r) => {
+      const last = lastApplied([r]);
+      return last ? daysBetween(r.due_date!, last) : null;
+    })
+    .filter((d): d is number => d !== null);
+  const orders = ordersOf(customerId, ctx).filter(confirmed);
+
+  let status: CreditSnapshot["status"] = "al_dia";
+  if (overdueCents > 0) status = "en_mora";
+  else if (limit != null && usedCents > limit) status = "sobre_linea";
+  else if (soon.length) status = "por_vencer";
+
   return {
-    usedCents: open.reduce((s, r) => s + r.balance.amount_cents, 0),
-    availableCents: null,
+    usedCents,
+    availableCents: limit != null ? Math.max(limit - usedCents, 0) : null,
     overdueCents,
     maxOverdueDays,
-    avgDaysLate: null,
-    paidOnTime: rs.filter((r) => r.status === "paid").length,
-    closedCount: rs.filter((r) => r.status === "paid").length,
-    status: overdueCents > 0 ? "en_mora" : soon.length ? "por_vencer" : "al_dia",
-    aviso: overdueCents > 0 ? `Este cliente está en mora: ${formatMoney(overdueCents)} vencido, hasta ${maxOverdueDays} días de atraso. ¿Quieres volver a darle crédito?` : null,
+    avgDaysLate: closed.length ? Math.round(closed.reduce((s, d) => s + d, 0) / closed.length) : null,
+    paidOnTime: closed.filter((d) => d <= 0).length,
+    closedCount: closed.length,
+    status,
+    // D-005: la mora avisa, no bloquea. El vendedor decide y queda registrado.
+    aviso:
+      status === "en_mora"
+        ? `Este cliente está en mora: ${formatMoney(overdueCents)} vencido, hasta ${maxOverdueDays} días de atraso. ¿Quieres volver a darle crédito?`
+        : status === "sobre_linea" && limit != null
+          ? `El saldo abierto supera la línea de referencia de ${formatMoney(limit)}.`
+          : null,
     totalSoldCents: orders.reduce((s, o) => s + zero(o.sale), 0),
     totalPaidCents: rs.reduce((s, r) => s + r.applied_amount.amount_cents, 0),
     orderCount: orders.length,
-    lastPaymentAt: null,
-    lastOrderOn: orders.map((o) => o.created_at.slice(0, 10)).sort().pop() ?? null,
+    lastPaymentAt: lastApplied(rs),
+    lastOrderOn: ordersOf(customerId, ctx)[0]?.created_at.slice(0, 10) ?? null,
   };
 }
 
 function customerView(id: string, ctx: Ctx): CustomerView | null {
-  const o = ctx.orders.find((x) => x.customer?.id === id);
-  const r = ctx.receivables.find((x) => x.customer.id === id);
-  const name = o?.customer?.name ?? r?.customer.name;
-  if (!name) return null;
-  const firstOrder = ctx.orders.filter((x) => x.customer?.id === id).map((x) => x.created_at.slice(0, 10)).sort()[0] ?? null;
-  return { id, name, brand: toBrand(o?.brand), tipo: null, rucDni: null, sellerId: null, contactoWhatsapp: null, since: firstOrder, creditLimitCents: null };
+  const ref = customerRef(id, ctx);
+  if (!ref) return null;
+  const own = ordersOf(id, ctx);
+  return {
+    id,
+    name: ref.name,
+    brand: toBrand(own[0]?.brand),
+    tipo: ref.type ? CUSTOMER_TIPO[ref.type] : null,
+    rucDni: ref.tax_id ?? null,
+    // Vendedor de su pedido más reciente: la API no expone la asignación del canal de WhatsApp.
+    sellerId: own[0]?.seller?.id ?? null,
+    contactoWhatsapp: null,
+    since: own.map((x) => x.created_at.slice(0, 10)).sort()[0] ?? null,
+    creditLimitCents: cents(ref.credit_limit),
+  };
 }
 
+const sellerOf = (customerId: string, ctx: Ctx) => ordersOf(customerId, ctx).find((o) => o.seller)?.seller?.name ?? null;
+
+const emptyCustomer = (name: string, brand: Brand | null): CustomerView => ({ id: "", name, brand, tipo: null, rucDni: null, sellerId: null, contactoWhatsapp: null, since: null, creditLimitCents: null });
+
 function paymentToEvidence(p: S.PaymentT): Evidence {
+  const applied = [...(p.applications ?? [])].sort((a, b) => b.applied_at.localeCompare(a.applied_at));
   return {
     id: p.id,
     ref: p.display_code ?? `PAGO-${p.id.slice(0, 8)}`,
@@ -374,7 +536,7 @@ function paymentToEvidence(p: S.PaymentT): Evidence {
     kind: "voucher",
     origen: p.data_origin === "manual_entry" ? "manual" : "whatsapp",
     receivedAt: p.created_at,
-    orderId: null,
+    orderId: applied[0]?.order_id ?? null,
     fields: {
       amountCents: p.received_amount.amount_cents,
       operationRef: p.operation_reference,
@@ -387,9 +549,9 @@ function paymentToEvidence(p: S.PaymentT): Evidence {
     legible: true,
     status: PHASE[p.phase],
     mismatchAccepted: false,
-    verifiedBy: p.verification ? (p.verification.method === "simulated_demo" ? "Verificación de demo" : "Administración") : null,
+    verifiedBy: p.verification ? (p.verification.verified_by_name ?? (p.verification.method === "simulated_demo" ? "Verificación de demo" : "Administración")) : null,
     verifiedAt: p.verification?.verified_at ?? null,
-    appliedAt: p.phase === "applied" ? p.created_at : null,
+    appliedAt: applied[0]?.applied_at ?? (p.phase === "applied" ? p.created_at : null),
     discardReason: null,
     corrections: [],
     evidenceIds: p.evidence_ids,
@@ -397,54 +559,56 @@ function paymentToEvidence(p: S.PaymentT): Evidence {
   };
 }
 
-function paymentCard(p: S.PaymentT): PaymentCard {
+function paymentCard(p: S.PaymentT, ctx: Ctx): PaymentCard {
   const ev = paymentToEvidence(p);
+  const app = p.applications?.[0];
   return {
     id: p.id,
     ref: ev.ref,
     kind: "voucher",
     origen: ev.origen,
     channel: ev.fields.channel,
-    orderId: null,
-    orderRef: null,
+    orderId: app?.order_id ?? null,
+    orderRef: app?.order_code ?? null,
     customer: p.payer_name ?? "Remitente sin identificar",
     amountCents: p.received_amount.amount_cents,
-    seller: null,
+    seller: app ? (ctx.orderById.get(app.order_id)?.seller?.name ?? null) : null,
     match: MATCH[p.reconciliation_status],
     status: ev.status,
     receivedAt: p.created_at,
   };
 }
 
-function alertRow(a: S.CollectionAlertT, ctx: Ctx): AlertRow {
+function alertRow(a: S.CollectionAlertT, ctx: Ctx, payments: S.PaymentT[] = []): AlertRow {
   const r = ctx.receivables.find((x) => x.id === a.receivable_id);
+  const p = a.payment_id ? payments.find((x) => x.id === a.payment_id) : undefined;
   return {
     id: a.id,
     orderId: r?.order_id ?? "",
     regla: RULE[a.rule],
-    responsable: "Administración",
+    responsable: a.responsible_name ?? "Administración",
     estado: ALERT_STATE[a.status],
     creadaAt: a.created_at,
-    resolucion: a.resolution === "payment_applied" ? "Pago aplicado" : a.resolution === "manual" ? "Resuelta manualmente" : null,
+    resolucion: a.resolution_note ?? (a.resolution === "payment_applied" ? "Pago aplicado" : a.resolution === "manual" ? "Resuelta manualmente" : null),
     resueltaBy: null,
     resueltaAt: a.closed_at,
-    orderRef: r?.order_code ?? (a.payment_id ? "Pago en revisión" : "—"),
-    customer: r?.customer.name ?? "—",
+    orderRef: r?.order_code ?? (a.payment_id ? (p?.display_code ? `${p.display_code} en revisión` : "Pago en revisión") : "—"),
+    customer: r?.customer.name ?? p?.payer_name ?? (a.payment_id ? "Remitente sin identificar" : "—"),
     customerId: r?.customer.id ?? null,
     balanceCents: r ? r.balance.amount_cents : null,
     dueDate: r?.due_date ?? null,
   };
 }
 
-function receivableRow(r: S.ReceivableT, today: string): ReceivableRow {
+function receivableRow(r: S.ReceivableT, ctx: Ctx): ReceivableRow {
   const due = r.due_date!;
-  const d = daysBetween(today, due);
+  const d = daysBetween(ctx.today, due);
   return {
     id: r.order_id,
     orderRef: r.order_code,
     customerId: r.customer.id,
     customer: r.customer.name,
-    seller: null,
+    seller: ctx.orderById.get(r.order_id)?.seller?.name ?? null,
     dueDate: due,
     daysToDue: d,
     balanceCents: r.balance.amount_cents,
@@ -452,22 +616,68 @@ function receivableRow(r: S.ReceivableT, today: string): ReceivableRow {
   };
 }
 
-function activity(e: S.AuditEventT, meId: string | null): ActivityItem {
-  const actor = e.actor === "user" ? (e.actor_user_id === meId ? "Tú" : "Usuario") : e.actor === "n8n" ? "n8n" : e.actor === "scheduler" ? "Programador" : "Sistema";
-  // evento_auditoria.entidad es el nombre de la tabla (pago, orden, aplicacion_pago, despacho…): solo pago y orden
-  // apuntan a una pantalla con ese id.
-  const href = e.entity_type === "pago" || e.entity_type === "payment" ? `/conciliacion/${e.entity_id}` : e.entity_type === "orden" || e.entity_type === "order" ? `/pedidos/${e.entity_id}` : null;
+function message(n: S.NotificationT): OutgoingMessage {
+  return {
+    id: n.id,
+    customerId: n.customer?.id ?? "",
+    orderId: n.order_id,
+    tipo: MESSAGE_TIPO[n.type],
+    estado: MESSAGE_ESTADO[n.status],
+    programadoPara: n.scheduled_for,
+    intentos: n.attempts,
+    enviadoAt: n.sent_at,
+    error: n.last_error,
+  };
+}
+
+function messageRow(n: S.NotificationT): MessageRow {
+  // El número de destino no sale de la API: solo se muestra el canal.
+  return { ...message(n), customer: n.customer?.name ?? "Contacto interno", contacto: "WhatsApp", orderRef: n.order_code };
+}
+
+/** Pedido, pago y monto detrás de un evento de auditoría, para mostrarlo con nombres en vez de ids. */
+type Lookup = { ctx: Ctx; payments: S.PaymentT[] };
+
+function auditAmount(e: S.AuditEventT) {
+  const v = e.changes.find((c) => c.field === "monto")?.new_value;
+  const n = v != null ? Number(v) : NaN;
+  return Number.isFinite(n) ? Math.round(n * 100) : null;
+}
+
+function activity(e: S.AuditEventT, meId: string | null, look: Lookup): ActivityItem {
+  const change = (f: string) => e.changes.find((c) => c.field === f)?.new_value ?? null;
+  const pago =
+    e.entity_type === "pago" ? look.payments.find((p) => p.id === e.entity_id) : e.entity_type === "aplicacion_pago" ? look.payments.find((p) => p.id === change("pago_id") || p.applications?.some((a) => a.application_id === e.entity_id)) : undefined;
+  const orderId =
+    e.entity_type === "orden"
+      ? e.entity_id
+      : e.entity_type === "despacho"
+        ? change("orden_id")
+        : e.entity_type === "aplicacion_pago"
+          ? (pago?.applications?.find((a) => a.application_id === e.entity_id)?.order_id ?? look.ctx.receivables.find((r) => r.id === change("obligacion_id"))?.order_id ?? null)
+          : null;
+  const order = orderId ? look.ctx.orderById.get(orderId) : undefined;
+  const op = OPERATION[e.operation];
+  const actor = e.actor === "user" ? (e.actor_user_id === meId ? "Tú" : (e.actor_name ?? "Usuario")) : (e.actor_name ?? (e.actor === "n8n" ? "n8n" : e.actor === "scheduler" ? "Programador" : "Sistema"));
   return {
     id: e.id,
     at: e.occurred_at,
-    who: e.entity_type,
+    who: order?.customer?.name ?? pago?.payer_name ?? (pago ? "Remitente sin identificar" : e.entity_type === "alerta_cobranza" ? "Cobranza" : "KeptAI"),
     actor,
-    text: e.operation.replace(/_/g, " ").toLowerCase(),
-    reference: e.changes.map((c) => `${c.field}: ${c.new_value ?? "-"}`).join(" · "),
-    amountCents: null,
-    status: "completado",
-    href,
+    text: op?.text ?? e.operation.replace(/_/g, " ").toLowerCase(),
+    reference: [pago?.display_code, order?.display_code].filter(Boolean).join(" · "),
+    amountCents: auditAmount(e),
+    status: op?.status ?? "pendiente",
+    href: pago ? `/conciliacion/${pago.id}` : order ? `/pedidos/${order.id}` : null,
   };
+}
+
+/** Margen de los pedidos confirmados con costeo cerrado (filas del motor por pedido); el resto no suma. */
+function closedMargins(rows: S.MarginRowT[], ctx: Ctx, scope: Scope) {
+  return rows.filter((m) => {
+    const o = m.group_id ? ctx.orderById.get(m.group_id) : undefined;
+    return o && confirmed(o) && fits(toBrand(o.brand), scope) && m.cost_status === "complete";
+  });
 }
 
 /** Pago aplicado por el usuario desde la vista: orden elegida para la conciliación (assignOrder). */
@@ -477,15 +687,16 @@ const chosenReceivable = new Map<string, string>();
 
 export const apiSource: DataSource = {
   capabilities: {
-    messagesLog: false,
-    resolveAlerts: false,
+    messagesLog: true,
+    resolveAlerts: true,
     retryMessages: false,
     editPaymentFields: false,
+    markDuplicate: true,
     discardPayment: false,
     manualOrderCapture: false,
     voucherNeedsFile: true,
     settings: false,
-    orderItems: false,
+    orderItems: true,
     customerDirectory: false,
     resetDemo: false,
     demoAccounts: false,
@@ -493,15 +704,17 @@ export const apiSource: DataSource = {
 
   async getDashboard(scope, role, notify) {
     const isManager = role === "gerencia";
-    const [ctx, alerts, payments, drafts, summary, forecast, audit, me] = await Promise.all([
+    const [ctx, alerts, payments, drafts, summary, forecast, margins, audit, me, notifications] = await Promise.all([
       context(),
       loadAlerts(),
-      role === "administracion" || role === "gerencia" ? loadPayments() : Promise.resolve([] as S.PaymentT[]),
+      loadPayments(),
       loadOrderDrafts(),
-      isManager ? soft(endpoints.getResultsSummary(), null) : Promise.resolve(null),
-      isManager ? soft(endpoints.getCashForecast(), null) : Promise.resolve(null),
-      role === "administracion" || role === "gerencia" ? soft(endpoints.listAuditEvents({ limit: 6 }), null) : Promise.resolve(null),
+      isManager ? readIf("results", () => endpoints.getResultsSummary(), null) : Promise.resolve(null),
+      isManager ? readIf("results", () => endpoints.getCashForecast(), null) : Promise.resolve(null),
+      isManager ? loadOrderMargins() : Promise.resolve([] as S.MarginRowT[]),
+      readIf("audit", () => endpoints.listAuditEvents({ limit: 6 }), null),
       soft(loadMe(), null),
+      role !== "vendedor" ? loadNotifications() : Promise.resolve([] as S.NotificationT[]),
     ]);
     const orders = ctx.orders.filter((o) => fits(toBrand(o.brand), scope));
     const ids = new Set(orders.map((o) => o.id));
@@ -509,9 +722,13 @@ export const apiSource: DataSource = {
     const due = recs.filter((r) => r.due_date);
     const pipeline = recs.filter((r) => !r.due_date);
     const opening = forecast?.opening_cash ? forecast.opening_cash.amount.amount_cents : null;
-    const collected = summary ? summary.applied_collections_total.amount_cents : recs.reduce((s, r) => s + r.applied_amount.amount_cents, 0);
+    // Caja actual según MotorCaja: el cierre de la primera semana menos su neto (apertura + cobros desde la apertura).
+    const w0 = forecast?.weeks[0];
+    const cashNow = w0?.closing_balance ? w0.closing_balance.amount_cents - w0.net.amount_cents : null;
+    const collected = cashNow != null && opening != null ? cashNow - opening : recs.reduce((s, r) => s + r.applied_amount.amount_cents, 0);
+    const counted = closedMargins(margins, ctx, scope);
 
-    let running = opening ?? 0;
+    let running = cashNow ?? opening ?? 0;
     const weeks: WeekPoint[] | null = forecast
       ? forecast.weeks.map((w, i) => {
           running += w.net.amount_cents;
@@ -520,6 +737,7 @@ export const apiSource: DataSource = {
             range: `${formatDate(w.week_start)} al ${formatDate(w.week_end)}`,
             inCents: w.expected_inflows.amount_cents,
             outCents: w.outflows.amount_cents,
+            // Sin apertura el motor no da cierre: se muestra el acumulado de los netos.
             balanceCents: w.closing_balance?.amount_cents ?? running,
             outflows: [],
             inflows: [],
@@ -534,7 +752,15 @@ export const apiSource: DataSource = {
         assistant.push({ id: `draft-${d.id}`, tone: "violet", title: `Borrador de pedido por revisar`, detail: `${c.customer}. ${c.faltantes ? `${c.faltantes} datos faltantes.` : "Listo para confirmar."}`, href: `/pedidos/${c.id}`, date: c.issuedOn });
       }
       for (const o of orders.filter((x) => x.status === "pending_approval")) {
-        assistant.push({ id: `pend-${o.id}`, tone: "violet", title: role === "vendedor" ? `${o.display_code} espera tu confirmación` : `${o.display_code} espera confirmación del vendedor`, detail: `${o.customer?.name ?? "Sin cliente"}, ${formatMoney(zero(o.sale))}.`, href: `/pedidos/${o.id}`, date: o.created_at.slice(0, 10) });
+        const mine = role === "vendedor" && (!o.seller || o.seller.id === me?.user_id);
+        assistant.push({
+          id: `pend-${o.id}`,
+          tone: "violet",
+          title: mine ? `${o.display_code} espera tu confirmación` : `${o.display_code} espera confirmación de ${o.seller?.name ?? "su vendedor"}`,
+          detail: `${o.customer?.name ?? "Sin cliente"}, ${formatMoney(zero(o.sale))}.`,
+          href: `/pedidos/${o.id}`,
+          date: o.created_at.slice(0, 10),
+        });
       }
       for (const o of orders.filter((x) => x.status === "held")) {
         assistant.push({ id: `ret-${o.id}`, tone: "info", title: `${o.display_code} retenida: falta ${o.payment_condition === "cash" ? "el pago al contado" : "anticipo"} de ${formatMoney(requiredBeforeProduction(o))}`, detail: "No entra a producción hasta que Administración verifique y aplique el pago.", href: `/pedidos/${o.id}`, date: o.created_at.slice(0, 10) });
@@ -549,9 +775,27 @@ export const apiSource: DataSource = {
     }
     if (notify.sinPedido && role !== "vendedor") {
       const review = payments.filter((p) => ["duplicate", "orphan", "amount_mismatch"].includes(p.reconciliation_status) && p.phase !== "applied");
-      if (review.length) assistant.push({ id: "review", tone: "warn", title: `${review.length} ${review.length === 1 ? "pago en revisión" : "pagos en revisión"}`, detail: "Duplicados, sin orden o con monto que no cuadra.", href: `/conciliacion/${review[0].id}`, date: review[0].created_at });
+      if (review.length)
+        assistant.push({
+          id: "review",
+          tone: "warn",
+          title: `${review.length} ${review.length === 1 ? "pago en revisión" : "pagos en revisión"}`,
+          detail: review.map((p) => `${p.display_code ?? "Pago"}: ${p.reconciliation_status === "duplicate" ? "duplicado" : p.reconciliation_status === "orphan" ? "sin cliente identificado" : "monto que no cuadra"}`).join(". ") + ".",
+          href: `/conciliacion/${review[0].id}`,
+          date: review[0].created_at,
+        });
       const open = alerts.filter((a) => a.status === "open");
-      if (open.length) assistant.push({ id: "alerts", tone: "bad", title: `${open.length} ${open.length === 1 ? "alerta de cobranza abierta" : "alertas de cobranza abiertas"}`, detail: "Revisa la mora temprana en Cobranza.", href: "/cobranza", date: open[0].created_at });
+      if (open.length) assistant.push({ id: "alerts", tone: "bad", title: `${open.length} ${open.length === 1 ? "alerta de cobranza abierta" : "alertas de cobranza abiertas"}`, detail: "Revisa la mora temprana en Cobranza.", href: "/cobranza?vista=alertas", date: open[0].created_at });
+      const errors = notifications.filter((n) => n.status === "error" && fits(toBrand(n.order_id ? ctx.orderById.get(n.order_id)?.brand : null), scope));
+      if (errors.length)
+        assistant.push({
+          id: "msg-error",
+          tone: "bad",
+          title: `${errors.length} ${errors.length === 1 ? "mensaje de WhatsApp falló" : "mensajes de WhatsApp fallaron"}`,
+          detail: errors[0].last_error ?? "El programador lo reintentará; revisa la bitácora en Cobranza.",
+          href: "/cobranza?vista=mensajes",
+          date: errors[0].scheduled_for,
+        });
     }
 
     return {
@@ -563,16 +807,16 @@ export const apiSource: DataSource = {
       overdueCents: due.filter((r) => r.due_bucket === "overdue").reduce((s, r) => s + r.balance.amount_cents, 0),
       pipelineCents: pipeline.reduce((s, r) => s + r.balance.amount_cents, 0),
       pipelineCount: pipeline.length,
-      cashCents: opening != null ? opening + collected : null,
+      cashCents: cashNow,
       openingCents: opening,
       collectedCents: collected,
       openingSource: forecast?.opening_cash ? `Saldo inicial al ${formatDate(forecast.opening_cash.as_of)} (${forecast.opening_cash.source === "demo_fixture" ? "demo" : "manual"})` : "",
-      marginCents: summary?.cost_status === "complete" ? cents(summary.margin_total) : null,
-      perceivedCents: null,
-      orderCount: orders.length,
+      marginCents: isManager && counted.length ? counted.reduce((s, m) => s + zero(m.margin), 0) : null,
+      perceivedCents: isManager && counted.length && counted.every((m) => m.perceived_margin) ? counted.reduce((s, m) => s + zero(m.perceived_margin), 0) : null,
+      orderCount: counted.length,
       weeks,
       assistant,
-      activity: audit ? audit.items.map((e) => activity(e, me?.user_id ?? null)) : null,
+      activity: audit ? audit.items.map((e) => activity(e, me?.user_id ?? null, { ctx, payments })) : null,
     };
   },
 
@@ -608,10 +852,9 @@ export const apiSource: DataSource = {
     const moroso = overdueCustomers(ctx);
 
     if (id.startsWith(DRAFT)) {
-      const d = await soft(endpoints.getDraft(id.slice(DRAFT.length)), null);
+      const d = DRAFTS_IN_SPRING ? await soft(endpoints.getDraft(id.slice(DRAFT.length)), null) : null;
       if (!d) return null;
       const c = draftCard(d, ctx.today);
-      const customer: CustomerView = { id: "", name: c.customer, brand: c.brand, tipo: null, rucDni: null, sellerId: null, contactoWhatsapp: null, since: null, creditLimitCents: null };
       const known = ctx.receivables.find((r) => r.customer.name.toLowerCase() === c.customer.toLowerCase());
       const order: Order = {
         ...viewOrder(
@@ -623,7 +866,7 @@ export const apiSource: DataSource = {
       return {
         cutDate: ctx.today,
         order,
-        customer,
+        customer: emptyCustomer(c.customer, c.brand),
         seller: null,
         card: { ...c, clienteEnMora: known ? moroso.has(known.customer.id) : false },
         credit: snapshotFor(known?.customer.id ?? null, ctx),
@@ -641,50 +884,55 @@ export const apiSource: DataSource = {
       };
     }
 
-    const o = ctx.orders.find((x) => x.id === id) ?? (await soft(endpoints.getOrder(id), null));
+    const o = ctx.orderById.get(id) ?? (await soft(endpoints.getOrder(id), null));
     if (!o) return null;
-    const [credit, alerts] = await Promise.all([soft(endpoints.getCreditDecision(o.id), null), loadAlerts()]);
+    const [credit, alerts, notifications, margins] = await Promise.all([
+      readIf("credit", () => endpoints.getCreditDecision(o.id), null),
+      loadAlerts(),
+      loadNotifications(),
+      loadOrderMargins(),
+    ]);
     const r = ctx.byOrder.get(o.id);
     const c = card(o, ctx, moroso);
+    const m = margins.find((x) => x.group_id === o.id && x.cost_status === "complete") ?? null;
     return {
       cutDate: ctx.today,
-      order: viewOrder(o, credit),
-      customer: (o.customer && customerView(o.customer.id, ctx)) ?? { id: "", name: c.customer, brand: c.brand, tipo: null, rucDni: null, sellerId: null, contactoWhatsapp: null, since: null, creditLimitCents: null },
-      seller: null,
+      order: viewOrder(o, credit, m),
+      customer: (o.customer && customerView(o.customer.id, ctx)) ?? emptyCustomer(c.customer, c.brand),
+      seller: o.seller?.name ?? null,
       card: c,
       credit: snapshotFor(o.customer?.id ?? null, ctx),
       paidCents: r ? r.applied_amount.amount_cents : 0,
       anticipoRequeridoCents: requiredBeforeProduction(o),
       gatekeeper: !["draft", "pending_approval", "held", "cancelled"].includes(o.status),
-      costCents: null,
-      marginCents: null,
-      perceivedCents: null,
-      payments:
-        r && r.applied_amount.amount_cents > 0
-          ? [{ id: `${r.id}-applied`, at: o.created_at, amountCents: r.applied_amount.amount_cents, channel: "Pagos aplicados", by: "Administración", evidenceId: null }]
-          : [],
+      costCents: cents(m?.total_cost),
+      marginCents: cents(m?.margin),
+      perceivedCents: cents(m?.perceived_margin),
+      payments: [...(r?.applications ?? [])]
+        .sort((a, b) => b.applied_at.localeCompare(a.applied_at))
+        .map((a) => ({ id: a.application_id, at: a.applied_at, amountCents: a.amount.amount_cents, channel: CHANNEL[a.channel], by: a.applied_by?.name ?? "Administración", evidenceId: a.payment_code })),
       pendingEvidence: [],
-      messages: null,
+      messages: notifications.filter((n) => n.order_id === o.id).map(message).sort((a, b) => a.programadoPara.localeCompare(b.programadoPara)),
       alerts: alerts.filter((a) => a.receivable_id && a.receivable_id === r?.id).map((a) => alertRow(a, ctx)),
       plazoDefecto: o.credit_term_days ?? 30,
     };
   },
 
   async getTaller(scope) {
-    const ctx = await context();
+    const [ctx, me] = await Promise.all([context(), soft(loadMe(), null)]);
     const map = (o: S.OrderT): TallerOrder => ({
       id: o.id,
       ref: o.display_code,
-      customer: o.customer?.name ?? "Sin cliente",
+      customer: o.customer?.name ?? null,
       brand: toBrand(o.brand),
-      description: o.product_line ?? "",
-      items: [],
+      description: describe(o),
+      items: items(o),
       modality: o.production_mode === "own" ? "propia" : "tercerizada",
       issuedOn: o.created_at.slice(0, 10),
       inicioProduccion: o.production_start_date,
       entregaSolicitada: o.requested_delivery_date,
       plazoDias: o.credit_term_days,
-      despacho: o.dispatch_date ? { fecha: o.dispatch_date, acta: "Registrado", by: "Taller" } : null,
+      despacho: dispatchOf(o),
       anticipoPendienteCents: o.status === "held" ? requiredBeforeProduction(o) : 0,
     });
     const orders = ctx.orders.filter((o) => fits(toBrand(o.brand), scope));
@@ -694,7 +942,8 @@ export const apiSource: DataSource = {
         .filter((o) => o.status === "released" || o.status === "in_production")
         .sort((a, b) => (a.requested_delivery_date ?? "").localeCompare(b.requested_delivery_date ?? ""))
         .map(map),
-      retenidas: orders.filter((o) => o.status === "held").map(map),
+      // V7: el jefe de taller solo lee órdenes liberadas; las retenidas no le llegan.
+      retenidas: me?.role === "JEFE_TALLER" ? null : orders.filter((o) => o.status === "held").map(map),
       despachadas: orders
         .filter((o) => o.dispatch_date)
         .sort((a, b) => (b.dispatch_date ?? "").localeCompare(a.dispatch_date ?? ""))
@@ -704,54 +953,90 @@ export const apiSource: DataSource = {
   },
 
   async getQueue() {
-    const payments = await loadPayments();
-    return payments.map(paymentCard).sort((a, b) => b.receivedAt.localeCompare(a.receivedAt));
+    const [payments, ctx] = await Promise.all([loadPayments(), context()]);
+    return payments.map((p) => paymentCard(p, ctx)).sort((a, b) => b.receivedAt.localeCompare(a.receivedAt));
   },
 
   async getEvidence(id) {
     const p = await soft(endpoints.getPayment(id), null);
     if (!p) return null;
-    const [rec, link] = await Promise.all([
-      soft(endpoints.getReconciliationCandidates(id), null),
+    const [rec, link, payments, ctx] = await Promise.all([
+      // La clasificación y los candidatos solo cambian mientras el pago no está aplicado.
+      p.phase !== "applied" ? readIf("reconciliation", () => endpoints.getReconciliationCandidates(id), null) : Promise.resolve(null),
       p.evidence_ids[0] ? soft(endpoints.getEvidenceDownloadLink(p.evidence_ids[0]), null) : Promise.resolve(null),
+      loadPayments(),
+      context(),
     ]);
-    const chosen = chosenReceivable.get(id);
-    const top = rec?.candidates.find((c) => c.receivable_id === chosen) ?? rec?.candidates[0] ?? null;
     const ev = paymentToEvidence(p);
-    ev.orderId = top?.order_id ?? null;
-    const missing = [
-      p.operation_reference ? null : "Número de operación",
-      p.payer_name ? null : "Remitente",
-      p.paid_at ? null : "Fecha de pago",
-    ].filter((x): x is string => x !== null);
+    const candidates = (rec?.candidates ?? []).filter((c) => c.balance.amount_cents > 0);
+    const chosen = candidates.find((c) => c.receivable_id === chosenReceivable.get(id));
+    // Con varios candidatos, Administración elige el pedido; con uno solo, es ese.
+    const candidate = chosen ?? (candidates.length === 1 ? candidates[0] : null);
+    const applied = p.applications?.[0];
+    const orderId = applied?.order_id ?? candidate?.order_id ?? null;
+    const o = orderId ? ctx.orderById.get(orderId) : undefined;
+    const r = orderId ? ctx.byOrder.get(orderId) : undefined;
+    const due = r?.due_date ?? o?.due_date ?? null;
+    ev.orderId = orderId;
+
+    const amount = p.received_amount.amount_cents;
+    let match: MatchKind = MATCH[p.reconciliation_status];
+    if (p.reconciliation_status === "pending" && rec) {
+      // Si se eligió otro pedido que el sugerido, el cuadre se mide contra su saldo.
+      match = chosen && chosen.receivable_id !== rec.candidates[0]?.receivable_id
+        ? amount === chosen.balance.amount_cents ? "total" : amount < chosen.balance.amount_cents ? "parcial" : "no_cuadra"
+        : CLASS_MATCH[rec.classification];
+    }
+    const original = p.duplicate_of_payment_id
+      ? payments.find((x) => x.id === p.duplicate_of_payment_id)
+      : match === "duplicado"
+        ? payments.find((x) => x.id !== p.id && x.operation_reference === p.operation_reference && x.received_amount.amount_cents === amount && x.created_at < p.created_at)
+        : undefined;
+    const missing = [p.operation_reference ? null : "Número de operación", p.payer_name ? null : "Remitente", p.paid_at ? null : "Fecha de pago"].filter((x): x is string => x !== null);
     return {
       evidence: ev,
-      brand: null,
+      brand: o ? toBrand(o.brand) : null,
       imageUrl: link?.url ?? null,
-      appliedBy: p.phase === "applied" ? "Administración" : null,
-      match: MATCH[p.reconciliation_status],
-      duplicateOfId: p.duplicate_of_payment_id,
-      order: top
-        ? { id: top.order_id, ref: top.order_code, customer: top.customer_name, line: null, saleCents: null, balanceCents: top.balance.amount_cents, daysToDue: null, dueDate: null, seller: null }
+      appliedBy: applied ? (applied.applied_by?.name ?? "Administración") : null,
+      match,
+      duplicateOfId: p.duplicate_of_payment_id ?? original?.id ?? null,
+      duplicateOfRef: original?.display_code ?? null,
+      duplicateMarked: p.reconciliation_status === "duplicate",
+      order: orderId
+        ? {
+            id: orderId,
+            ref: applied?.order_code ?? candidate?.order_code ?? o?.display_code ?? "",
+            customer: o?.customer?.name ?? candidate?.customer_name ?? "—",
+            line: o?.product_line ?? null,
+            saleCents: cents(o?.sale),
+            balanceCents: r?.balance.amount_cents ?? candidate?.balance.amount_cents ?? 0,
+            daysToDue: due ? daysBetween(ctx.today, due) : null,
+            dueDate: due,
+            seller: o?.seller?.name ?? null,
+          }
         : null,
       missing,
-      openOrders: (rec?.candidates ?? []).filter((c) => c.balance.amount_cents > 0).map((c) => ({ id: c.receivable_id, label: `${c.order_code} · ${c.customer_name} · saldo ${formatMoney(c.balance.amount_cents)}` })),
+      openOrders: candidates.map((c) => ({ id: c.receivable_id, label: `${c.order_code} · ${c.customer_name} · saldo ${formatMoney(c.balance.amount_cents)}` })),
     };
   },
 
   async getCobranza(scope) {
-    const [ctx, alerts] = await Promise.all([context(), loadAlerts()]);
-    const brandOf = new Map(ctx.orders.map((o) => [o.id, toBrand(o.brand)]));
+    const [ctx, alerts, notifications, payments] = await Promise.all([context(), loadAlerts(), loadNotifications(), loadPayments()]);
+    const brandOf = (orderId: string | null) => (orderId ? toBrand(ctx.orderById.get(orderId)?.brand) : null);
     return {
       cutDate: ctx.today,
       receivables: ctx.receivables
-        .filter((r) => r.due_date && r.balance.amount_cents > 0 && fits(brandOf.get(r.order_id) ?? null, scope))
-        .map((r) => receivableRow(r, ctx.today))
+        .filter((r) => r.due_date && r.balance.amount_cents > 0 && fits(brandOf(r.order_id), scope))
+        .map((r) => receivableRow(r, ctx))
         .sort((a, b) => a.dueDate.localeCompare(b.dueDate)),
       alerts: alerts
-        .map((a) => alertRow(a, ctx))
+        .map((a) => alertRow(a, ctx, payments))
+        .filter((a) => !a.orderId || fits(brandOf(a.orderId), scope))
         .sort((a, b) => (a.estado === b.estado ? b.creadaAt.localeCompare(a.creadaAt) : a.estado === "abierta" ? -1 : 1)),
-      messages: null,
+      messages: notifications
+        .filter((n) => fits(brandOf(n.order_id), scope))
+        .map(messageRow)
+        .sort((a, b) => b.programadoPara.localeCompare(a.programadoPara)),
     };
   },
 
@@ -772,16 +1057,16 @@ export const apiSource: DataSource = {
         id,
         name: v.name,
         brand: v.brand,
-        tipo: null,
-        seller: null,
+        tipo: v.tipo,
+        seller: sellerOf(id, ctx),
         since: v.since,
-        creditLimitCents: null,
+        creditLimitCents: v.creditLimitCents,
         usedCents: snap.usedCents,
         overdueCents: snap.overdueCents,
         maxOverdueDays: snap.maxOverdueDays,
         status: snap.status,
-        avgDaysLate: null,
-        lastPaymentAt: null,
+        avgDaysLate: snap.avgDaysLate,
+        lastPaymentAt: snap.lastPaymentAt,
         nextDue: next ? { id: next.order_id, ref: next.order_code, date: next.due_date!, overdue: next.due_date! < ctx.today } : null,
         pendingOrders: ctx.orders.filter((o) => o.customer?.id === id && (o.status === "pending_approval" || o.status === "draft")).length,
       });
@@ -794,21 +1079,24 @@ export const apiSource: DataSource = {
     const view = customerView(id, ctx);
     if (!view) return null;
     const moroso = overdueCustomers(ctx);
-    const orders = ctx.orders.filter((o) => o.customer?.id === id).sort((a, b) => b.created_at.localeCompare(a.created_at));
-    const [statement, credits] = await Promise.all([
-      soft(endpoints.getCustomerStatement(id), null),
-      Promise.all(orders.map((o) => soft(endpoints.getCreditDecision(o.id), null))),
+    const orders = ordersOf(id, ctx);
+    const [credits, notifications] = await Promise.all([
+      Promise.all(orders.map((o) => (confirmed(o) ? readIf("credit", () => endpoints.getCreditDecision(o.id), null) : Promise.resolve(null)))),
+      loadNotifications(),
     ]);
-    const payments = (statement?.applications ?? []).map((a, i) => ({
-      id: `${a.payment_code ?? "pago"}-${i}`,
-      at: a.applied_at,
-      orderRef: a.order_code,
-      amountCents: a.applied_amount.amount_cents,
-      // El estado de cuenta trae el código del pago, no su id: se muestra sin enlace a Conciliación.
-      channel: a.payment_code,
-      by: null,
-      evidence: null,
-    }));
+    const payments = ctx.receivables
+      .filter((r) => r.customer.id === id)
+      .flatMap((r) => (r.applications ?? []).map((a) => ({ a, orderRef: r.order_code })))
+      .sort((x, y) => y.a.applied_at.localeCompare(x.a.applied_at))
+      .map(({ a, orderRef }) => ({
+        id: a.application_id,
+        at: a.applied_at,
+        orderRef,
+        amountCents: a.amount.amount_cents,
+        channel: CHANNEL[a.channel],
+        by: a.applied_by?.name ?? null,
+        evidence: a.payment_code,
+      }));
     const decisions: CreditDecisionRow[] = [];
     orders.forEach((o, i) => {
       const c = credits[i];
@@ -817,7 +1105,7 @@ export const apiSource: DataSource = {
         orderId: o.id,
         orderRef: o.display_code,
         decision: c.status === "approved" ? "aprobado" : "rechazado",
-        by: "Vendedor",
+        by: c.responsible_name ?? o.seller?.name ?? "Vendedor",
         at: c.decided_at ?? o.created_at,
         avisoMoraMostrado: c.arrears_notice_shown,
         tipo: o.payment_condition === "cash" ? "Contado" : o.payment_condition === "advance" ? "Anticipo" : "Crédito",
@@ -826,31 +1114,48 @@ export const apiSource: DataSource = {
         saleCents: cents(o.sale),
       });
     });
+    const messages = notifications
+      .filter((n) => n.customer?.id === id)
+      .map(message)
+      .sort((a, b) => b.programadoPara.localeCompare(a.programadoPara));
 
     const timeline: TimelineItem[] = [];
     for (const o of orders) {
-      timeline.push({ id: `${o.id}-p`, at: o.created_at, kind: "pedido", title: `Pedido ${o.display_code}`, detail: o.product_line ?? "", amountCents: cents(o.sale), tone: "neutral", future: false, dateOnly: false });
-      if (o.dispatch_date) timeline.push({ id: `${o.id}-d`, at: `${o.dispatch_date}T12:00:00`, kind: "despacho", title: `Despacho de ${o.display_code}`, detail: `Inicia el plazo de ${o.credit_term_days ?? 0} días.`, amountCents: null, tone: "info", future: false, dateOnly: true });
+      timeline.push({ id: `${o.id}-p`, at: o.created_at, kind: "pedido", title: `Pedido ${o.display_code}`, detail: describe(o), amountCents: cents(o.sale), tone: "neutral", future: false, dateOnly: false });
+      if (o.dispatch_date) timeline.push({ id: `${o.id}-d`, at: `${o.dispatch_date}T12:00:00`, kind: "despacho", title: `Despacho de ${o.display_code}`, detail: `${o.dispatched_by ? `Registrado por ${o.dispatched_by.name}. ` : ""}Inicia el plazo de ${o.credit_term_days ?? 0} días.`, amountCents: null, tone: "info", future: false, dateOnly: true });
       const r = ctx.byOrder.get(o.id);
       if (r?.due_date && r.balance.amount_cents > 0) {
         const d = daysBetween(ctx.today, r.due_date);
         timeline.push({ id: `${o.id}-v`, at: `${r.due_date}T23:59:00`, kind: "vencimiento", title: d < 0 ? `${o.display_code} vencido` : `Vence ${o.display_code}`, detail: `Saldo ${formatMoney(r.balance.amount_cents)}`, amountCents: r.balance.amount_cents, tone: d < 0 ? "bad" : d <= 3 ? "warn" : "neutral", future: r.due_date > ctx.today, dateOnly: true });
       }
     }
-    for (const p of payments) timeline.push({ id: p.id, at: p.at, kind: "pago", title: `Pago aplicado a ${p.orderRef}`, detail: p.evidence ?? "Pago", amountCents: p.amountCents, tone: "ok", future: false, dateOnly: false });
+    for (const p of payments)
+      timeline.push({ id: p.id, at: p.at, kind: "pago", title: `Pago aplicado a ${p.orderRef}`, detail: [p.channel, p.evidence, p.by && `por ${p.by}`].filter(Boolean).join(" · "), amountCents: p.amountCents, tone: "ok", future: false, dateOnly: false });
     for (const d of decisions)
-      timeline.push({ id: `${d.orderId}-c`, at: d.at, kind: "credito", title: `${d.orderRef}: ${d.decision === "aprobado" ? `${d.tipo.toLowerCase()} aprobado` : "crédito rechazado"}`, detail: `${d.avisoMoraMostrado ? "Vio el aviso de mora" : "Sin aviso de mora"}${d.nota ? ` · ${d.nota}` : ""}`, amountCents: null, tone: d.decision === "aprobado" ? (d.avisoMoraMostrado ? "warn" : "violet") : "bad", future: false, dateOnly: false });
+      timeline.push({ id: `${d.orderId}-c`, at: d.at, kind: "credito", title: `${d.orderRef}: ${d.decision === "aprobado" ? `${d.tipo.toLowerCase()} aprobado` : "crédito rechazado"}`, detail: [d.by, d.avisoMoraMostrado && "vio el aviso de mora", d.nota].filter(Boolean).join(" · "), amountCents: null, tone: d.decision === "aprobado" ? (d.avisoMoraMostrado ? "warn" : "violet") : "bad", future: false, dateOnly: false });
+    for (const m of messages.filter((x) => x.estado === "enviado" || x.estado === "error"))
+      timeline.push({
+        id: m.id,
+        at: m.enviadoAt ?? m.programadoPara,
+        kind: "mensaje",
+        title: `WhatsApp: ${MESSAGE_LABEL[m.tipo]}`,
+        detail: m.estado === "error" ? `Error: ${m.error ?? "sin detalle"}` : `Enviado al contacto de prueba${m.orderId ? ` · ${ctx.orderById.get(m.orderId)?.display_code ?? ""}` : ""}`,
+        amountCents: null,
+        tone: m.estado === "error" ? "bad" : "info",
+        future: false,
+        dateOnly: false,
+      });
     timeline.sort((a, b) => b.at.localeCompare(a.at));
 
     return {
       cutDate: ctx.today,
       customer: view,
-      seller: null,
+      seller: sellerOf(id, ctx),
       snapshot: snapshotFor(id, ctx),
       orders: orders.map((o) => row(o, ctx, moroso)),
       payments,
       decisions,
-      messages: null,
+      messages,
       timeline,
     };
   },
@@ -862,13 +1167,13 @@ export const apiSource: DataSource = {
     const today = ctx.today;
     let overdue = 0;
     const orders = s.orders.map((o) => {
-      const full = ctx.orders.find((x) => x.id === o.order_id);
+      const full = ctx.orderById.get(o.order_id);
       const late = o.due_date != null && o.due_date < today && o.balance.amount_cents > 0;
       if (late) overdue += o.balance.amount_cents;
       return {
         id: o.order_id,
         ref: o.order_code,
-        description: full?.product_line ?? null,
+        description: full ? describe(full) : null,
         despachoOn: full?.dispatch_date ?? null,
         dueDate: o.due_date,
         saleCents: o.sale.amount_cents,
@@ -892,18 +1197,17 @@ export const apiSource: DataSource = {
   },
 
   async getResults(scope) {
-    const [ctx, byOrder, byBrand, byLine, center, summary] = await Promise.all([
+    const [ctx, byOrder, center, summary] = await Promise.all([
       context(),
-      endpoints.getMarginReport({ group_by: "order", limit: 200 }),
-      endpoints.getMarginReport({ group_by: "brand" }),
-      endpoints.getMarginReport({ group_by: "product_line" }),
-      soft(endpoints.getProductionCenterResults(), null),
-      soft(endpoints.getResultsSummary(), null),
+      loadOrderMargins(),
+      readIf("results", () => endpoints.getProductionCenterResults(), null),
+      readIf("results", () => endpoints.getResultsSummary(), null),
     ]);
-    const COMPONENT: Record<string, string> = { raw_materials: "materiales", labor: "mano de obra", outsourced: "terceros", overhead: "indirectos", logistics: "logística" };
     const rows: ResultRow[] = [];
-    for (const m of byOrder.items) {
-      const o = ctx.orders.find((x) => x.id === m.group_id);
+    for (const m of byOrder) {
+      const o = m.group_id ? ctx.orderById.get(m.group_id) : undefined;
+      // Como en la demo: solo pedidos confirmados (los pendientes o rechazados aún no tienen resultado).
+      if (o && !confirmed(o)) continue;
       const brand = toBrand(o?.brand);
       if (!fits(brand, scope)) continue;
       const r = o ? ctx.byOrder.get(o.id) : undefined;
@@ -914,43 +1218,61 @@ export const apiSource: DataSource = {
         customerId: o?.customer?.id ?? null,
         brand,
         line: o?.product_line ?? null,
-        description: o?.product_line ?? m.group_key,
+        description: o ? describe(o) : m.group_key,
         modality: m.production_mode === "own" ? "propia" : m.production_mode === "outsourced" ? "tercerizada" : null,
-        costOrigin: null,
-        issuedOn: o?.created_at.slice(0, 10) ?? byOrder.as_of,
+        costOrigin: m.cost_status === "complete" ? "real" : null,
+        issuedOn: o?.created_at.slice(0, 10) ?? summary?.as_of ?? ctx.today,
         saleCents: m.revenue.amount_cents,
         costCents: cents(m.total_cost),
         costs: null,
         costComplete: m.cost_status === "complete",
         missingCosts: m.missing_cost_components.map((c) => COMPONENT[c] ?? c),
         marginCents: cents(m.margin),
-        perceivedCents: null,
+        perceivedCents: cents(m.perceived_margin),
         collectedCents: r ? r.applied_amount.amount_cents : null,
         balanceCents: r ? r.balance.amount_cents : null,
         dueDate: r?.due_date ?? null,
       });
     }
-    const collectedByBrand = (b: Brand) =>
-      ctx.receivables.filter((r) => toBrand(ctx.orders.find((o) => o.id === r.order_id)?.brand) === b).reduce((s, r) => s + r.applied_amount.amount_cents, 0);
+    rows.sort((a, b) => b.issuedOn.localeCompare(a.issuedOn));
+
+    // Marca y línea: suma de los pedidos con costeo cerrado (el motor deja la agrupación incompleta mientras haya
+    // pedidos en curso, y esos no tienen margen todavía).
+    const counted = rows.filter((r) => r.costComplete);
+    const brands: Brand[] = scope === "consolidado" ? ["corpotex", "unicrack"] : [scope];
+    const sum = (list: ResultRow[], f: (r: ResultRow) => number | null) => list.reduce((s, r) => s + (f(r) ?? 0), 0);
     const items = center?.items ?? [];
-    const sum = (f: (i: (typeof items)[number]) => number | null) => (items.some((i) => f(i) == null) ? null : items.reduce((s, i) => s + (f(i) ?? 0), 0));
+    const total = (f: (i: (typeof items)[number]) => number | null) => (items.some((i) => f(i) == null) ? null : items.reduce((s, i) => s + (f(i) ?? 0), 0));
+    const byBrand: ResultsDTO["byBrand"] = brands.map((b) => {
+      const bo = counted.filter((r) => r.brand === b);
+      return {
+        brand: b,
+        saleCents: sum(bo, (r) => r.saleCents),
+        marginCents: sum(bo, (r) => r.marginCents),
+        perceivedCents: bo.every((r) => r.perceivedCents != null) ? sum(bo, (r) => r.perceivedCents) : null,
+        collectedCents: sum(bo, (r) => r.collectedCents),
+        orders: bo.length,
+        withoutCost: rows.filter((r) => r.brand === b && !r.costComplete).length,
+      };
+    });
+    const lines = [...new Set(counted.map((r) => r.line ?? "Sin línea"))];
     return {
-      cutDate: summary?.as_of ?? byOrder.as_of,
-      demo: byOrder.data_origin === "demo_fixture",
+      cutDate: summary?.as_of ?? ctx.today,
+      demo: summary?.data_origin === "demo_fixture" || ctx.orders.some((o) => o.data_origin === "demo_fixture"),
       rows,
-      byBrand: byBrand.items
-        .map((m) => ({ m, brand: toBrand(m.group_key) }))
-        .filter((x): x is { m: S.MarginRowT; brand: Brand } => x.brand !== null && fits(x.brand, scope))
-        .map(({ m, brand }) => ({ brand, saleCents: m.revenue.amount_cents, marginCents: cents(m.margin), perceivedCents: null, collectedCents: collectedByBrand(brand) })),
-      byLine: byLine.items.map((m) => ({ line: m.group_key, saleCents: m.revenue.amount_cents, marginCents: cents(m.margin), orders: m.orders_count })),
+      byBrand,
+      byLine: lines.map((line) => {
+        const lo = counted.filter((r) => (r.line ?? "Sin línea") === line);
+        return { line, saleCents: sum(lo, (r) => r.saleCents), marginCents: sum(lo, (r) => r.marginCents), orders: lo.length };
+      }),
       workshop: items.length
         ? {
             orderIds: items.map((i) => i.order_code),
-            costCents: sum((i) => cents(i.workshop_cost)),
+            costCents: total((i) => cents(i.workshop_cost)),
             internalChargeCents: items.reduce((s, i) => s + i.internal_charge.amount_cents, 0),
-            workshopResultCents: sum((i) => cents(i.workshop_result)),
+            workshopResultCents: total((i) => cents(i.workshop_result)),
             commercialResultCents: items.reduce((s, i) => s + i.commercial_result.amount_cents, 0),
-            consolidatedMarginCents: sum((i) => cents(i.consolidated_margin)),
+            consolidatedMarginCents: total((i) => cents(i.consolidated_margin)),
           }
         : null,
     };
@@ -959,23 +1281,23 @@ export const apiSource: DataSource = {
   ordersCsv: () => endpoints.exportOrdersCsv(),
 
   async getProfile(person) {
-    const [me, audit] = await Promise.all([soft(loadMe(), null), soft(endpoints.listAuditEvents({ limit: 100 }), null)]);
+    const [me, audit, ctx, payments] = await Promise.all([soft(loadMe(), null), readIf("audit", () => endpoints.listAuditEvents({ limit: 100 }), null), context(), loadPayments()]);
     const mine = audit ? audit.items.filter((e) => e.actor === "user" && e.actor_user_id === me?.user_id) : null;
     const count = (re: RegExp) => mine?.filter((e) => re.test(e.operation)).length ?? 0;
     const counts: Record<Role, Array<{ label: string; value: number }>> = {
       vendedor: [
-        { label: "Créditos decididos", value: count(/CREDIT|CONTADO/i) },
+        { label: "Créditos decididos", value: count(/CREDITO|CONTADO/i) },
         { label: "Borradores confirmados", value: count(/DRAFT|BORRADOR/i) },
       ],
       administracion: [
-        { label: "Pagos verificados", value: count(/VERIF/i) },
-        { label: "Pagos aplicados", value: count(/APPL|APLICADO/i) },
-        { label: "Despachos registrados", value: count(/DISPATCH|DESPACHO/i) },
+        { label: "Pagos verificados", value: count(/VERIFICADO/i) },
+        { label: "Pagos aplicados", value: count(/APLICADO/i) },
+        { label: "Despachos registrados", value: count(/DESPACHO/i) },
       ],
       gerencia: [{ label: "Eventos revisados", value: audit?.items.length ?? 0 }],
-      jefe_taller: [{ label: "Despachos registrados", value: count(/DISPATCH|DESPACHO/i) }],
+      jefe_taller: [{ label: "Despachos registrados", value: count(/DESPACHO/i) }],
     };
-    return { activity: mine ? mine.slice(0, 30).map((e) => activity(e, me?.user_id ?? null)) : null, counts: counts[person.role], settings: null, ownOrders: [] };
+    return { activity: mine ? mine.slice(0, 30).map((e) => activity(e, me?.user_id ?? null, { ctx, payments })) : null, counts: counts[person.role], settings: null, ownOrders: [] };
   },
 
   async search(q, brand) {
@@ -988,8 +1310,8 @@ export const apiSource: DataSource = {
       .filter((o) => o.customer && o.customer.name.toLowerCase().includes(term) && ok(toBrand(o.brand)) && !seen.has(o.customer.id) && seen.add(o.customer.id))
       .map((o) => ({ id: o.customer!.id, label: o.customer!.name, detail: "Cliente", href: `/clientes/${o.customer!.id}`, brand: toBrand(o.brand) }));
     const orders = ctx.orders
-      .filter((o) => ok(toBrand(o.brand)) && (o.display_code.toLowerCase().includes(term) || (o.customer?.name ?? "").toLowerCase().includes(term)))
-      .map((o) => ({ id: o.id, label: `${o.display_code} · ${o.customer?.name ?? "Sin cliente"}`, detail: `Orden ${o.sale ? formatMoney(o.sale.amount_cents) : ""}`, href: `/pedidos/${o.id}`, brand: toBrand(o.brand) }));
+      .filter((o) => ok(toBrand(o.brand)) && (o.display_code.toLowerCase().includes(term) || (o.customer?.name ?? "").toLowerCase().includes(term) || describe(o).toLowerCase().includes(term)))
+      .map((o) => ({ id: o.id, label: `${o.display_code} · ${o.customer?.name ?? "Sin cliente"}`, detail: `${describe(o)}${o.sale ? ` · ${formatMoney(o.sale.amount_cents)}` : ""}`, href: `/pedidos/${o.id}`, brand: toBrand(o.brand) }));
     const pays = payments
       .filter((p) => (p.display_code ?? "").toLowerCase().includes(term) || (p.payer_name ?? "").toLowerCase().includes(term) || (p.operation_reference ?? "").includes(term))
       .map((p) => ({ id: p.id, label: `${p.display_code ?? "Pago"} · ${p.payer_name ?? "Sin remitente"}`, detail: `${CHANNEL[p.channel]} ${formatMoney(p.received_amount.amount_cents)}`, href: `/conciliacion/${p.id}`, brand: null }));
@@ -998,7 +1320,7 @@ export const apiSource: DataSource = {
 
   async getCaptureOptions(brand) {
     const ctx = await context();
-    const open = ctx.receivables.filter((r) => r.balance.amount_cents > 0 && fits(toBrand(ctx.orders.find((o) => o.id === r.order_id)?.brand), brand));
+    const open = ctx.receivables.filter((r) => r.balance.amount_cents > 0 && fits(toBrand(ctx.orderById.get(r.order_id)?.brand), brand));
     const customers = new Map<string, string>();
     for (const o of ctx.orders) if (o.customer && fits(toBrand(o.brand), brand)) customers.set(o.customer.id, o.customer.name);
     return {
@@ -1009,20 +1331,32 @@ export const apiSource: DataSource = {
 
   commands: {
     editField: () => unavailable("Corregir un pago ya creado"),
-    markDuplicate: () => unavailable("Marcar duplicado a mano"),
     discard: () => unavailable("Descartar un pago"),
-    resolveAlert: () => unavailable("Resolver una alerta"),
     retryMessage: () => unavailable("Reintentar un mensaje"),
     captureOrder: () => unavailable("El alta manual de pedidos"),
     updateSettings: () => unavailable("Cambiar los supuestos"),
     setInternalCharge: () => unavailable("Cambiar el precio de transferencia"),
     reset: () => unavailable("Restablecer la demo"),
 
+    markDuplicate: (id) =>
+      run(async () => {
+        const p = await endpoints.markPaymentDuplicate(id);
+        return { ok: true, message: `${p.display_code ?? "Pago"} marcado como duplicado. Queda en revisión y no reduce el saldo.` };
+      }),
+
+    resolveAlert: (alertId, resolucion) =>
+      run(async () => {
+        const note = resolucion.trim();
+        if (note.length < 5) return { ok: false, message: "Describe qué se acordó con el cliente." };
+        await endpoints.resolveCollectionAlert(alertId, { note });
+        return { ok: true, message: "Alerta resuelta. La nota queda en el historial." };
+      }),
+
     /** Elegir la cuenta por cobrar donde se aplicará el pago (se usa en applyPayment). */
     assignOrder: (id, receivableId) =>
       run(async () => {
         chosenReceivable.set(id, receivableId);
-        return { ok: true, message: "Cuenta por cobrar elegida. Se usará al aplicar el pago." };
+        return { ok: true, message: "Pedido elegido. El pago se descontará de su saldo." };
       }),
 
     verifyFunds: (id, _actor, acceptMismatch) =>
@@ -1037,9 +1371,9 @@ export const apiSource: DataSource = {
     applyPayment: (id) =>
       run(async () => {
         const [p, rec] = await Promise.all([endpoints.getPayment(id), endpoints.getReconciliationCandidates(id)]);
-        const chosen = chosenReceivable.get(id);
-        const c = rec.candidates.find((x) => x.receivable_id === chosen) ?? rec.candidates.find((x) => x.balance.amount_cents > 0);
-        if (!c) return { ok: false, message: "No hay una cuenta por cobrar candidata para este pago." };
+        const open = rec.candidates.filter((x) => x.balance.amount_cents > 0);
+        const c = open.find((x) => x.receivable_id === chosenReceivable.get(id)) ?? (open.length === 1 ? open[0] : null);
+        if (!c) return { ok: false, message: open.length ? "Elige el pedido al que corresponde el pago." : "No hay una cuenta por cobrar candidata para este pago." };
         const available = zero(p.verified_amount ?? p.received_amount) - p.applied_amount.amount_cents;
         const amount = Math.min(available, c.balance.amount_cents);
         if (amount <= 0) return { ok: false, message: "El pago no tiene monto disponible para aplicar." };
@@ -1058,11 +1392,11 @@ export const apiSource: DataSource = {
           const name = d.order_fields?.customer_name.value?.toLowerCase();
           customerId = ctx.receivables.find((r) => r.customer.name.toLowerCase() === name)?.customer.id ?? null;
         } else {
-          customerId = ctx.orders.find((o) => o.id === orderId)?.customer?.id ?? null;
+          customerId = ctx.orderById.get(orderId)?.customer?.id ?? null;
         }
-        // D-005: la mora avisa, no bloquea. Se pide confirmación explícita antes de dar crédito.
+        // D-005: la mora avisa, no bloquea. Spring exige confirmar el aviso para cualquier decisión con saldo vencido.
         const snap = snapshotFor(customerId, ctx);
-        if (terms.tipo === "credito" && snap.status === "en_mora" && !opts.moraAcknowledged) return { ok: false, code: "aviso_mora", message: snap.aviso ?? "Cliente en mora." };
+        if (snap.status === "en_mora" && !opts.moraAcknowledged) return { ok: false, code: "aviso_mora", message: snap.aviso ?? "Cliente en mora." };
 
         if (orderId.startsWith(DRAFT)) {
           const d = await endpoints.getDraft(orderId.slice(DRAFT.length));
@@ -1077,7 +1411,13 @@ export const apiSource: DataSource = {
           ...(terms.tipo === "anticipo" && terms.anticipoPct != null ? { advance_pct_bps: Math.round(terms.anticipoPct * 100), credit_term_days: terms.plazoDias } : {}),
           ...(opts.nota ? { reason: opts.nota } : {}),
         });
-        return { ok: true, message: "Orden confirmada.", id };
+        const message =
+          terms.tipo === "credito"
+            ? `Orden confirmada con crédito a ${terms.plazoDias} días: pasa a producción.`
+            : terms.tipo === "anticipo"
+              ? `Orden confirmada con anticipo del ${terms.anticipoPct}%: queda retenida hasta que llegue.`
+              : "Orden confirmada al contado: queda retenida hasta que llegue el pago completo.";
+        return { ok: true, message, id };
       }),
 
     rejectOrder: (orderId, nota) =>
@@ -1086,8 +1426,9 @@ export const apiSource: DataSource = {
           await endpoints.discardDraft(orderId.slice(DRAFT.length), nota);
           return { ok: true, message: "Borrador descartado." };
         }
-        await endpoints.submitCreditDecision(orderId, { decision: "rejected", arrears_notice_acknowledged: true, reason: nota });
-        return { ok: true, message: "Crédito rechazado." };
+        if (nota.trim().length < 5) return { ok: false, message: "Registra el motivo." };
+        await endpoints.submitCreditDecision(orderId, { decision: "rejected", arrears_notice_acknowledged: true, reason: nota.trim() });
+        return { ok: true, message: "Orden rechazada." };
       }),
 
     registerDispatch: (orderId, fecha, acta) =>

@@ -72,16 +72,21 @@ export function TallerPage() {
                 <h2 className="flex items-center gap-2 text-section font-bold">
                   <Hourglass size={20} className="text-warn" /> Retenidas
                 </h2>
-                <Chip tone="warn">{data.retenidas.length}</Chip>
+                {data.retenidas && <Chip tone="warn">{data.retenidas.length}</Chip>}
               </div>
               <p className="mt-1 text-[13px] text-muted">No se producen hasta que Administración verifique el anticipo.</p>
-              {data.retenidas.length > 0 ? (
+              {data.retenidas === null ? (
+                <div className="mt-4 flex flex-1 items-center justify-center rounded-lg border border-line-soft bg-panel/40 p-6 text-center text-xs text-muted">
+                  Las órdenes retenidas las gestiona Administración: llegan a producción cuando se aplica el anticipo.
+                </div>
+              ) : data.retenidas.length > 0 ? (
                 <ul className="mt-4 flex flex-col divide-y divide-line-soft">
                   {data.retenidas.map((o) => (
                     <li key={o.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3 text-sm">
                       <span className="min-w-0">
                         <span className="block font-bold truncate">
-                          {o.ref} · {o.customer}
+                          {o.ref}
+                          {o.customer && ` · ${o.customer}`}
                         </span>
                         <span className="block truncate text-[13px] text-muted">{o.description}</span>
                       </span>
@@ -110,7 +115,8 @@ export function TallerPage() {
                     <li key={o.id} className="tabular grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3 text-sm">
                       <span className="min-w-0">
                         <span className="block font-bold truncate">
-                          {o.ref} · {o.customer}
+                          {o.ref}
+                          {o.customer && ` · ${o.customer}`}
                         </span>
                         <span className="block truncate text-[13px] text-muted">
                           {o.despacho?.acta} · {o.despacho?.by}
@@ -145,7 +151,8 @@ function TallerRow({ o, cutDate, onDispatch }: { o: TallerOrder; cutDate: string
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] items-start md:items-center gap-4 py-5">
       <div className="min-w-0">
         <p className="font-bold text-ink">
-          {o.ref} · {o.customer}
+          {o.ref}
+          {o.customer && ` · ${o.customer}`}
         </p>
         <ul className="mt-1 text-[13px] text-muted space-y-0.5">
           {o.items.map((it, i) => (
@@ -191,7 +198,7 @@ function DispatchModal({ open, order, cutDate, onClose }: { open: boolean; order
   if (!order) return null;
   const due = order.plazoDias != null && fecha ? addDays(fecha, order.plazoDias) : null;
   return (
-    <Modal open={open} onClose={onClose} title={`Despachar ${order.ref}`} subtitle={`${order.customer}. El acta fija el vencimiento: despacho + ${order.plazoDias ?? 0} días.`}>
+    <Modal open={open} onClose={onClose} title={`Despachar ${order.ref}`} subtitle={`${order.customer ? `${order.customer}. ` : ""}El acta fija el vencimiento: despacho + ${order.plazoDias ?? 0} días.`}>
       <form
         noValidate
         className="flex flex-col gap-4"

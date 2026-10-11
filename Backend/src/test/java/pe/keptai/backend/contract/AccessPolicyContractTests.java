@@ -43,8 +43,9 @@ class AccessPolicyContractTests {
 	@Test
 	void everyIncomingContractOperationHasExactlyOneRuleAndNoRuleIsInvented() {
 		List<Op> ops = contractOperations();
-		assertThat(ops).hasSize(37);
-		assertThat(AccessPolicy.RULES).hasSize(37);
+		// 37 de MIG-02 + 3 de INT-FE-API-002 (resolución de alertas, marca de duplicado y bitácora de envíos).
+		assertThat(ops).hasSize(40);
+		assertThat(AccessPolicy.RULES).hasSize(40);
 		for (Op op : ops) {
 			List<Rule> found = AccessPolicy.RULES.stream().filter(r -> r.operationId().equals(op.id())).toList();
 			assertThat(found).as(op.id()).hasSize(1);

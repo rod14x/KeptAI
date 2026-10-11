@@ -25,6 +25,10 @@ export function InicioPage() {
           Identidad
         </h2>
         <dl className="mt-4 grid gap-4 sm:grid-cols-[180px_1fr]">
+          <dt className="text-sm font-semibold text-muted">Nombre</dt>
+          <dd className="text-sm">{identity.name || "—"}</dd>
+          <dt className="text-sm font-semibold text-muted">Organización</dt>
+          <dd className="text-sm">{identity.organizationName || "—"}</dd>
           <dt className="text-sm font-semibold text-muted">Correo (Auth)</dt>
           <dd className="break-all text-sm">{identity.email || "—"}</dd>
           <dt className="text-sm font-semibold text-muted">Rol</dt>
@@ -41,7 +45,7 @@ export function InicioPage() {
           </dd>
         </dl>
         <p className="mt-4 text-[13px] text-muted">
-          El nombre de la organización, la marca y los datos de negocio no se muestran: el contrato de identidad no los incluye.
+          Nombre y organización vienen de la base (usuario y organización); la marca no forma parte del contrato de identidad.
         </p>
       </section>
 

@@ -4,8 +4,12 @@ import static pe.keptai.backend.panel.PanelMapping.money;
 import static pe.keptai.backend.panel.PanelMapping.nonNegative;
 import static pe.keptai.backend.panel.PanelMapping.nonNegativeOrZero;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
@@ -91,9 +95,54 @@ public class ResultsAdapter {
 			default -> throw PanelException.badRequest("production_mode debe ser own u outsourced");
 		};
 		ReporteMargen r = motor().margen(panel.financiero(), agrupacion, tipo, asOf);
-		List<MarginRow> rows = r.filas().stream().map(this::row).toList();
+		// Margen percibido (INT-FE-API-002): v_margen_orden.margen_real_cobrado de Andrés, sobre los mismos pedidos que el
+		// motor incluyó en el reporte. Por línea no aplica (el cobro es de la orden, no del ítem).
+		List<UUID> incluidas = agrupacion == Agrupacion.ORDEN ? r.filas().stream().map(FilaMargen::id).toList()
+				: motor().margen(panel.financiero(), Agrupacion.ORDEN, tipo, asOf).filas().stream().map(FilaMargen::id).toList();
+		Map<UUID, Percibido> percibidos = perceivedByOrder();
+		java.util.function.Function<FilaMargen, BigDecimal> percibido = switch (agrupacion) {
+			case ORDEN -> f -> sumPerceived(percibidos, List.of(f.id()));
+			case MARCA -> f -> sumPerceived(percibidos, incluidas.stream()
+				.filter(id -> percibidos.containsKey(id) && java.util.Objects.equals(percibidos.get(id).marcaId(), f.id()))
+				.toList());
+			case LINEA -> f -> null;
+		};
+		List<MarginRow> rows = r.filas().stream().map(f -> row(f, percibido.apply(f))).toList();
 		PageResponse<MarginRow> p = page.slice(rows);
-		return new MarginReport(r.fechaCorte(), grupo, p.items(), row(r.totales()), p.page(), origin());
+		return new MarginReport(r.fechaCorte(), grupo, p.items(), row(r.totales(), sumPerceived(percibidos, incluidas)),
+				p.page(), origin());
+	}
+
+	private record Percibido(UUID marcaId, BigDecimal margen) {
+	}
+
+	private Map<UUID, Percibido> perceivedByOrder() {
+		Map<UUID, Percibido> out = new HashMap<>();
+		panel.read(() -> {
+			panel.jdbc().query("SELECT orden_id, marca_id, margen_real_cobrado FROM keptai.v_margen_orden",
+					(java.sql.ResultSet rs) -> {
+						out.put(rs.getObject(1, UUID.class),
+								new Percibido(rs.getObject(2, UUID.class), rs.getBigDecimal(3)));
+					});
+			return null;
+		});
+		return out;
+	}
+
+	/** Suma solo si todos los pedidos tienen margen percibido (costeo cerrado); si falta uno, no hay cifra. */
+	private static BigDecimal sumPerceived(Map<UUID, Percibido> percibidos, List<UUID> ordenes) {
+		if (ordenes.isEmpty()) {
+			return null;
+		}
+		BigDecimal total = BigDecimal.ZERO.setScale(2);
+		for (UUID id : ordenes) {
+			Percibido p = percibidos.get(id);
+			if (p == null || p.margen() == null) {
+				return null;
+			}
+			total = total.add(p.margen());
+		}
+		return total;
 	}
 
 	public ProductionCenterReport productionCenter(LocalDate asOf, PageRequest page) {
@@ -129,14 +178,14 @@ public class ResultsAdapter {
 		return motor().csvPedidos(panel.financiero(), asOf);
 	}
 
-	private MarginRow row(FilaMargen f) {
+	private MarginRow row(FilaMargen f, BigDecimal percibido) {
 		boolean completo = f.completo() && f.costoTotal() != null;
 		List<CostComponent> faltantes = components(f.componentesFaltantes());
 		return new MarginRow(f.clave(), f.id(), f.tipoProduccion() == null ? null
 				: "TERCERIZADA".equals(f.tipoProduccion()) ? ProductionMode.OUTSOURCED : ProductionMode.OWN,
 				nonNegativeOrZero(f.ingreso()), completo ? nonNegative(f.costoTotal()) : null,
 				completo ? money(f.margen()) : null, completo ? CostStatus.COMPLETE : CostStatus.INCOMPLETE,
-				completo ? List.of() : faltantes, f.ordenes());
+				completo ? List.of() : faltantes, f.ordenes(), completo ? money(percibido) : null);
 	}
 
 	private static List<CostComponent> components(List<String> conceptos) {

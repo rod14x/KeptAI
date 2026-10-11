@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
@@ -75,7 +76,8 @@ public final class ResultsDtos {
 			@JsonProperty("margin") @Valid Money margin,
 			@JsonProperty("cost_status") @NotNull CostStatus costStatus,
 			@JsonProperty("missing_cost_components") @NotNull @Size(max = 4) List<@NotNull CostComponent> missingCostComponents,
-			@JsonProperty("orders_count") @NotNull @Min(0) @Max(1_000_000) Integer ordersCount) {
+			@JsonProperty("orders_count") @NotNull @Min(0) @Max(1_000_000) Integer ordersCount,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("perceived_margin") @Valid Money perceivedMargin) {
 
 		@JsonIgnore
 		@AssertTrue(message = "costos incompletos: total_cost y margin deben ser null y listar lo que falta")

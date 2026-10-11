@@ -67,4 +67,10 @@ public class PaymentsController {
 		return commands.apply(uuid(paymentId, "payment_id"), requests.body(body, ApplyPaymentRequest.class));
 	}
 
+	/** markPaymentDuplicate (INT-FE-API-002): sin cuerpo; el motor busca el pago original. */
+	@PostMapping("/api/v1/payments/{payment_id}/duplicate")
+	public Payment markDuplicate(@PathVariable("payment_id") String paymentId) {
+		return commands.markDuplicate(uuid(paymentId, "payment_id"));
+	}
+
 }

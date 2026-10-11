@@ -20,6 +20,7 @@ import pe.keptai.backend.contract.CommonDtos.ApiErrorExtended;
 import pe.keptai.backend.contract.CommonDtos.Money;
 import pe.keptai.backend.contract.CommonDtos.NonNegativeMoney;
 import pe.keptai.backend.contract.CommonDtos.PageInfo;
+import pe.keptai.backend.contract.CommonDtos.PersonRef;
 import pe.keptai.backend.contract.CommonDtos.PositiveMoney;
 import pe.keptai.backend.contract.CommonDtos.UserContext;
 import pe.keptai.backend.contract.EvidenceDtos.*;
@@ -150,7 +151,10 @@ class OpenApiConsistencyTests {
 				CreditAuthorization.class, StatementOrder.class, StatementApplication.class, CustomerStatement.class,
 				ResultsSummary.class, MarginRow.class, MarginReport.class, ProductionCenterRow.class,
 				ProductionCenterReport.class, OpeningCash.class, CashAssumptions.class, CashWeek.class, CashForecast.class,
-				AuditChange.class, AuditEvent.class, DispatchRequest.class, CreditDecisionRequest.class }) {
+				AuditChange.class, AuditEvent.class, DispatchRequest.class, CreditDecisionRequest.class,
+				// INT-FE-API-002
+				PersonRef.class, OrderItem.class, PaymentAllocation.class, ReceivableApplication.class, Notification.class,
+				ResolveAlertRequest.class }) {
 			records.put(c.getSimpleName(), c);
 		}
 		records.forEach((name, type) -> {
@@ -167,7 +171,7 @@ class OpenApiConsistencyTests {
 		// esquemas con DTO propio (los genericos ExtractedX se cubren con ExtractedField)
 		Set<String> noDto = new LinkedHashSet<>(List.of("Uuid", "OptionalMoney", "ApiError", "ApiErrorExtended", "UploadEvidenceFileRequest",
 				"ExtractedString", "ExtractedInteger", "ExtractedMoney", "ExtractedDateTime", "EvidencePage", "ExtractionDraftPage",
-				"OrderPage", "PaymentPage", "ReceivablePage", "CollectionAlertPage", "AuditEventPage"));
+				"OrderPage", "PaymentPage", "ReceivablePage", "CollectionAlertPage", "AuditEventPage", "NotificationPage"));
 		spec.root().path("components").path("schemas").properties().forEach(e -> {
 			if (e.getValue().has("properties") && !noDto.contains(e.getKey()) && !e.getKey().startsWith("N8n")) {
 				assertThat(records).as("falta DTO Java para el esquema " + e.getKey()).containsKey(e.getKey());

@@ -14,6 +14,8 @@ En modo `api` todos los módulos usan Spring + PostgreSQL reales, salvo **Carga 
 | Resultados, margen, centro productivo, caja, CSV | Conectado (GERENTE), cifras de `MotorResultados`/`MotorCaja` |
 | Evidencias y borradores | Sin endpoint (404): el panel los muestra vacíos |
 
+**INT-FE-API-002:** también conectados vendedor, ítems, aplicaciones de pagos, nombres, margen percibido, resolver alertas (`POST /collection-alerts/{id}/resolution`), marcar duplicado (`POST /payments/{id}/duplicate`) y la bitácora de envíos (`GET /notifications`, sin texto). El adaptador solo pide lo que el rol puede leer (`READS` en `src/api/contract/source.ts`) y no llama `/drafts` hasta que exista (MIG-06).
+
 Decisiones del adaptador que conviene conocer:
 - **Contado:** el panel envía `approved` sin `credit_term_days`; Spring lo trata como contado (orden RETENIDA hasta cobrarse completa). Con plazo es crédito (orden LIBERADA); con `advance_pct_bps` > 0, anticipo (RETENIDA hasta aplicar el anticipo; al aplicarlo pasa sola a LIBERADA).
 - **Mora:** si el cliente tiene saldo vencido y no se envía `arrears_notice_acknowledged=true`, Spring responde 422 `ARREARS_NOTICE_NOT_ACKNOWLEDGED`. La mora avisa; no bloquea.
@@ -24,7 +26,7 @@ Decisiones del adaptador que conviene conocer:
 1. BD: `./BD/local/db.sh up && ./BD/local/db.sh migrate && ./BD/local/db.sh seed` (V1–V10 y semilla). Opcional: `./BD/local/db.sh seed-escenarios` agrega pedidos por decidir, un pedido por despachar y vouchers por verificar.
 2. Spring (perfil `local`) con el JWKS de Supabase (`KEPTAI_JWT_*`, ver `Backend/docs/configuracion-supabase-local.md`). Si el 8080 está ocupado: `PORT=8081`; agregar el origen del frontend a `KEPTAI_CORS_ALLOWED_ORIGINS` si no es `localhost:5173`.
 3. Frontend `.env.local`: `VITE_API_MODE=api`, `VITE_API_BASE_URL=http://localhost:8081`, `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` del proyecto.
-4. Cuentas: crear en Supabase Auth un usuario por rol y vincular cada uno: `./BD/local/db.sh link-auth VENDEDOR <uuid-del-usuario-en-Auth>` (igual con ADMIN, GERENTE, JEFE_TALLER). Sin vínculo, `/me` responde 403.
+4. Cuentas: crear en Supabase Auth un usuario por rol y vincular cada uno: `./BD/local/db.sh link-auth VENDEDOR <uuid-del-usuario-en-Auth>` (igual con ADMIN, GERENTE, JEFE_TALLER; `VENDEDOR2` es el segundo vendedor de los escenarios). Sin vínculo, `/me` responde 403.
 5. Prueba de contrato en vivo: `KEPTAI_LIVE_API=http://127.0.0.1:8081 KEPTAI_LIVE_TOKEN_ADMIN=… npx vitest run src/api/contract/live.test.ts` (un token por rol).
 
 ## 1. Cómo se elige la fuente de datos

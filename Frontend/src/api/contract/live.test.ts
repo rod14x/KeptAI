@@ -73,6 +73,22 @@ describe.skipIf(!live)("API viva: lecturas del panel", () => {
     expect((await csv.text()).split("\r\n")[0]).toContain("order_id,order_code");
   });
 
+  it("INT-FE-API-002: nombres, ítems, aplicaciones y bitácora de envíos", async () => {
+    const me = await ok("VENDEDOR", "/api/v1/me", S.UserContext);
+    expect(me.name).toBeTruthy();
+    const orders = await ok("ADMIN", "/api/v1/orders?limit=100", S.OrderPage);
+    expect(orders.items.every((o) => o.seller?.name)).toBe(true);
+    expect(orders.items.some((o) => (o.items ?? []).length > 0)).toBe(true);
+    const recs = await ok("ADMIN", "/api/v1/receivables?limit=100", S.ReceivablePage);
+    const paid = recs.items.filter((r) => r.applied_amount.amount_cents > 0);
+    expect(paid.every((r) => (r.applications ?? []).reduce((s, a) => s + a.amount.amount_cents, 0) === r.applied_amount.amount_cents)).toBe(true);
+    const payments = await ok("ADMIN", "/api/v1/payments?limit=100", S.PaymentPage);
+    expect(payments.items.filter((p) => p.phase === "applied").every((p) => (p.applications ?? []).length > 0)).toBe(true);
+    for (const role of ["VENDEDOR", "ADMIN", "GERENTE"]) await ok(role, "/api/v1/notifications", S.NotificationPage);
+    const byOrder = await ok("ADMIN", `/api/v1/notifications?order_id=${orders.items[0].id}`, S.NotificationPage);
+    expect(byOrder.items.every((n) => n.order_id === orders.items[0].id)).toBe(true);
+  });
+
   it("cada rol recibe 403 fuera de su alcance", async () => {
     const denied: Array<[string, string]> = [
       ["VENDEDOR", "/api/v1/payments"],
@@ -81,6 +97,7 @@ describe.skipIf(!live)("API viva: lecturas del panel", () => {
       ["JEFE_TALLER", "/api/v1/audit-events"],
       ["ADMIN", "/api/v1/results/cash-forecast"],
       ["GERENTE", "/api/v1/collection-alerts"],
+      ["JEFE_TALLER", "/api/v1/notifications"],
     ];
     for (const [role, path] of denied) expect((await get(role, path)).status, `${role} ${path}`).toBe(403);
   });
