@@ -1,10 +1,12 @@
 # KeptAI — Base local y coordinación con Supabase
 
-ID: DB-LOCAL-001. Alcance: PostgreSQL del negocio V6, 25 tablas, sin datos reales. Esta instalación no incluye Supabase Auth, Storage ni Studio.
+ID: DB-LOCAL-001. Alcance: PostgreSQL del negocio V7 sobre V6, 25 tablas, sin datos reales. Esta instalación no incluye Supabase Auth, Storage ni Studio.
 
 ## Qué se adapta de Andrés
 El estado Running y Flyway Success acreditan infraestructura y migraciones locales. El cierre funcional exige [DB-VAL-001](../validaciones-pre-supabase.md), pruebas del motor/API y comprobaciones del entorno Supabase real.
 
+
+V7 de Andrés (6875bab) refuerza autorización de crédito, autoría, protección de padres financieros y lecturas por rol. No añade tablas ni cierra JWT/Storage/motor. V1–V6 se conservan sin cambios.
 
 V1–V3 se conservan byte a byte. V4–V5 corrigen vouchers/RLS/integridad/costos. **V6**, aprobada como alcance por Miguel (D-008), retira contacto y nota_cliente solo si están vacías y sin dependencias externas; de otro modo aborta. No se usa CASCADE, repair ni limpieza de datos reales.
 
@@ -26,6 +28,8 @@ cd /home/miguel/dev/hackaton/conocimiento
 ./BD/local/db.sh status
 ./BD/local/db.sh validate
 ```
+
+Para actualizar una base V6 existente, ejecutar up, migrate y validate en ese orden: Flyway aplica únicamente V7 pendiente, conservando datos y volumen. El status debe mostrar Schema version: 7 y V1–V7 Success.
 
 up crea BD/local/.env si falta, con dos contraseñas aleatorias, permisos 0600 y valores locales; conserva cualquier archivo existente. .env está ignorado por Git. No copiar secretos remotos aquí ni publicar el archivo. .env.example sí se comparte.
 

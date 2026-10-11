@@ -26,6 +26,8 @@ Estas instrucciones aplican a este repositorio KeptAI: cerebro/ conserva conocim
 - Sin commit/push/reset/clean/cambio de rama automático. Miguel revisa Git y publica. No controlar terminales ajenas ni lanzar agentes en Herdr desde esta tarea.
 
 ## Resumen vigente de Miguel
+
+- Actualización local: rama backend-migueltarea2y3, merge 71ab563 incorpora V7 de Andrés (6875bab). V1–V6 intactas y 25 tablas; PostgreSQL local migrado a V7. SchemaRlsTests/Mvp25MigrationTests: 16 tests sin fallos; sin JWT/motor/Supabase remoto ni push. Detalle en estado.md; guías iniciales de entorno son históricas.
 - D-010/V7 (Andrés): 6 roles conservados. Solo VENDEDOR decide crédito, autoría = usuario autenticado, padres financieros congelados con aplicaciones vigentes, INGESTA solo BORRADOR, lecturas por mínimo privilegio. 146 tests locales OK. Detalle: BD/revision-sql-rls.md (DB-REV-003). Spring debe fijar `aprobado_por`/`*_por` desde el JWT y no escribir crédito con ADMIN o INGESTA.
 - D-009 adoptada: BD/validaciones-pre-supabase.md define seis condiciones obligatorias. V5/V6 y 25 tablas se conservan; integridad/RLS/reversión/concurrencia parciales en local, idempotencia HTTP y aceptación integrada pendientes. MIG-03 a MIG-08 deben registrar evidencia por entorno. No confundir Flyway Success o 141 tests previos con cierre para Supabase.
 

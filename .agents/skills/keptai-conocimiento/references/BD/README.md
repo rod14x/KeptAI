@@ -9,6 +9,7 @@ Revisión de Miguel/Codex, 10/10/2026, basada en Actores/flujos/DER, D-005 y D-0
 
 
 - [Guia local](local/README.md): Docker, Flyway, 127.0.0.1:5433 y perfil Spring local.
+- [V7](migrations/V7__autorizacion_critica.sql): DB-REV-003. Crédito solo VENDEDOR, autoría no suplantable, padres financieros congelados con aplicaciones vigentes, INGESTA limitada a borradores y lecturas por mínimo privilegio. Sin cambios de tablas. Ver [revisión](revision-sql-rls.md).
 - [V6](migrations/V6__mvp_25_tablas.sql): aprobacion D-008, 25 tablas; excluye contacto/notas solo si estan vacias, sin CASCADE.
 
 - migrations/V1__esquema_inicial.sql, V2__rls_organizacion.sql y V3__nota_cliente.sql: originales, no reescribir checksums.
@@ -49,4 +50,4 @@ La vista diferencia margen_venta_real y margen_real_cobrado. Un costo ausente/in
 
 ## Verificar localmente
 
-Desde Backend/: `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ./mvnw -o test -Dtest=SchemaRlsTests`. Docker debe responder. Testcontainers aplica V1–V6 en PostgreSQL 17 efímero y elimina el contenedor al terminar. No requiere .env ni proyecto remoto. El test Storage usa catálogos mínimos emulados: acredita SQL/políticas, no el servicio Supabase real.
+Desde Backend/: `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ./mvnw -o test -Dtest=SchemaRlsTests`. Docker debe responder. Testcontainers aplica V1–V7 en PostgreSQL 17 efímero y elimina el contenedor al terminar. No requiere .env ni proyecto remoto. El test Storage usa catálogos mínimos emulados: acredita SQL/políticas, no el servicio Supabase real.

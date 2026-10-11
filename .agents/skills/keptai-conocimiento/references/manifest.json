@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "1b5375e1b757dc0a0533d6d293f3e56d072c595e",
+  "source_head_at_generation": "71ab563ef3ef6a6f6af62db3da4aab287dba7efe",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -10,31 +10,7 @@
     "diagramas/keptai-roadmap-fuentes.md"
   ],
   "source_changes_at_generation": [
-    "M  cerebro/conocimientos/INDICE.md",
-    "M  cerebro/conocimientos/decisiones/actores-flujos-y-der-mvp.md",
-    "M  cerebro/conocimientos/decisiones/decisiones-del-proyecto.md",
-    "M  cerebro/conocimientos/decisiones/infraestructura-desarrollo-mvp.md",
-    "M  cerebro/conocimientos/decisiones/modelo-base-datos-mvp.md",
-    "M  cerebro/conocimientos/decisiones/reto-6-corpotex-conciliacion-y-rentabilidad.md",
-    "M  cerebro/conocimientos/decisiones/roadmap-german-frontend.md",
-    "M  cerebro/conocimientos/decisiones/roadmap-hackathon-equipo.md",
-    "A  cerebro/conocimientos/decisiones/trazabilidad-tablas-mvp.md",
-    "M  cerebro/conocimientos/desarrollo/miguel/estado.md",
-    "M  cerebro/conocimientos/desarrollo/miguel/plan-implementacion.md",
-    "A  cerebro/conocimientos/desarrollo/miguel/preparacion-supabase-rls.md",
-    "M  cerebro/conocimientos/desarrollo/miguel/prompt-claude.md",
-    "A  cerebro/conocimientos/desarrollo/miguel/revision-integracion-andres.md",
-    "M  cerebro/conocimientos/desarrollo/miguel/tareas.md",
-    "A  cerebro/diagramas/keptai-der-v5-01.png",
-    "A  cerebro/diagramas/keptai-der-v5-02.png",
-    "A  cerebro/diagramas/keptai-der-v5-03.png",
-    "A  cerebro/diagramas/keptai-der-v5.md",
-    "A  cerebro/diagramas/keptai-der-v6-01.png",
-    "A  cerebro/diagramas/keptai-der-v6-02.png",
-    "A  cerebro/diagramas/keptai-der-v6-03.png",
-    "A  cerebro/diagramas/keptai-der-v6.md",
-    "A  cerebro/diagramas/render-der-v5.py",
-    "A  cerebro/diagramas/render-der-v6.py"
+    "M cerebro/conocimientos/desarrollo/miguel/estado.md"
   ],
   "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
   "interview_ids": [
@@ -95,8 +71,8 @@
     },
     {
       "path": "conocimientos/decisiones/decisiones-del-proyecto.md",
-      "bytes": 37230,
-      "sha256": "192c6d447b4d390bff0ffcc61d4127e35a0e492acbbefc70a23272da11191d4b"
+      "bytes": 38281,
+      "sha256": "df19f97078d058f62f106ec86eda30904aa3574e333c119773da96e238121fce"
     },
     {
       "path": "conocimientos/decisiones/infraestructura-desarrollo-mvp.md",
@@ -135,8 +111,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/estado.md",
-      "bytes": 29388,
-      "sha256": "d35611f2ac7512aa42e0e036b02ad2e1697f5b3ad2c1847340be22eb97758960"
+      "bytes": 31885,
+      "sha256": "4079e8cb0fa63860901c2badaa95c1b1924c730ad35f392f26ea98f20c25247a"
     },
     {
       "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
@@ -383,30 +359,30 @@
   "technical_files": [
     {
       "path": "BD/README.md",
-      "bytes": 4560,
-      "sha256": "512d2e4521409dfa5684c737560e7b8dbf9d50817060ad2e14e0cec51283290a",
-      "source_sha256": "512d2e4521409dfa5684c737560e7b8dbf9d50817060ad2e14e0cec51283290a",
+      "bytes": 4853,
+      "sha256": "89bda0213e58e2f649b8b68d708772d73899a64ee54bb909a84b83b1fafcf243",
+      "source_sha256": "89bda0213e58e2f649b8b68d708772d73899a64ee54bb909a84b83b1fafcf243",
       "sanitized": false
     },
     {
       "path": "BD/definicion-base-datos.md",
-      "bytes": 21605,
-      "sha256": "7f462eac4f4b7b73b9ef403bad0eb214c083a4383b2d4820dd3ecd62cfa6d235",
-      "source_sha256": "7f462eac4f4b7b73b9ef403bad0eb214c083a4383b2d4820dd3ecd62cfa6d235",
+      "bytes": 22198,
+      "sha256": "c6e4c5cea1760da5ff6217f5c00cfe513e372436fcd132e1015621c7dd249f2f",
+      "source_sha256": "c6e4c5cea1760da5ff6217f5c00cfe513e372436fcd132e1015621c7dd249f2f",
       "sanitized": false
     },
     {
       "path": "BD/diccionario-datos.md",
-      "bytes": 15628,
-      "sha256": "59c2f1b907e5d33db3bb89ab104ab4af557e22532e881dfce4fa87aaf42afe4e",
-      "source_sha256": "59c2f1b907e5d33db3bb89ab104ab4af557e22532e881dfce4fa87aaf42afe4e",
+      "bytes": 16983,
+      "sha256": "6c25fe4cf3c53ec1765ecccf4cae3c777c80dace2f87bff811c3cec52835528f",
+      "source_sha256": "6c25fe4cf3c53ec1765ecccf4cae3c777c80dace2f87bff811c3cec52835528f",
       "sanitized": false
     },
     {
       "path": "BD/local/README.md",
-      "bytes": 7998,
-      "sha256": "382ee93a5bb29429244646777cfad381d80bb6e969ee6155dbed71fdfdcbe5cf",
-      "source_sha256": "382ee93a5bb29429244646777cfad381d80bb6e969ee6155dbed71fdfdcbe5cf",
+      "bytes": 8427,
+      "sha256": "d57bea1ba9d226b54fe053c278364af35e7ac438aba1f1f1d1bfb25ea05d0d00",
+      "source_sha256": "d57bea1ba9d226b54fe053c278364af35e7ac438aba1f1f1d1bfb25ea05d0d00",
       "sanitized": false
     },
     {
@@ -459,10 +435,17 @@
       "sanitized": false
     },
     {
+      "path": "BD/migrations/V7__autorizacion_critica.sql",
+      "bytes": 11513,
+      "sha256": "99f5b1958a4ffdcd1f3d6487ec8eb2a7eac1a02162460e61829ee2d2db7ed8d0",
+      "source_sha256": "99f5b1958a4ffdcd1f3d6487ec8eb2a7eac1a02162460e61829ee2d2db7ed8d0",
+      "sanitized": false
+    },
+    {
       "path": "BD/revision-sql-rls.md",
-      "bytes": 6856,
-      "sha256": "6139996a497494eaf0b29c6d755acee07df9ccee227fccdf5c7c1b68bf91d3ea",
-      "source_sha256": "6139996a497494eaf0b29c6d755acee07df9ccee227fccdf5c7c1b68bf91d3ea",
+      "bytes": 9905,
+      "sha256": "fc9c174a3f9342c7eb7791ea9bf4460458d2317c8c07dcc45ce1bb8bb1dbf19e",
+      "source_sha256": "fc9c174a3f9342c7eb7791ea9bf4460458d2317c8c07dcc45ce1bb8bb1dbf19e",
       "sanitized": false
     },
     {

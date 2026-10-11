@@ -153,3 +153,21 @@ No se ejecutaron nuevas pruebas financieras ni se modificó SQL, Java, secretos 
 
 
 No habilitado ahora. Tras principal verificado, tareas OBR de QA; si Claude alcanza límite antes, Miguel puede autorizar handoff explícito del siguiente ID pendiente. El estado permanece parcial hasta completar y verificar requisitos.
+
+## DB-REV-003 / V7 — Revisión de V6 y autorización crítica (10/10/2026, Andrés)
+
+- Solicitud de Andrés: revisar V6 como arquitecto de BD (entidades, funciones, relaciones, RLS, roles) y corregir lo crítico en seguridad. V6 correcta; fallos en políticas V4 por rol y en la mutación de padres financieros.
+- Roles: 6 de negocio, todos justificados (reto §03, Actores §1). Autorización previa: GERENTE/SCHEDULER correctos, ADMIN/JEFE_TALLER parciales, INGESTA incorrecta (podía crear una aprobación de crédito que libera producción) y VENDEDOR excesiva.
+- Entrega: `BD/migrations/V7__autorizacion_critica.sql`. Crédito solo VENDEDOR, trigger de autoría y actor de auditoría, padres financieros congelados con aplicaciones vigentes, cierre de costeo ADMIN/JEFE_TALLER, INGESTA solo en BORRADOR y lecturas por mínimo privilegio. Sin cambios de tablas; DER V6 vigente. SchemaRlsTests: semilla con VENDEDOR/JEFE_TALLER y 5 tests nuevos.
+- Verificación real: `./mvnw -Dtest=SchemaRlsTests test` dio 15 tests sin fallos. `./mvnw test` completo: **146 tests, 0 fallos/errores/omitidos**. Postgres 17 desechable con V1→V7: cada rechazo da la causa esperada (RLS de crédito para INGESTA/ADMIN, autoría, costeo, padres, actor de auditoría).
+- Documentos: revision-sql-rls (DB-REV-003), definicion §7, diccionario V7, BD README y D-010.
+- Pendientes: vendedor por marca/cartera, segregación registrar/verificar, crédito por ADMIN, máquina de estados de orden, estado de obligación persistido, orden_etapa multi-taller. Supabase remoto no tocado; sin commit/push.
+
+
+## Integración local V7 de Andrés — 10/10/2026
+
+Solicitud de Miguel: considerar commit 6875bab de origin/feature/autorizacion. Integrado sin conflictos en backend-migueltarea2y3 mediante merge 71ab563; sin push. V1–V6 intactas, 25 tablas.
+
+Prueba ejecutada: ./mvnw -o -Dtest=SchemaRlsTests,Mvp25MigrationTests test: 16 tests, 0 fallos/errores/skips, BUILD SUCCESS. Log local /tmp/keptai-v7-local-tests.log. Incluye nuevas restricciones de rol, autoría y padres financieros. No es nueva ejecución de la suite completa ni prueba JWT/Supabase real.
+
+BD/local/db.sh migrate aplicó V7 sobre PostgreSQL local existente; validate correcto y datos/volumen conservados. Frontend mock y Spring local mantienen su alcance anterior. JWT/API/motor siguen pendientes. Guía BD/local/README.md actualizada; snapshot skill regenerado. Supabase remoto no inspeccionado ni modificado. Respaldos stash previos conservados.
