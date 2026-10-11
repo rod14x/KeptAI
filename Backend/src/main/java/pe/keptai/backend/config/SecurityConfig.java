@@ -1,6 +1,27 @@
 package pe.keptai.backend.config;
 
 import java.nio.charset.StandardCharsets;
+import java.io.IOException;
+import java.util.Arrays;
+
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.authorization.AuthorizationManager;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
+import pe.keptai.backend.security.AuthInfrastructureFailureFilter;
+import pe.keptai.backend.security.JwtDecoders;
+import pe.keptai.backend.security.KeptaiAuthentication;
+import pe.keptai.backend.security.KeptaiJwtConverter;
+import pe.keptai.backend.security.MembershipResolver;
 
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
@@ -23,9 +44,16 @@ import pe.keptai.backend.web.ApiError;
 @EnableConfigurationProperties(KeptaiSecurityProperties.class)
 public class SecurityConfig {
 
+	/** Rutas exclusivas de n8n (X-Api-Key, MIG-03-D): un JWT de usuario nunca las autentica. */
+	private static final String[] SERVICE_PATHS = { "/api/v1/ordenes/**", "/api/v1/pagos/**", "/api/v1/mensajes/**" };
+
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http,
-			@Qualifier("corsConfigurationSource") CorsConfigurationSource cors) throws Exception {
+			@Qualifier("corsConfigurationSource") CorsConfigurationSource cors,
+			JwtDecoder jwtDecoder, MembershipResolver membershipResolver) throws Exception {
+		AuthorizationManager<RequestAuthorizationContext> deny = (auth, ctx) -> new AuthorizationDecision(false);
+		AuthorizationManager<RequestAuthorizationContext> panel = (auth, ctx) -> new AuthorizationDecision(
+				auth.get() instanceof KeptaiAuthentication k && k.access() == KeptaiAuthentication.Access.SINGLE);
 		http
 			.cors(c -> c.configurationSource(cors))
 			.csrf(AbstractHttpConfigurer::disable)
@@ -35,11 +63,47 @@ public class SecurityConfig {
 			.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(a -> a
 				.requestMatchers("/actuator/health/**").permitAll()
-				.anyRequest().authenticated())
+				.requestMatchers(SERVICE_PATHS).access(deny)
+				.requestMatchers("/api/v1/**").access(panel)
+				.anyRequest().denyAll())
+			.oauth2ResourceServer(o -> o
+				.bearerTokenResolver(healthExemptResolver())
+				.jwt(j -> j.decoder(jwtDecoder).jwtAuthenticationConverter(new KeptaiJwtConverter(membershipResolver)))
+				.authenticationEntryPoint(this::unauthenticated)
+				.accessDeniedHandler(this::denied))
+			.addFilterBefore(new AuthInfrastructureFailureFilter(), BearerTokenAuthenticationFilter.class)
 			.exceptionHandling(e -> e
-				.authenticationEntryPoint((req, res, ex) -> write(res, 401, ApiError.of("UNAUTHORIZED", "No autenticado")))
-				.accessDeniedHandler((req, res, ex) -> write(res, 403, ApiError.of("FORBIDDEN", "Acceso denegado"))));
+				.authenticationEntryPoint(this::unauthenticated)
+				.accessDeniedHandler(this::denied));
 		return http.build();
+	}
+
+	/** Decodificador configurado desde keptai.security.jwt.*; sin configurar rechaza todo token (401). */
+	@Bean
+	JwtDecoder jwtDecoder(KeptaiSecurityProperties props) {
+		return JwtDecoders.from(props.jwt());
+	}
+
+	/** El health es público: un Authorization erróneo allí no debe convertirlo en 401. */
+	private static BearerTokenResolver healthExemptResolver() {
+		DefaultBearerTokenResolver delegate = new DefaultBearerTokenResolver();
+		return request -> request.getRequestURI().startsWith("/actuator/health") ? null : delegate.resolve(request);
+	}
+
+	private void unauthenticated(HttpServletRequest req, HttpServletResponse res, AuthenticationException ex) throws IOException {
+		res.setHeader("WWW-Authenticate", "Bearer");
+		write(res, 401, ApiError.of("UNAUTHORIZED", "No autenticado"));
+	}
+
+	private void denied(HttpServletRequest req, HttpServletResponse res, AccessDeniedException ex) throws IOException {
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		boolean servicePath = Arrays.stream(SERVICE_PATHS).anyMatch(p -> PathPatternRequestMatcher.withDefaults().matcher(p).matches(req));
+		if (!servicePath && auth instanceof KeptaiAuthentication k && k.access() == KeptaiAuthentication.Access.MULTIPLE) {
+			// Selección de organización no definida (propuesta en matriz-acceso.md 5.1): no se elige ninguna ni se listan.
+			write(res, 409, ApiError.of("ORGANIZATION_SELECTION_REQUIRED", "Se requiere seleccionar organización; aún no soportado"));
+			return;
+		}
+		write(res, 403, ApiError.of("FORBIDDEN", "Acceso denegado"));
 	}
 
 	/**

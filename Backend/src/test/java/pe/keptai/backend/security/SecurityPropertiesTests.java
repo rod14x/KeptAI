@@ -25,6 +25,7 @@ class SecurityPropertiesTests {
 			assertThat(ctx).hasNotFailed();
 			KeptaiSecurityProperties p = ctx.getBean(KeptaiSecurityProperties.class);
 			assertThat(p.jwt().isConfigured()).isFalse();
+			assertThat(p.jwt().clockSkew()).isEqualTo(java.time.Duration.ofSeconds(30));
 			assertThat(p.cors().allowedOrigins()).isEmpty();
 			assertThat(p.cors().allowedHeaders()).contains("Authorization", "Idempotency-Key").doesNotContain("X-Api-Key");
 		});

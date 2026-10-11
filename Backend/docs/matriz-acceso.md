@@ -1,12 +1,12 @@
 # Matriz de acceso — MIG-03-A
 
-Fecha: 10/10/2026. Rama backend-migueltarea2y3. Estado: **configuración y matriz preparadas; nada de esto está implementado como autenticación.** `SecurityConfig` sigue devolviendo 401 en todo salvo `/actuator/health/**`. Fuentes: `BD/migrations/V4` y `V7` (D-010), `BD/definicion-base-datos.md`, `BD/revision-sql-rls.md`, `contrato-api.md`, `openapi.yaml`, `alineacion-bd-n8n.md`. Las filas marcadas *propuesta* no son aprobaciones del equipo.
+Fecha: 10/10/2026. Rama backend-migueltarea2y3. Estado: matriz y configuración (MIG-03-A) más **validación de JWT y `GET /api/v1/me` (MIG-03-B, probados con JWKS de prueba y PostgreSQL real; Auth real pendiente)**. Sin JWT configurado todo responde 401 salvo `/actuator/health/**`. Siguen sin implementar: `X-Api-Key` (MIG-03-D), contexto JDBC por transacción (MIG-03-C) y los demás endpoints. Fuentes: `BD/migrations/V4` y `V7` (D-010), `BD/definicion-base-datos.md`, `BD/revision-sql-rls.md`, `contrato-api.md`, `openapi.yaml`, `alineacion-bd-n8n.md`. Las filas marcadas *propuesta* no son aprobaciones del equipo.
 
 ## 1. Tres credenciales distintas (una por operación)
 
 | Mecanismo | Quién | Sentido | Cómo se valida | Estado |
 |---|---|---|---|---|
-| `Authorization: Bearer <JWT>` (`bearerAuth`) | Usuario del panel (Supabase Auth) | Entrante | Firma, issuer, audiencia y expiración con las propiedades `keptai.security.jwt.*`; `sub` → `usuario.auth_user_id` activo (`resolver_usuario`) → organización y rol de la fila, nunca del cuerpo | Propiedades listas; decodificador = MIG-03-B |
+| `Authorization: Bearer <JWT>` (`bearerAuth`) | Usuario del panel (Supabase Auth) | Entrante | Firma, issuer, audiencia y expiración con las propiedades `keptai.security.jwt.*`; `sub` → `usuario.auth_user_id` activo (`resolver_usuario`) → organización y rol de la fila, nunca del cuerpo | Decodificador y resolución de membresía implementados en MIG-03-B (RS256/ES256, issuer, audiencia, exp, nbf, `sub` UUID); Auth real sin integrar |
 | `X-Api-Key` (`serviceApiKey`) | n8n WF0–WF3 hacia Spring | Entrante | Hash de la clave → `resolver_servicio(hash)` (activo) → organización, instancia y alcance INGESTA o SCHEDULER | Pendiente MIG-03-D |
 | `X-Api-Secret` (`n8nWebhookSecret`) | Spring hacia webhook WF3 | **Saliente** | Spring lo envía; WF3 lo compara. Propiedades `keptai.security.webhook.*` (url + secreto por entorno) | Propiedades listas; cliente en MIG-07 |
 
@@ -61,7 +61,7 @@ INGESTA lee en V7: hoja_resumen, cliente, canal_whatsapp, envio_notificacion, or
 
 | # | Decisión | Propuesta | Dueño | Bloquea |
 |---|---|---|---|---|
-| 5.1 | Usuario con varias organizaciones: `resolver_usuario` devuelve N filas y el contrato no define la elección | Una membresía → automática; varias → 409 con la lista permitida o cabecera `X-Organization-Id` validada solo contra esas filas. El frontend actual no envía esa cabecera | Miguel | MIG-03-B (caso multi-membresía; el caso de una sola puede avanzar) |
+| 5.1 | Usuario con varias organizaciones: `resolver_usuario` devuelve N filas y el contrato no define la elección (hoy `/me` responde 409 sin elegir) | Una membresía → automática; varias → 409 con la lista permitida o cabecera `X-Organization-Id` validada solo contra esas filas. El frontend actual no envía esa cabecera | Miguel | MIG-03-B (caso multi-membresía; el caso de una sola puede avanzar) |
 | 5.2 | Hash y provisión de la clave de n8n (`clave_hash` char(64) hex, única) | SHA-256 hex del valor de `X-Api-Key`; la clave aleatoria se genera fuera de Git y solo el migrador/provisionador inserta el hash; comparación sobre la fila ya hallada por hash | Miguel (SQL de provisión: Andrés) | MIG-03-D |
 | 5.3 | `n8nConfirmOrder`: el contrato dice que Spring resuelve al vendedor por `vendedorJid`, pero V7 hace fallar `revisado_por` ≠ usuario del contexto cuando el actor es servicio | Tras autenticar el servicio y resolver al vendedor, ejecutar la transacción con contexto de **ese usuario** (actor VENDEDOR), no como INGESTA; requiere confirmar que el contexto "usuario activo" es válido sin JWT | Miguel + Andrés | MIG-06 (no MIG-03-A/B) |
 | 5.4 | Una sola `apiKey` en la configuración de WF0–WF3, pero SQL separa INGESTA y SCHEDULER (`UNIQUE(org, instancia, alcance)`) | Dos claves por instancia: INGESTA para WF0–WF2 y SCHEDULER para el callback de WF3; hoy el workflow usaría la de INGESTA y V7 rechazaría la escritura | Miguel + Isabella (n8n) | MIG-03-D y MIG-07 |
@@ -80,5 +80,14 @@ INGESTA lee en V7: hoja_resumen, cliente, canal_whatsapp, envio_notificacion, or
 
 `.env.example` documenta las variables con valores `example.invalid`. Perfiles `dev`, `test` y `prod` no abren ninguna ruta por estas propiedades. El frontend en modo `api` usa `VITE_API_BASE_URL`, `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` y envía `Authorization: Bearer` e `Idempotency-Key`, coherente con esta matriz.
 
+## 6.1 MIG-03-B — comportamiento implementado
+- Resource Server con las propiedades `keptai.security.jwt.*`: firma por JWKS (solo RS256 y ES256; HS256 y `none` rechazados), issuer exacto, audiencia, `exp` obligatorio, `nbf` y `clock-skew`; `sub` debe ser UUID. El token solo aporta el `sub`: organización y rol de claims, cuerpo, query o cabeceras se ignoran.
+- El `sub` validado se resuelve con `keptai_private.resolver_usuario(uuid)` por la conexión JDBC runtime (login no propietario, sin SELECT global ni grants nuevos). Solo devuelve filas activas de ese `sub`.
+- Una membresía → `ROLE_<rol>` y `/me` responde 200 `{user_id, organization_id, role}`. Sin membresía activa (inexistente, `usuario.activo=false`) → 403 `FORBIDDEN`. **Varias → 409 `ORGANIZATION_SELECTION_REQUIRED`** (propuesta): no se elige ninguna, no se listan y el caso **no está completo** hasta decidir 5.1.
+- Base o JWKS no disponibles → 503 `SERVICE_UNAVAILABLE` (sin identidad). JWT ausente, mal formado, vencido o inválido → 401 `UNAUTHORIZED` con `request_id`.
+- Rutas de n8n (`/api/v1/ordenes/**`, `/api/v1/pagos/**`, `/api/v1/mensajes/**`): un JWT de usuario recibe 403; sin credencial 401; `X-Api-Key` aún no autentica nada. Cualquier otra ruta fuera de `/api/v1/**` y del health se deniega.
+- `/api/v1/**` del panel exige una única membresía resuelta; el control por rol y recurso llega en MIG-03-D.
+- Límite del modelo: V1–V7 no tienen estado «inactivo» para `organizacion` (solo `usuario.activo`); una organización inactiva no es representable y no se inventó.
+
 ## 7. Qué no cubre esta entrega
-Decodificador JWT, resolución de membresías, contexto JDBC (`SET LOCAL`), filtro de `X-Api-Key`, controllers, Storage, motor financiero, cambios en V1–V7 ni Supabase remoto. Las pruebas de MIG-03-A comprueban configuración, CORS y rutas aún protegidas; **no acreditan** autenticación ni autorización reales.
+Contexto JDBC (`SET LOCAL`, MIG-03-C), filtro de `X-Api-Key` (MIG-03-D), controllers distintos de `/me`, Storage, motor financiero, cambios en V1–V7 ni Supabase remoto. Las pruebas usan un JWKS local de prueba y PostgreSQL de Testcontainers: **no acreditan** integración con Supabase Auth real.

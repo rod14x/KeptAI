@@ -58,8 +58,16 @@ paths:
       - Contexto
       operationId: getMyContext
       summary: Usuario autenticado, organización resuelta y rol (solo lectura).
+      description: 'Implementado en MIG-03-B y probado con JWKS de prueba y PostgreSQL real (fixtures); la integración con Supabase Auth real sigue
+        pendiente. Valida firma (RS256/ES256), issuer, audiencia, exp y nbf; el `sub` se resuelve con `keptai_private.resolver_usuario`.
+        Con una sola membresía activa responde 200. Sin membresía activa: 403 `FORBIDDEN`. Con varias: 409
+        `ORGANIZATION_SELECTION_REQUIRED` (propuesta; la selección de organización aún no está definida y no se elige ninguna).
+        Fallo de base o JWKS: 503 `SERVICE_UNAVAILABLE`.
+
+        '
       x-keptai-owner: miguel
       x-keptai-status: proposed
+      x-keptai-implemented: MIG-03-B (fixture JWKS; Auth real pendiente)
       x-keptai-task: MIG-03
       x-keptai-proposed-roles:
       - VENDEDOR
@@ -83,6 +91,10 @@ paths:
                   $ref: '#/components/examples/UserContextDemo'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/v1/evidences/text:
     post:
       tags:
@@ -2058,7 +2070,7 @@ components:
               $ref: '#/components/examples/ErrorNotFound'
     Conflict:
       description: 'Conflicto de estado o idempotencia. Códigos propuestos: `IDEMPOTENCY_KEY_CONFLICT`, `IDEMPOTENCY_IN_PROGRESS`,
-        `REVISION_CONFLICT`, `INVALID_STATE`.
+        `REVISION_CONFLICT`, `INVALID_STATE`, `ORGANIZATION_SELECTION_REQUIRED` (solo `getMyContext`/panel con varias membresías).
 
         '
       headers:

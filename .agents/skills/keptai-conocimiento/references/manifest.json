@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "11718bb11f93226e364753e342f6bf668d15454a",
+  "source_head_at_generation": "e1b0ffecfcea837c46999a975dfdd101cd3ce6eb",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -111,8 +111,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/estado.md",
-      "bytes": 36927,
-      "sha256": "7927541b063ea3f34e7091460c7151549360d6131e9d0ea95b6965777f70d6d7"
+      "bytes": 40762,
+      "sha256": "3e0dfd2b2bf9ab0b69bc902cdd7330c0747731b0ded75fd257771c569492ca94"
     },
     {
       "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
@@ -471,23 +471,23 @@
     },
     {
       "path": "Backend/docs/contrato-api.md",
-      "bytes": 8916,
-      "sha256": "023d3ed613bc1fbcbc6218c6d853c5fe0b4b5b11ffbeb395d58c753a033dc9dd",
-      "source_sha256": "023d3ed613bc1fbcbc6218c6d853c5fe0b4b5b11ffbeb395d58c753a033dc9dd",
+      "bytes": 8965,
+      "sha256": "fe9e030c1f69660c852c4f5c9bd85ec09482e15027be7dce82b8631bb75dc0a7",
+      "source_sha256": "fe9e030c1f69660c852c4f5c9bd85ec09482e15027be7dce82b8631bb75dc0a7",
       "sanitized": false
     },
     {
       "path": "Backend/docs/matriz-acceso.md",
-      "bytes": 10927,
-      "sha256": "4eec7f9a2f1b4d5bb905772fbc64222b73e3c692f5286e589ce11b7ab07fb688",
-      "source_sha256": "4eec7f9a2f1b4d5bb905772fbc64222b73e3c692f5286e589ce11b7ab07fb688",
+      "bytes": 12795,
+      "sha256": "a87b19a35d8ae36c4156a69da2fee0eb6a846f8db40a5cf79e58b2b98a0910d9",
+      "source_sha256": "a87b19a35d8ae36c4156a69da2fee0eb6a846f8db40a5cf79e58b2b98a0910d9",
       "sanitized": false
     },
     {
       "path": "Backend/docs/openapi.yaml",
-      "bytes": 209668,
-      "sha256": "1c46a3212b043a99d0a6b388f829f10409b732af58f9c67a3eb459a5f00cb097",
-      "source_sha256": "003f38df85e0eec8730ab2562ad7390e5598545138a98ded572037cd3cdb6645",
+      "bytes": 210553,
+      "sha256": "a1e7751a0d1a29f4864719e9f11d0db9e657e8ddb7df6c9c0df81dcecaec50c1",
+      "source_sha256": "e7fe77ba87ba8bbd09977b8284a4f4f716f1db321bd82ee54a026a94b161cea9",
       "sanitized": true
     },
     {

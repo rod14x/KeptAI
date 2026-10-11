@@ -27,6 +27,7 @@ Estas instrucciones aplican a este repositorio KeptAI: cerebro/ conserva conocim
 
 ## Resumen vigente de Miguel
 
+- MIG-03-B completada (10/10/2026) con fixtures: Resource Server valida JWT (RS256/ES256, issuer, audiencia, exp, nbf, sub UUID) con keptai.security.jwt.*; membresía por keptai_private.resolver_usuario con login runtime; GET /api/v1/me implementado (1 membresía 200; sin membresía 403; varias 409 ORGANIZATION_SELECTION_REQUIRED sin elegir, caso no completo; base caída 503). JWT de usuario no autentica rutas n8n. 182 tests sin fallos con JWKS de prueba y PostgreSQL de Testcontainers; Supabase Auth real, contexto JDBC (MIG-03-C) y X-Api-Key (MIG-03-D) pendientes. Siguiente: MIG-03-C.
 - Revisión MIG-03-A: 165 tests verify sin fallos y OpenAPI válido (38/212/25). Propiedades/CORS/matriz completos; siguiente MIG-03-B, JWT/membresías aún pendientes. Puertos5433/8080/5173 activos. Reiniciar Spring manualmente en Zellij para cargar CORS nuevo; no detener otros servicios. Detalle en estado.md.
 
 - MIG-03-A completada (10/10/2026): propiedades tipadas keptai.security.* (JWT issuer/JWKS/audiencia, CORS exacto, webhook X-Api-Secret), AccessRole (4 roles vs INGESTA/SCHEDULER) y Backend/docs/matriz-acceso.md coherente con V7; 165 tests sin fallos, health público y resto 401. No hay decodificador JWT, filtro X-Api-Key, contexto JDBC ni endpoints. Propuestas sin aprobar: organización múltiple, hash/provisión de clave n8n, WF0 confirmar con contexto del vendedor, claves INGESTA/SCHEDULER separadas. Siguiente: MIG-03-B.

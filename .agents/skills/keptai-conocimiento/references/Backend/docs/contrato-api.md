@@ -8,7 +8,7 @@ Los cuatro roles son los de `usuario.rol`; `service_n8n` es una credencial técn
 
 | operationId | Método | Ruta | Dueño | Tarea | Roles propuestos | Estado |
 |---|---|---|---|---|---|---|
-| `getMyContext` | GET | `/api/v1/me` | `miguel` | MIG-03 | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | Propuesta, no implementado |
+| `getMyContext` | GET | `/api/v1/me` | `miguel` | MIG-03 | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | Propuesta; implementado en MIG-03-B con JWKS de prueba, Auth real pendiente |
 | `createTextEvidence` | POST | `/api/v1/evidences/text` | `miguel` | MIG-04 | VENDEDOR, ADMIN | Propuesta, no implementado (fuera del MVP) |
 | `uploadEvidenceFile` | POST | `/api/v1/evidences/files` | `miguel` | MIG-04 | VENDEDOR, ADMIN | Propuesta, no implementado |
 | `listEvidences` | GET | `/api/v1/evidences` | `miguel` | MIG-04 | VENDEDOR, ADMIN | Propuesta, no implementado |
