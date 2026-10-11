@@ -249,12 +249,59 @@
   .skip-link { position: fixed; left: 16px; top: -60px; z-index: 100; background: var(--color-card); color: var(--color-ink); padding: 12px 20px; border: 2px solid var(--color-violet); border-radius: calc(var(--radius) - 4px); }
   .skip-link:focus { top: 12px; }
   .login-layout { display: grid; min-height: 100vh; min-height: 100svh; grid-template-columns: minmax(0, 1.08fr) minmax(400px, 1fr); }
-  .login-story { --color-muted: #b3c6dd; --color-action: #faa901; --color-action-hover: #fbbd3a; --color-inverse: #00285f; --color-brand-word: #ffffff; display: flex; flex-direction: column; justify-content: space-between; background: var(--color-navy); color: #f1f6fa; padding: clamp(32px, 5vw, 80px); }
+  .login-story {
+    --color-muted: #b3c6dd;
+    --color-action: #faa901;
+    --color-action-hover: #fbbd3a;
+    --color-inverse: #00285f;
+    --color-brand-word: #ffffff;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background-color: var(--color-navy);
+    background-image:
+      linear-gradient(135deg, rgba(4, 36, 80, 0.88) 0%, rgba(0, 40, 95, 0.82) 100%),
+      url('/Gemini_Generated_Image_pgkxjvpgkxjvpgkx.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    color: #f1f6fa;
+    padding: clamp(32px, 5vw, 80px);
+  }
   .login-workflow { margin: 48px 0; padding: 0; list-style: none; }
-  .login-workflow li { display: grid; grid-template-columns: 32px 1fr; gap: 16px; padding: 20px 0; border-top: 1px solid #22426b; }
+  .login-workflow li { display: grid; grid-template-columns: 32px 1fr; gap: 16px; padding: 20px 0; border-top: 1px solid rgba(34, 66, 107, 0.8); }
   .login-workflow li > span { color: #faa901; font-variant-numeric: tabular-nums; font-size: 13px; padding-top: 3px; }
-  .login-form-panel { display: flex; flex-direction: column; justify-content: center; padding: 40px clamp(24px, 5vw, 88px); background: var(--color-card); }
-  .login-form-panel > section { width: 100%; max-width: 400px; margin: auto; }
+  .login-form-panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 40px clamp(24px, 5vw, 88px);
+    background-color: var(--color-card);
+    background-image:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(243, 246, 250, 0.88) 100%),
+      url('/Gemini_Generated_Image_cin89acin89acin8.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+  :root[data-theme="dark"] .login-form-panel {
+    background-image:
+      linear-gradient(135deg, rgba(14, 37, 66, 0.92) 0%, rgba(6, 22, 41, 0.88) 100%),
+      url('/Gemini_Generated_Image_cin89acin89acin8.jpg');
+  }
+  .login-form-panel > section {
+    width: 100%;
+    max-width: 420px;
+    margin: auto;
+    background: var(--color-card);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius);
+    padding: clamp(24px, 4vw, 36px);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(8px);
+  }
   .login-form-panel input { background: var(--color-card); }
 
   /* 2.4. Ergonomía de Componentes */
