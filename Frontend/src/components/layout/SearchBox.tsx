@@ -10,7 +10,7 @@ import { useAuth } from "../../context/AuthContext";
 type Hit = { id: string; label: string; detail: string; href: string };
 
 function hitBrand(s: ReturnType<typeof getState>, href: string) {
-  const id = href.split(/[/=]/).pop() ?? "";
+  const id = href.split("/").pop() ?? "";
   return s.customers.find((c) => c.id === id)?.brand ?? s.orders.find((o) => o.id === id)?.brand ?? s.evidences.find((e) => e.id === id)?.brand;
 }
 
@@ -21,7 +21,7 @@ function search(q: string, brand: string | null): Hit[] {
   const customer = (id: string) => s.customers.find((c) => c.id === id)?.name ?? "";
   const orders = s.orders
     .filter((o) => o.id.toLowerCase().includes(term) || customer(o.customerId).toLowerCase().includes(term))
-    .map((o) => ({ id: o.id, label: `${o.id} · ${customer(o.customerId)}`, detail: `Pedido ${formatMoney(o.saleCents)}`, href: `/pedidos?pedido=${o.id}` }));
+    .map((o) => ({ id: o.id, label: `${o.id} · ${customer(o.customerId)}`, detail: `Orden ${formatMoney(o.saleCents)}`, href: `/pedidos/${o.id}` }));
   const evs = s.evidences
     .filter((e) => e.id.toLowerCase().includes(term) || (e.fields.payer ?? "").toLowerCase().includes(term) || (e.fields.operationRef ?? "").includes(term))
     .map((e) => ({
@@ -74,7 +74,7 @@ export function SearchBox({ className }: { className?: string }) {
             if (e.key === "Enter" && hits[active]) go(hits[active]);
             if (e.key === "Escape") setOpen(false);
           }}
-          placeholder="Buscar cliente, P-002 o V-003"
+          placeholder="Buscar cliente, ORD-002 o V-003"
           className="w-full bg-transparent text-sm outline-none placeholder:text-faint"
           role="combobox"
           aria-expanded={open && q.length > 0}

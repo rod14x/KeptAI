@@ -1,7 +1,7 @@
 import { NavLink } from "react-router";
 import { motion } from "motion/react";
 import { spring } from "../motion/primitives";
-import { ArrowCounterClockwise, ChartPieSlice, Kanban, Receipt, SquaresFour, UsersThree } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, Bell, ChartPieSlice, Factory, Kanban, Receipt, SquaresFour, UploadSimple, UsersThree } from "@phosphor-icons/react";
 import type { Role } from "../../api/schemas";
 import { Logo } from "./Logo";
 import { useAuth } from "../../context/AuthContext";
@@ -11,10 +11,13 @@ import { can } from "../../lib/permissions";
 import { cx } from "../../lib/format";
 
 export const NAV: Array<{ to: string; label: string; icon: typeof SquaresFour; end: boolean; show?: (r: Role) => boolean }> = [
-  { to: "/", label: "Dashboard", icon: SquaresFour, end: true },
-  { to: "/pedidos", label: "Pedidos", icon: Kanban, end: false },
-  { to: "/clientes", label: "Clientes", icon: UsersThree, end: false },
-  { to: "/conciliacion", label: "Conciliación", icon: Receipt, end: false },
+  { to: "/", label: "Dashboard", icon: SquaresFour, end: true, show: (r) => can(r, "ver_comercial") },
+  { to: "/pedidos", label: "Pedidos", icon: Kanban, end: false, show: (r) => can(r, "ver_comercial") },
+  { to: "/clientes", label: "Clientes", icon: UsersThree, end: false, show: (r) => can(r, "ver_comercial") },
+  { to: "/conciliacion", label: "Conciliación", icon: Receipt, end: false, show: (r) => can(r, "verificar") || can(r, "ver_resultado") },
+  { to: "/cobranza", label: "Cobranza", icon: Bell, end: false, show: (r) => can(r, "gestionar_cobranza") || can(r, "ver_resultado") },
+  { to: "/taller", label: "Taller", icon: Factory, end: false, show: (r) => can(r, "registrar_despacho") || can(r, "ver_resultado") },
+  { to: "/captura", label: "Carga manual", icon: UploadSimple, end: false, show: (r) => can(r, "captura") },
   { to: "/resultado", label: "Resultado", icon: ChartPieSlice, end: false, show: (r) => can(r, "ver_resultado") },
 ];
 

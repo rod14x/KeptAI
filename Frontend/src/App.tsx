@@ -17,6 +17,10 @@ const ClientesPage = page(() => import("./pages/ClientesPage"), "ClientesPage");
 const ClienteDetailPage = page(() => import("./pages/ClienteDetailPage"), "ClienteDetailPage");
 const PerfilPage = page(() => import("./pages/PerfilPage"), "PerfilPage");
 const EstadoCuentaPage = page(() => import("./pages/EstadoCuentaPage"), "EstadoCuentaPage");
+const OrdenDetailPage = page(() => import("./pages/OrdenDetailPage"), "OrdenDetailPage");
+const TallerPage = page(() => import("./pages/TallerPage"), "TallerPage");
+const CobranzaPage = page(() => import("./pages/CobranzaPage"), "CobranzaPage");
+const CapturaPage = page(() => import("./pages/CapturaPage"), "CapturaPage");
 
 function PageFallback() {
   return (
@@ -35,9 +39,10 @@ function RequireSession() {
   return <Outlet />;
 }
 
-function RequirePermission({ permission, children }: { permission: Permission; children: ReactNode }) {
+function RequirePermission({ permission, children }: { permission: Permission | Permission[]; children: ReactNode }) {
   const { person } = useAuth();
-  if (!can(person?.role, permission)) {
+  const list = Array.isArray(permission) ? permission : [permission];
+  if (!list.some((p) => can(person?.role, p))) {
     return (
       <div className="mx-auto max-w-md py-16">
         <EmptyState title="Tu rol no tiene acceso a esta sección">
@@ -51,6 +56,15 @@ function RequirePermission({ permission, children }: { permission: Permission; c
   }
   return <>{children}</>;
 }
+
+/** El Jefe de taller no ve la parte comercial: su inicio es el taller. */
+function Home() {
+  const { person } = useAuth();
+  if (person?.role === "jefe_taller") return <Navigate to="/taller" replace />;
+  return <DashboardPage />;
+}
+
+const gate = (permission: Permission | Permission[], el: ReactNode) => <RequirePermission permission={permission}>{el}</RequirePermission>;
 
 function NotFound() {
   return (
@@ -76,20 +90,17 @@ export default function App() {
               <Route path="/estado-cuenta/:token" element={<EstadoCuentaPage />} />
               <Route element={<RequireSession />}>
                 <Route element={<AppLayout />}>
-                  <Route index element={<DashboardPage />} />
-                  <Route path="pedidos" element={<PedidosPage />} />
-                  <Route path="clientes" element={<ClientesPage />} />
-                  <Route path="clientes/:id" element={<ClienteDetailPage />} />
-                  <Route path="conciliacion" element={<ConciliacionPage />} />
-                  <Route path="conciliacion/:id" element={<ConciliacionPage />} />
-                  <Route
-                    path="resultado"
-                    element={
-                      <RequirePermission permission="ver_resultado">
-                        <ResultadoPage />
-                      </RequirePermission>
-                    }
-                  />
+                  <Route index element={<Home />} />
+                  <Route path="pedidos" element={gate("ver_comercial", <PedidosPage />)} />
+                  <Route path="pedidos/:ref" element={gate("ver_comercial", <OrdenDetailPage />)} />
+                  <Route path="clientes" element={gate("ver_comercial", <ClientesPage />)} />
+                  <Route path="clientes/:id" element={gate("ver_comercial", <ClienteDetailPage />)} />
+                  <Route path="conciliacion" element={gate(["verificar", "ver_resultado"], <ConciliacionPage />)} />
+                  <Route path="conciliacion/:id" element={gate(["verificar", "ver_resultado"], <ConciliacionPage />)} />
+                  <Route path="cobranza" element={gate(["gestionar_cobranza", "ver_resultado"], <CobranzaPage />)} />
+                  <Route path="taller" element={gate(["registrar_despacho", "ver_resultado"], <TallerPage />)} />
+                  <Route path="captura" element={gate("captura", <CapturaPage />)} />
+                  <Route path="resultado" element={gate("ver_resultado", <ResultadoPage />)} />
                   <Route path="perfil" element={<PerfilPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Route>

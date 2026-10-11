@@ -115,12 +115,12 @@ function Statement({ d }: { d: Extract<StatementDTO, { ok: true }> }) {
                   {formatDate(o.issuedOn)}
                 </span>
                 <span>
-                  <span className="block text-faint">Entrega</span>
-                  {formatDate(o.deliveredOn)}
+                  <span className="block text-faint">Despacho</span>
+                  {o.despachoOn ? formatDate(o.despachoOn) : "En producción"}
                 </span>
                 <span>
                   <span className="block text-faint">Vence</span>
-                  <span className={cx(o.balanceCents > 0 && "font-bold")}>{formatDate(o.dueDate)}</span>
+                  <span className={cx(o.balanceCents > 0 && "font-bold")}>{o.dueDate ? formatDate(o.dueDate) : "Al despachar"}</span>
                 </span>
               </div>
               <div className="tabular mt-2 flex justify-between text-[13px]">

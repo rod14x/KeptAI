@@ -1,30 +1,18 @@
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { motion } from "motion/react";
-import { MotionLink, Stagger, itemVariants, listVariants, press, spring } from "../components/motion/primitives";
-import { PageHeader } from "../components/ui/PageHeader";
-import { useEffect, useState, type ReactNode } from "react";
-import { Link, useNavigate, useParams } from "react-router";
-import {
-  ArrowLeft,
-  CheckCircle,
-  CopySimple,
-  Info,
-  LinkSimple,
-  SealCheck,
-  ShieldCheck,
-  Trash,
-  WarningCircle,
-  NotePencil,
-  Check,
-} from "@phosphor-icons/react";
-import { getEvidence, getQueue, type BoardCard, type EvidenceDetailDTO } from "../api/client";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
+import { ArrowLeft, Bank, CheckCircle, CopySimple, Info, LinkSimple, NotePencil, Trash, WarningCircle, ChatCircleText, UploadSimple } from "@phosphor-icons/react";
+import { getEvidence, getQueue, queueGroup, type EvidenceDetailDTO, type PaymentCard, type QueueFilter } from "../api/client";
 import { actions, type ActionResult } from "../api/store";
-import type { FieldKey } from "../api/schemas";
+import type { FieldKey, Person } from "../api/schemas";
 import { useApi } from "../hooks/useApi";
 import { useScope } from "../context/ScopeContext";
 import { useMe } from "../context/AuthContext";
-import { can, ROLE_LABEL, type Permission } from "../lib/permissions";
-import type { Person, Role } from "../api/schemas";
 import { useToast } from "../context/ToastContext";
+import { can, rolesWith, ROLE_LABEL, type Permission } from "../lib/permissions";
+import { MotionLink, Stagger, itemVariants, listVariants, press, spring } from "../components/motion/primitives";
+import { PageHeader } from "../components/ui/PageHeader";
+import { Segmented } from "../components/ui/Segmented";
 import { Card, DemoBadge, EmptyState, ErrorState, Money, Skeleton } from "../components/ui/States";
 import { Chip, DueTag, MatchChip } from "../components/ui/Chip";
 import { Button } from "../components/ui/Button";
@@ -32,34 +20,73 @@ import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { EvidenceViewer } from "../components/evidence/EvidenceViewer";
 import { cx, formatDate, formatDateTime, formatMoney } from "../lib/format";
 
+const FILTERS: Array<{ value: QueueFilter; label: string }> = [
+  { value: "recibidos", label: "Recibidos" },
+  { value: "revision", label: "En revisión" },
+  { value: "verificados", label: "Verificados" },
+  { value: "aplicados", label: "Aplicados" },
+];
+
 export function ConciliacionPage() {
   const { id } = useParams();
   const { scope } = useScope();
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
   const queue = useApi(() => getQueue(scope), [scope]);
+  const filter = (FILTERS.find((f) => f.value === params.get("fase"))?.value ?? "recibidos") as QueueFilter;
 
-  // Sin selección en escritorio: abrir el primer pendiente.
+  const grouped = useMemo(() => {
+    const all = queue.data ?? [];
+    return { visible: all.filter((c) => queueGroup(c) === filter), count: (f: QueueFilter) => all.filter((c) => queueGroup(c) === f).length };
+  }, [queue.data, filter]);
+
+  // Sin selección en escritorio: abrir el primero del filtro.
   useEffect(() => {
-    if (!id && queue.data?.length && window.matchMedia("(min-width: 1280px)").matches) {
-      const first = queue.data.find((c) => c.status !== "pago_aplicado" && c.status !== "descartado") ?? queue.data[0];
-      navigate(`/conciliacion/${first.id}`, { replace: true });
+    if (!id && grouped.visible.length && window.matchMedia("(min-width: 1280px)").matches) {
+      navigate(`/conciliacion/${grouped.visible[0].id}?fase=${filter}`, { replace: true });
     }
-  }, [id, queue.data, navigate]);
+  }, [id, grouped.visible, filter, navigate]);
 
   return (
     <Stagger className="mx-auto flex max-w-[1400px] flex-col gap-6">
-      <PageHeader title="Conciliación" subtitle="Revisa la evidencia junto a lo que leyó la IA y confirma cada paso." actions={<DemoBadge />} />
+      <PageHeader
+        title="Conciliación"
+        subtitle="Cada pago pasa por recibido, verificado en banco y aplicado. Solo el aplicado mueve el saldo."
+        actions={
+          <>
+            <DemoBadge />
+            {/* La carga manual es el respaldo cuando WhatsApp no trae el comprobante. */}
+            <MotionLink to="/captura" {...press} className="inline-flex h-10 items-center gap-2 rounded-full bg-card px-4 text-[13px] font-semibold ring-1 ring-line transition-colors hover:bg-panel">
+              <UploadSimple size={16} weight="bold" /> Cargar a mano
+            </MotionLink>
+          </>
+        }
+      />
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
-        <motion.aside variants={listVariants} className={cx("flex-col gap-2", id ? "hidden xl:flex" : "flex")} aria-label="Cola de revisión">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
+        <motion.aside variants={listVariants} className={cx("flex-col gap-3", id ? "hidden xl:flex" : "flex")} aria-label="Cola de pagos">
+          <motion.div variants={itemVariants}>
+            <Segmented
+              label="Fase del pago"
+              value={filter}
+              onChange={(f) => setParams({ fase: f })}
+              size="sm"
+              className="flex w-full [&>button]:flex-1 [&>button]:px-2"
+              options={FILTERS.map((f) => ({ value: f.value, label: f.label, count: grouped.count(f.value) }))}
+            />
+          </motion.div>
           {queue.error ? (
             <ErrorState error={queue.error} onRetry={queue.reload} />
           ) : queue.loading || !queue.data ? (
-            [0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-[76px] rounded-2xl" />)
-          ) : queue.data.length === 0 ? (
-            <EmptyState title="Sin evidencias en esta vista">Cambia a Consolidado o carga un comprobante.</EmptyState>
+            [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[84px] rounded-2xl" />)
+          ) : grouped.visible.length === 0 ? (
+            <EmptyState title="Nada en esta fase">Cuando llegue un comprobante por WhatsApp o lo cargues a mano, aparecerá aquí.</EmptyState>
           ) : (
-            queue.data.map((c) => <QueueItem key={c.id} card={c} active={c.id === id} />)
+            <motion.div key={filter} variants={listVariants} initial="hidden" animate="show" className="flex flex-col gap-2">
+              {grouped.visible.map((c) => (
+                <QueueItem key={c.id} card={c} active={c.id === id} filter={filter} />
+              ))}
+            </motion.div>
           )}
         </motion.aside>
 
@@ -69,47 +96,39 @@ export function ConciliacionPage() {
   );
 }
 
-const STATUS_LABEL = {
-  borrador: "Borrador",
-  comprobante_pendiente: "Pendiente",
-  pago_verificado: "Verificado",
-  pago_aplicado: "Aplicado",
-  descartado: "Descartado",
-};
-
-function QueueItem({ card, active }: { card: BoardCard; active: boolean }) {
-  const closed = card.status === "pago_aplicado" || card.status === "descartado";
+function QueueItem({ card, active, filter }: { card: PaymentCard; active: boolean; filter: QueueFilter }) {
   return (
     <MotionLink
-      to={`/conciliacion/${card.id}`}
+      to={`/conciliacion/${card.id}?fase=${filter}`}
       aria-current={active ? "page" : undefined}
       variants={itemVariants}
       {...press}
       className={cx(
-        "relative flex min-h-[76px] items-center gap-3 rounded-2xl p-3 transition-colors duration-200",
+        "relative flex min-h-[84px] items-center gap-3 rounded-2xl p-3 transition-colors duration-200",
         active ? "bg-card shadow-[var(--shadow-card)]" : "bg-card/60 ring-1 ring-line/70 hover:bg-card",
-        closed && !active && "opacity-60",
       )}
     >
-      {/* El anillo de selección viaja entre elementos: el ojo sigue el cambio de evidencia. */}
       {active && <motion.span layoutId="queue-active" transition={spring} aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-violet" />}
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+          {card.origen === "whatsapp" ? <ChatCircleText size={13} weight="bold" /> : <UploadSimple size={13} weight="bold" />}
           {card.id}
           {card.orderId && <span className="text-faint">· {card.orderId}</span>}
-          <span className="text-faint">· {STATUS_LABEL[card.status]}</span>
         </p>
         <p className="mt-0.5 truncate text-sm font-bold">{card.customer}</p>
-        <div className="mt-1.5">
-          {card.status === "pago_aplicado" ? (
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          {card.status === "aplicado" ? (
             <Chip tone="ok" icon={<CheckCircle size={14} weight="bold" />}>
               Aplicado
             </Chip>
-          ) : card.status === "descartado" ? (
-            <Chip tone="neutral">Descartado</Chip>
+          ) : card.status === "verificado_banco" ? (
+            <Chip tone="info" icon={<Bank size={14} weight="bold" />}>
+              Verificado
+            </Chip>
           ) : (
             <MatchChip match={card.match} />
           )}
+          <span className="tabular text-[11px] text-faint">{formatDateTime(card.receivedAt)}</span>
         </div>
       </div>
       <span className="text-sm font-extrabold">{card.amountCents != null ? <Money cents={card.amountCents} /> : <span className="text-warn">S/ ?</span>}</span>
@@ -131,7 +150,7 @@ function Detail({ id }: { id: string }) {
     );
   if (data === null || (me.role === "vendedor" && data.evidence.brand !== me.brand))
     return (
-      <EmptyState title={`No existe la evidencia ${id}`}>
+      <EmptyState title={`El comprobante ${id} no está disponible`}>
         <Link to="/conciliacion" className="font-semibold text-violet-ink underline">
           Volver a la lista
         </Link>
@@ -141,22 +160,28 @@ function Detail({ id }: { id: string }) {
 }
 
 const STEPS = [
-  { key: "borrador", label: "Borrador" },
-  { key: "comprobante_pendiente", label: "Pendiente" },
-  { key: "pago_verificado", label: "Verificado" },
-  { key: "pago_aplicado", label: "Aplicado" },
+  { key: "recibido", label: "Recibido" },
+  { key: "verificado_banco", label: "Verificado en banco" },
+  { key: "aplicado", label: "Aplicado" },
 ] as const;
 
 function Stepper({ status }: { status: string }) {
   const idx = STEPS.findIndex((s) => s.key === status);
   return (
-    <ol className="flex items-center gap-1.5" aria-label="Estado del pago">
+    <ol className="grid grid-cols-3 gap-1.5" aria-label="Fase del pago">
       {STEPS.map((s, i) => {
-        const done = idx > i || status === "pago_aplicado";
+        const done = idx >= i;
         const current = idx === i;
         return (
-          <li key={s.key} className="flex min-w-0 flex-1 flex-col gap-1.5" aria-current={current ? "step" : undefined}>
-            <span className={cx("h-1.5 rounded-full", done ? "bg-ok" : current ? "bg-violet" : "bg-line")} />
+          <li key={s.key} className="flex min-w-0 flex-col gap-1.5" aria-current={current ? "step" : undefined}>
+            <span className="h-1.5 overflow-hidden rounded-full bg-line">
+              <motion.span
+                className={cx("block h-full w-full origin-left rounded-full", current && status !== "aplicado" ? "bg-violet" : "bg-ok")}
+                initial={false}
+                animate={{ scaleX: done ? 1 : 0 }}
+                transition={spring}
+              />
+            </span>
             <span className={cx("truncate text-[11px] font-semibold", current ? "text-ink" : done ? "text-ok" : "text-faint")}>{s.label}</span>
           </li>
         );
@@ -178,24 +203,18 @@ type Pending = { title: string; body: ReactNode; label: string; tone: "primary" 
 function SplitView({ d }: { d: EvidenceDetailDTO }) {
   const me = useMe();
   const toast = useToast();
-  const by = me;
   const ev = d.evidence;
   const canEdit = can(me.role, "editar_evidencia");
   const [pending, setPendingState] = useState<Pending | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [acceptMismatch, setAcceptMismatch] = useState(false);
+  const [orderChoice, setOrderChoice] = useState("");
   // El contenido se conserva al cerrar para que el diálogo no se vacíe durante su salida.
   const setPending = (p: Pending | null) => {
     if (p) setPendingState(p);
     setConfirmOpen(p != null);
   };
-  const [acceptMismatch, setAcceptMismatch] = useState(false);
-  const [orderChoice, setOrderChoice] = useState("");
-  const locked = !canEdit || ev.status === "pago_verificado" || ev.status === "pago_aplicado" || ev.status === "descartado";
-
-  useEffect(() => {
-    setAcceptMismatch(false);
-    setOrderChoice("");
-  }, [ev.id]);
+  const locked = !canEdit || ev.status !== "recibido";
 
   const run = (fn: () => ActionResult) => {
     const r = fn();
@@ -203,28 +222,19 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
   };
 
   const amount = ev.fields.amountCents != null ? formatMoney(ev.fields.amountCents) : "el monto";
+  const needed: Permission | null = ev.status === "recibido" ? "verificar" : ev.status === "verificado_banco" ? "aplicar" : null;
 
   let primary: ReactNode = null;
-  if (ev.status === "borrador") {
+  if (needed && !can(me.role, needed)) {
     primary = (
-      <Button
-        size="lg"
-        className="w-full"
-        icon={<Check size={18} weight="bold" />}
-        onClick={() =>
-          setPending({
-            title: "Confirmar borrador",
-            body: "El borrador pasa a comprobante pendiente. Todavía no reduce el saldo de ningún pedido.",
-            label: "Confirmar borrador",
-            tone: "primary",
-            run: () => actions.confirmDraft(ev.id, by),
-          })
-        }
-      >
-        Confirmar borrador
-      </Button>
+      <p className="flex items-start gap-2 rounded-xl bg-panel px-4 py-3 text-[13px] text-muted ring-1 ring-line">
+        <Info size={18} weight="bold" className="mt-px shrink-0" />
+        <span>
+          Este paso lo hace {rolesWith(needed).join(" o ")}. Tu rol ({ROLE_LABEL[me.role]}) puede ver el comprobante y su estado.
+        </span>
+      </p>
     );
-  } else if (ev.status === "comprobante_pendiente" && d.match === "duplicado") {
+  } else if (ev.status === "recibido" && d.match === "duplicado") {
     primary = (
       <Button
         size="lg"
@@ -234,57 +244,38 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
         onClick={() =>
           setPending({
             title: `Marcar ${ev.id} como duplicado`,
-            body: `Tiene la misma operación que ${d.duplicateOfId}. Se guarda en el historial y no reduce el saldo.`,
+            body: `Tiene el mismo código, monto y fecha que ${d.duplicateOfId}. Se guarda en el historial y no reduce el saldo.`,
             label: "Marcar duplicado",
             tone: "danger",
-            run: () => actions.markDuplicate(ev.id, by),
+            run: () => actions.markDuplicate(ev.id, me),
           })
         }
       >
         Marcar como duplicado
       </Button>
     );
-  } else if (ev.status === "comprobante_pendiente" && !ev.validatedBy) {
-    const blocked = d.match === "huerfano" || d.match === "incompleto" || d.match === "excede" || (d.match === "monto_no_cuadra" && !acceptMismatch);
+  } else if (ev.status === "recibido") {
+    const blocked = ["sin_orden", "incompleto", "excede"].includes(d.match) || (d.match === "no_cuadra" && !acceptMismatch);
     primary = (
       <Button
         size="lg"
         className="w-full"
         disabled={blocked}
-        icon={<ShieldCheck size={18} weight="bold" />}
+        icon={<Bank size={18} weight="bold" />}
         onClick={() =>
           setPending({
-            title: "Validar evidencia",
-            body: `Confirmas que el comprobante de ${amount} corresponde a ${ev.orderId}. Validar no es verificar fondos.`,
-            label: "Validar",
+            title: "Verificar en banco",
+            body: `Confirmas que el abono de ${amount} aparece en la banca de la empresa. KeptAI no se conecta al banco: esta verificación la hace Administración.`,
+            label: "Verificado",
             tone: "primary",
-            run: () => actions.validate(ev.id, by, acceptMismatch),
+            run: () => actions.verifyFunds(ev.id, me, acceptMismatch),
           })
         }
       >
-        1. Validar evidencia
+        1. Verificar en banco
       </Button>
     );
-  } else if (ev.status === "comprobante_pendiente" && ev.validatedBy) {
-    primary = (
-      <Button
-        size="lg"
-        className="w-full"
-        icon={<SealCheck size={18} weight="bold" />}
-        onClick={() =>
-          setPending({
-            title: "Registrar verificación de fondos",
-            body: "Declaras que revisaste el abono en el banco o billetera. En esta demo la verificación es simulada: no hay conexión a bancos.",
-            label: "Registrar verificación",
-            tone: "primary",
-            run: () => actions.verifyFunds(ev.id, by),
-          })
-        }
-      >
-        2. Registrar verificación de fondos
-      </Button>
-    );
-  } else if (ev.status === "pago_verificado") {
+  } else if (ev.status === "verificado_banco") {
     primary = (
       <Button
         size="lg"
@@ -297,49 +288,29 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
             body: d.order ? `El saldo de ${d.order.id} pasa de ${formatMoney(d.order.balanceCents)} a ${formatMoney(d.order.balanceCents - (ev.fields.amountCents ?? 0))}.` : "",
             label: "Aplicar pago",
             tone: "violet",
-            run: () => actions.applyPayment(ev.id, by),
+            run: () => actions.applyPayment(ev.id, me),
           })
         }
       >
-        3. Confirmar y aplicar pago
+        2. Aplicar a la orden
       </Button>
     );
-  } else if (ev.status === "pago_aplicado") {
+  } else if (ev.status === "aplicado") {
     primary = (
       <div className="flex flex-col gap-2">
         <Button size="lg" className="w-full" disabled icon={<CheckCircle size={18} weight="fill" />}>
           Pago aplicado
         </Button>
-        <button onClick={() => run(() => actions.applyPayment(ev.id, by))} className="text-[13px] font-semibold text-muted underline-offset-2 hover:text-ink hover:underline">
-          Reintentar aplicación (no duplica el pago)
-        </button>
+        {can(me.role, "aplicar") && (
+          <button onClick={() => run(() => actions.applyPayment(ev.id, me))} className="min-h-10 text-[13px] font-semibold text-muted underline-offset-2 hover:text-ink hover:underline">
+            Reintentar aplicación (no duplica el pago)
+          </button>
+        )}
       </div>
     );
   }
 
-  // Separación de funciones: si el rol no puede dar este paso, se explica quién lo hace.
-  const needed: Permission | null =
-    ev.status === "borrador"
-      ? "editar_evidencia"
-      : ev.status === "comprobante_pendiente"
-        ? ev.validatedBy && d.match !== "duplicado"
-          ? "verificar"
-          : "validar"
-        : ev.status === "pago_verificado"
-          ? "aplicar"
-          : null;
-  if (needed && !can(me.role, needed)) {
-    primary = (
-      <p className="flex items-start gap-2 rounded-xl bg-panel px-4 py-3 text-[13px] text-muted ring-1 ring-line">
-        <Info size={18} weight="bold" className="mt-px shrink-0" />
-        <span>
-          Este paso lo hace {rolesWith(needed)}. Tu rol ({ROLE_LABEL[me.role]}) puede ver el comprobante y su estado.
-        </span>
-      </p>
-    );
-  }
-
-  const canDiscard = can(me.role, "descartar") && (ev.status === "borrador" || (ev.status === "comprobante_pendiente" && d.match !== "duplicado"));
+  const canDiscard = can(me.role, "descartar") && ev.status === "recibido" && d.match !== "duplicado";
 
   return (
     <Stagger className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
@@ -354,13 +325,23 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
       <Card className="flex flex-col gap-5 p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold text-muted">Datos extraídos por la IA</p>
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+              {ev.origen === "whatsapp" ? (
+                <>
+                  <ChatCircleText size={14} weight="bold" /> Llegó por WhatsApp (n8n WF2)
+                </>
+              ) : (
+                <>
+                  <UploadSimple size={14} weight="bold" /> Cargado a mano
+                </>
+              )}
+            </p>
             <h2 className="text-xl font-extrabold tracking-tight">
               {ev.id}
               {ev.orderId && <span className="font-semibold text-muted"> · {ev.orderId}</span>}
             </h2>
           </div>
-          {ev.status === "pago_aplicado" ? (
+          {ev.status === "aplicado" ? (
             <Chip tone="ok" icon={<CheckCircle size={14} weight="bold" />}>
               Aplicado
             </Chip>
@@ -373,10 +354,10 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
 
         {ev.status !== "descartado" && <Stepper status={ev.status} />}
 
-        {ev.status !== "pago_aplicado" && ev.status !== "descartado" && (
+        {ev.status !== "aplicado" && ev.status !== "descartado" && (
           <p className="flex items-start gap-2 rounded-xl bg-warn-tint px-3.5 py-2.5 text-[13px] font-semibold text-warn">
             <Info size={18} weight="bold" className="mt-px shrink-0" />
-            Comprobante recibido no es pago verificado: aún no reduce el saldo.
+            La IA propone, no confirma: este pago aún no reduce el saldo.
           </p>
         )}
 
@@ -384,19 +365,19 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
           <p className="flex items-start gap-2 rounded-xl bg-bad-tint px-3.5 py-2.5 text-[13px] font-medium text-bad">
             <CopySimple size={18} weight="bold" className="mt-px shrink-0" />
             <span>
-              Misma operación y canal que{" "}
+              Mismo código de operación, monto y fecha que{" "}
               <Link to={`/conciliacion/${d.duplicateOfId}`} className="font-bold underline">
                 {d.duplicateOfId}
               </Link>
-              . Se mantiene para revisión y no se aplica.
+              . Queda en revisión y no se aplica.
             </span>
           </p>
         )}
 
         <fieldset className="grid gap-3 sm:grid-cols-2" disabled={locked}>
-          <legend className="sr-only">Campos del comprobante</legend>
+          <legend className="sr-only">Datos leídos del comprobante</legend>
           {FIELDS.map((f) => (
-            <FieldInput key={`${ev.id}-${f.key}`} evId={ev.id} field={f} value={ev.fields[f.key]} by={by} />
+            <FieldInput key={`${ev.id}-${f.key}`} evId={ev.id} field={f} value={ev.fields[f.key]} by={me} />
           ))}
         </fieldset>
         {ev.corrections.length > 0 && (
@@ -406,23 +387,20 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
           </p>
         )}
 
-        {d.match === "monto_no_cuadra" && ev.status === "comprobante_pendiente" && (
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-warn-tint/70 p-3.5 text-[13px]">
+        {d.match === "no_cuadra" && ev.status === "recibido" && (
+          <label className="flex min-h-12 cursor-pointer items-start gap-3 rounded-xl bg-warn-tint/70 p-3.5 text-[13px] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-violet">
             <input type="checkbox" checked={acceptMismatch} onChange={(e) => setAcceptMismatch(e.target.checked)} className="mt-0.5 size-4 accent-[#7c5cdb]" />
             <span>
-              <span className="font-semibold">El chat anuncia {formatMoney(ev.declaredAmountCents ?? 0)} y el comprobante dice {amount}.</span> Confirmo que el monto
-              correcto es el del comprobante.
+              <span className="font-semibold">El chat anuncia {formatMoney(ev.declaredAmountCents ?? 0)} y el comprobante dice {amount}.</span> Confirmo que el monto correcto es el del comprobante.
             </span>
           </label>
         )}
 
-        <OrderBlock d={d} canEdit={canEdit} orderChoice={orderChoice} setOrderChoice={setOrderChoice} onAssign={() => run(() => actions.assignOrder(ev.id, orderChoice, by))} />
+        <OrderBlock d={d} canEdit={canEdit} orderChoice={orderChoice} setOrderChoice={setOrderChoice} onAssign={() => run(() => actions.assignOrder(ev.id, orderChoice, me))} />
 
         <div className="mt-auto flex flex-col gap-2 border-t border-line-soft pt-5">
           {primary}
-          {ev.status === "descartado" && (
-            <p className="text-center text-sm text-muted">Evidencia cerrada. Queda en el historial de auditoría.</p>
-          )}
+          {ev.status === "descartado" && <p className="text-center text-sm text-muted">Comprobante cerrado. Queda en el historial de auditoría.</p>}
           <Trace ev={ev} appliedBy={d.appliedBy} />
           {canDiscard && (
             <Button
@@ -433,14 +411,14 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
               onClick={() =>
                 setPending({
                   title: `Descartar ${ev.id}`,
-                  body: "La evidencia se cierra sin afectar saldos. Queda registrada en el historial.",
+                  body: "El comprobante se cierra sin afectar saldos. Queda registrado en el historial.",
                   label: "Descartar",
                   tone: "danger",
-                  run: () => actions.discard(ev.id, by, "No corresponde a un pago"),
+                  run: () => actions.discard(ev.id, me, "No corresponde a un pago"),
                 })
               }
             >
-              Descartar evidencia
+              Descartar comprobante
             </Button>
           )}
         </div>
@@ -463,18 +441,11 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
   );
 }
 
-const ROLES: Role[] = ["gerencia", "administracion", "registro", "vendedor"];
-function rolesWith(p: Permission) {
-  const names = ROLES.filter((r) => can(r, p)).map((r) => ROLE_LABEL[r]);
-  return names.length ? names.join(" o ") : "otra área";
-}
-
 function Trace({ ev, appliedBy }: { ev: EvidenceDetailDTO["evidence"]; appliedBy: string | null }) {
   const rows = [
-    { label: "Recibido", at: ev.receivedAt, by: null as string | null },
-    { label: "Validado", at: ev.validatedAt, by: ev.validatedBy },
-    { label: "Fondos verificados (simulado)", at: ev.verifiedAt, by: ev.verifiedBy },
-    { label: "Aplicado al pedido", at: ev.appliedAt, by: appliedBy },
+    { label: ev.origen === "whatsapp" ? "Recibido por WhatsApp" : "Cargado a mano", at: ev.receivedAt, by: null as string | null },
+    { label: "Verificado en banco", at: ev.verifiedAt, by: ev.verifiedBy },
+    { label: "Aplicado a la orden", at: ev.appliedAt, by: appliedBy },
   ];
   return (
     <ol className="mt-1 grid gap-1.5 rounded-xl bg-panel p-3 text-xs ring-1 ring-line/70" aria-label="Trazabilidad">
@@ -520,21 +491,21 @@ function FieldInput({ evId, field, value, by }: { evId: string; field: (typeof F
         {field.label}
       </label>
       <div className="relative">
-      <input
-        id={id}
-        value={draft}
-        inputMode={field.money ? "decimal" : undefined}
-        placeholder={field.placeholder}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-        aria-describedby={missing ? `${id}-pending` : undefined}
-        className={cx(
-          "h-11 w-full rounded-[var(--radius-block)] bg-panel px-3.5 text-sm font-semibold outline-none ring-1 transition-shadow placeholder:font-normal placeholder:text-faint focus:bg-card focus:ring-2 focus:ring-violet disabled:text-muted",
-          field.money && "tabular",
-          missing ? "pr-24 ring-[#ecd39c]" : "ring-line",
-        )}
-      />
+        <input
+          id={id}
+          value={draft}
+          inputMode={field.money ? "decimal" : undefined}
+          placeholder={field.placeholder}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+          aria-describedby={missing ? `${id}-pending` : undefined}
+          className={cx(
+            "h-11 w-full rounded-[var(--radius-block)] bg-panel px-3.5 text-sm font-semibold outline-none ring-1 transition-shadow placeholder:font-normal placeholder:text-faint focus:bg-card focus:ring-2 focus:ring-violet disabled:text-muted",
+            field.money && "tabular",
+            missing ? "pr-24 ring-[#ecd39c]" : "ring-line",
+          )}
+        />
         {missing && (
           <span id={`${id}-pending`} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2">
             <Chip tone="warn" className="px-2 py-0.5 text-[11px]">
@@ -567,15 +538,15 @@ function OrderBlock({
       <div className="rounded-[var(--radius-block)] bg-panel p-4 ring-1 ring-line">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-muted">Pedido vinculado</p>
-            <Link to={`/pedidos?pedido=${o.id}`} className="block truncate font-bold hover:underline">
+            <p className="text-xs font-semibold text-muted">Orden vinculada</p>
+            <Link to={`/pedidos/${o.id}`} className="block truncate font-bold hover:underline">
               {o.id} · {o.customer}
             </Link>
             <p className="text-[13px] text-muted">
               {o.line} · vendedor {o.seller}
             </p>
           </div>
-          {o.balanceCents > 0 ? <DueTag daysToDue={o.daysToDue} /> : <Chip tone="ok">Sin saldo</Chip>}
+          {o.balanceCents <= 0 ? <Chip tone="ok">Sin saldo</Chip> : o.daysToDue != null ? <DueTag daysToDue={o.daysToDue} /> : <Chip tone="neutral">Sin despacho</Chip>}
         </div>
         <dl className="tabular mt-3 grid grid-cols-3 gap-3 text-[13px]">
           <div>
@@ -588,7 +559,7 @@ function OrderBlock({
           </div>
           <div>
             <dt className="text-muted">Vence</dt>
-            <dd className="font-bold">{formatDate(o.dueDate)}</dd>
+            <dd className="font-bold">{o.dueDate ? formatDate(o.dueDate) : "Al despachar"}</dd>
           </div>
         </dl>
       </div>
@@ -598,25 +569,25 @@ function OrderBlock({
   return (
     <div className="rounded-[var(--radius-block)] bg-warn-tint/60 p-4 ring-1 ring-[#f0dfb5]">
       <p className="flex items-center gap-2 text-sm font-bold text-warn">
-        <WarningCircle size={18} weight="bold" /> Sin pedido vinculado
+        <WarningCircle size={18} weight="bold" /> Sin orden vinculada
       </p>
-      <p className="mt-1 text-[13px] text-ink-soft">Elige a qué pedido corresponde. Si no corresponde a ninguno, descártalo.</p>
+      <p className="mt-1 text-[13px] text-ink-soft">Elige a qué orden corresponde. Si no corresponde a ninguna, descártalo.</p>
       {!canEdit ? (
-        <p className="mt-3 text-[13px] text-muted">Registro de pagos o administración vinculan el pedido.</p>
+        <p className="mt-3 text-[13px] text-muted">Administración vincula la orden.</p>
       ) : d.openOrders.length === 0 ? (
-        <p className="mt-3 text-[13px] text-muted">No hay pedidos con saldo en esta marca.</p>
+        <p className="mt-3 text-[13px] text-muted">No hay órdenes con saldo en esta marca.</p>
       ) : (
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <label htmlFor="order-select" className="sr-only">
-            Pedido
+            Orden
           </label>
           <select
             id="order-select"
             value={orderChoice}
             onChange={(e) => setOrderChoice(e.target.value)}
-            className="h-11 min-w-0 flex-1 rounded-[var(--radius-block)] bg-card px-3 text-sm font-medium ring-1 ring-line outline-none focus:ring-2 focus:ring-violet"
+            className="h-11 min-w-0 flex-1 rounded-[var(--radius-block)] bg-card px-3 text-sm font-medium outline-none ring-1 ring-line focus:ring-2 focus:ring-violet"
           >
-            <option value="">Selecciona un pedido</option>
+            <option value="">Selecciona una orden</option>
             {d.openOrders.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.label}
@@ -631,4 +602,3 @@ function OrderBlock({
     </div>
   );
 }
-

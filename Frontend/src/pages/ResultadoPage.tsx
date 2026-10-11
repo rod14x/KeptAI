@@ -151,7 +151,7 @@ function OrdersTable({ rows }: { rows: ResultRow[] }) {
         </div>
       ) : (
         <div className="-mx-5 mt-4 overflow-x-auto px-5 sm:-mx-6 sm:px-6">
-          <table className="tabular w-full min-w-[760px] text-sm">
+          <table className="tabular w-full min-w-[860px] text-sm">
             <thead>
               <tr className="text-left text-[13px] text-muted">
                 <th className="pb-3 font-semibold">Pedido</th>
@@ -161,6 +161,11 @@ function OrdersTable({ rows }: { rows: ResultRow[] }) {
                 <th className="pb-3 text-right font-semibold">
                   <span className="inline-flex items-center gap-1" title="Resultado económico: venta menos costo. No es dinero cobrado.">
                     Margen <Info size={14} />
+                  </span>
+                </th>
+                <th className="pb-3 text-right font-semibold">
+                  <span className="inline-flex items-center gap-1" title="Margen real percibido: margen en proporción a lo efectivamente cobrado (rediseño 5.3).">
+                    Percibido <Info size={14} />
                   </span>
                 </th>
                 <th className="pb-3 text-right font-semibold">
@@ -193,7 +198,11 @@ function OrdersTable({ rows }: { rows: ResultRow[] }) {
                       </td>
                       <td className="py-3.5 text-right">{formatMoney(r.saleCents)}</td>
                       <td className="py-3.5 text-right">{formatMoney(r.costCents)}</td>
-                      <td className={cx("py-3.5 text-right font-extrabold", r.marginCents < 0 ? "text-bad" : "text-ok")}>{formatMoney(r.marginCents)}</td>
+                      <td className={cx("py-3.5 text-right font-extrabold", !r.hasCost ? "text-faint" : r.marginCents < 0 ? "text-bad" : "text-ok")}>
+                        {r.hasCost ? formatMoney(r.marginCents) : "Costo pendiente"}
+                        <span className="block text-[11px] font-semibold text-faint">{r.costOrigin === "real" ? "costo real" : "costo teórico"}</span>
+                      </td>
+                      <td className={cx("py-3.5 text-right font-semibold", r.perceivedCents < 0 && "text-bad")}>{r.hasCost ? formatMoney(r.perceivedCents) : "Sin dato"}</td>
                       <td className="py-3.5 text-right">{formatMoney(r.collectedCents)}</td>
                       <td className="py-3.5 text-right font-semibold">{formatMoney(r.balanceCents)}</td>
                       <td className="py-3.5 text-right">
@@ -209,7 +218,7 @@ function OrdersTable({ rows }: { rows: ResultRow[] }) {
                     </tr>
                     {expanded && (
                       <tr>
-                        <td colSpan={8} className="pb-4">
+                        <td colSpan={9} className="pb-4">
                           <CostBreakdown r={r} />
                         </td>
                       </tr>

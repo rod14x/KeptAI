@@ -32,7 +32,7 @@ export function PerfilPage() {
   const me = useMe();
   const [params, setParams] = useSearchParams();
   const tab = (TABS.find((t) => t.id === params.get("tab"))?.id ?? "datos") as TabId;
-  const { data, loading, error, reload } = useApi(() => getProfile(me.name), [me.name]);
+  const { data, loading, error, reload } = useApi(() => getProfile(me.name, me.role), [me.name, me.role]);
 
   return (
     <Stagger className="mx-auto flex max-w-[1100px] flex-col gap-6">
@@ -78,13 +78,7 @@ export function PerfilPage() {
 
 function RoleTab({ d }: { d: ProfileDTO }) {
   const me = useMe();
-  const stats = [
-    { label: "Evidencias validadas", v: d.counts.validados },
-    { label: "Pagos aplicados", v: d.counts.aplicados },
-    { label: "Correcciones", v: d.counts.corregidos },
-    { label: "Solicitudes de crédito", v: d.counts.solicitudes },
-    { label: "Decisiones de crédito", v: d.counts.decisiones },
-  ];
+  const stats = d.counts.map((c) => ({ label: c.label, v: c.value }));
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
       <Card className="p-5 sm:p-6">
@@ -172,8 +166,8 @@ function ActivityTab({ d }: { d: ProfileDTO }) {
 const NOTIFY_LABEL: Record<keyof Preferences["notify"], string> = {
   vencimientos: "Vencimientos y mora de mis clientes",
   duplicados: "Comprobantes duplicados",
-  credito: "Solicitudes de crédito",
-  sinPedido: "Pagos sin pedido, montos que no cuadran y borradores",
+  credito: "Órdenes por confirmar y retenidas",
+  sinPedido: "Pagos en revisión y mensajes con error",
 };
 
 function PreferencesTab() {
@@ -213,7 +207,7 @@ function PreferencesTab() {
 
       <fieldset className="mt-6">
         <legend className="text-sm font-bold">Alertas del asistente</legend>
-        <p className="mt-1 text-[13px] text-muted">Las alertas son internas: no se envían mensajes reales a clientes.</p>
+        <p className="mt-1 text-[13px] text-muted">Esto solo filtra el asistente. Los mensajes al cliente salen por WhatsApp (contacto de prueba) según la cobranza programada.</p>
         <div className="mt-3 flex flex-col gap-2">
           {(Object.keys(NOTIFY_LABEL) as Array<keyof Preferences["notify"]>).map((k) => (
             <label key={k} className="flex min-h-14 cursor-pointer items-center justify-between gap-4 rounded-xl bg-panel px-4 py-3 ring-1 ring-line/70 transition-colors hover:bg-line-soft/60 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-violet">
@@ -252,23 +246,21 @@ function SettingsTab({ d }: { d: ProfileDTO }) {
   const toast = useToast();
   const editable = can(me.role, "configurar");
   const s = d.settings;
-  const [mora, setMora] = useState(String(Math.round(s.factorMora * 100)));
-  const [terms, setTerms] = useState<number[]>(s.termOptions);
-  const [start, setStart] = useState(s.termStartEvent);
+  const [cobro, setCobro] = useState(String(Math.round(s.factorCobro * 100)));
+  const [plazo, setPlazo] = useState(String(s.plazoDefecto));
 
   useEffect(() => {
-    setMora(String(Math.round(s.factorMora * 100)));
-    setTerms(s.termOptions);
-    setStart(s.termStartEvent);
-  }, [s.factorMora, s.termOptions, s.termStartEvent]);
+    setCobro(String(Math.round(s.factorCobro * 100)));
+    setPlazo(String(s.plazoDefecto));
+  }, [s.factorCobro, s.plazoDefecto]);
 
   const save = () => {
-    const n = Number(mora);
+    const n = Number(cobro);
     if (!Number.isFinite(n)) {
-      toast(false, "El factor de mora debe ser un número.");
+      toast(false, "El factor de cobro debe ser un número.");
       return;
     }
-    const r = actions.updateSettings({ factorMora: n / 100, termOptions: [...terms].sort((a, b) => a - b), termStartEvent: start }, me);
+    const r = actions.updateSettings({ factorCobro: n / 100, plazoDefecto: Number(plazo) }, me);
     toast(r.ok, r.message);
   };
 
@@ -283,7 +275,7 @@ function SettingsTab({ d }: { d: ProfileDTO }) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-section font-bold">Supuestos de caja y crédito</h2>
-            <p className="mt-1 text-sm text-muted">Valores de demostración. Ninguno es política aprobada por la empresa.</p>
+            <p className="mt-1 text-sm text-muted">CONFIG_ESCENARIO del modelo. Valores de demostración, no política aprobada por la empresa.</p>
           </div>
           {s.updatedAt && (
             <p className="tabular text-xs text-muted">
@@ -293,56 +285,40 @@ function SettingsTab({ d }: { d: ProfileDTO }) {
         </div>
         <fieldset disabled={!editable} className="mt-5 grid gap-6 md:grid-cols-2">
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="mora" className="text-sm font-bold">
-              Factor de mora (supuesto de escenario)
+            <label htmlFor="cobro" className="text-sm font-bold">
+              Factor de cobro (escenario)
             </label>
             <div className="relative">
-              <input id="mora" inputMode="numeric" value={mora} onChange={(e) => setMora(e.target.value)} className={cx(inputClass, "tabular pr-10 disabled:text-muted")} />
+              <input id="cobro" inputMode="numeric" value={cobro} onChange={(e) => setCobro(e.target.value)} className={cx(inputClass, "tabular pr-10 disabled:text-muted")} />
               <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-sm text-muted">%</span>
             </div>
-            <p className="text-xs text-muted">Reduce los cobros esperados en la proyección de caja. Inicia en 0%; no se precarga ningún dato de la empresa.</p>
+            <p className="text-xs text-muted">Parte de los cobros esperados que entra a la proyección de caja. 100% = sin castigo; no se precarga ningún dato de mora de la empresa.</p>
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-bold">Evento que inicia el plazo</span>
-            <div className="flex flex-wrap gap-2">
-              {(["entrega", "confirmacion"] as const).map((e) => (
-                <label key={e} className={cx("flex h-11 cursor-pointer items-center rounded-full px-4 text-sm font-semibold ring-1 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-violet", start === e ? "bg-ink text-white ring-ink" : "bg-card ring-line")}>
-                  <input type="radio" name="start" className="sr-only" checked={start === e} onChange={() => setStart(e)} />
-                  {e === "entrega" ? "Entrega del pedido" : "Confirmación del pedido"}
-                </label>
+            <label htmlFor="plazo-def" className="text-sm font-bold">
+              Plazo por defecto
+            </label>
+            <select id="plazo-def" value={plazo} onChange={(e) => setPlazo(e.target.value)} className={inputClass}>
+              {[15, 20, 25, 30].map((t) => (
+                <option key={t} value={t}>
+                  {t} días
+                </option>
               ))}
-            </div>
-            <p className="text-xs text-muted">Aplica a pedidos nuevos; los ya entregados conservan su vencimiento.</p>
+            </select>
+            <p className="text-xs text-muted">D-005: de 15 a 30 días por orden, contados desde el despacho. El vendedor lo ajusta en cada orden.</p>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-bold">Plazos permitidos</span>
-            <div className="flex flex-wrap gap-2">
-              {[15, 30, 45, 60].map((t) => {
-                const on = terms.includes(t);
-                return (
-                  <label key={t} className={cx("flex h-11 cursor-pointer items-center gap-1.5 rounded-full px-4 text-sm font-semibold ring-1 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-violet", on ? "bg-violet-tint text-violet-ink ring-violet-tint" : "bg-card text-muted ring-line")}>
-                    <input type="checkbox" className="sr-only" checked={on} onChange={() => setTerms(on ? terms.filter((x) => x !== t) : [...terms, t])} />
-                    {on && <Check size={14} weight="bold" />}
-                    {t} días
-                  </label>
-                );
-              })}
-            </div>
-            <p className="text-xs text-muted">La entrevista menciona 30 y 45 días; la demo usa 15 y 30.</p>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-bold">Alertas de cobranza (propuesta)</span>
+          <div className="flex flex-col gap-1.5 md:col-span-2">
+            <span className="text-sm font-bold">Cobranza automática</span>
             <div className="flex flex-wrap gap-2">
               {s.alertOffsets.map((o) => (
                 <Chip key={o} tone="neutral">
-                  {o < 0 ? `${-o} días antes` : o === 0 ? "El día" : `${o} días después`}
+                  {o < 0 ? `${-o} días antes` : o === 0 ? "El día" : `${o} días después (escala a administración)`}
                 </Chip>
               ))}
             </div>
-            <p className="text-xs text-muted">Alertas internas. Se cancelan solas cuando el pago queda aplicado.</p>
+            <p className="text-xs text-muted">Los mensajes salen por WhatsApp (n8n WF3) solo al contacto de prueba y se cancelan al aplicar el pago completo.</p>
           </div>
         </fieldset>
         {editable && (

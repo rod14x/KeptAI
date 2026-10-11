@@ -1,167 +1,100 @@
 import { motion } from "motion/react";
-import { MotionLink, Stagger, itemVariants, lift, listVariants } from "../components/motion/primitives";
-import { PageHeader } from "../components/ui/PageHeader";
-import { Segmented } from "../components/ui/Segmented";
 import { Link, useSearchParams } from "react-router";
-import { CalendarBlank, ChatCircleText, CheckCircle, Image, Microphone, NotePencil, SealCheck, Hourglass, X } from "@phosphor-icons/react";
-import { getBoard, getOrders, type BoardCard, type BoardColumnId, type BoardDTO, type OrderRow } from "../api/client";
-import { getState } from "../api/store";
-import { daysToDue, orderBalance } from "../api/domain";
+import { CalendarBlank, ChatCircleText, CheckCircle, Factory, Hourglass, NotePencil, Truck, UploadSimple, WarningCircle } from "@phosphor-icons/react";
+import { getOrderBoard, getOrders, type OrderBoardDTO, type OrderCard, type OrderColumnId, type OrderRow } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { SCOPE_LABEL, useScope } from "../context/ScopeContext";
+import { useMe } from "../context/AuthContext";
+import { can } from "../lib/permissions";
+import { MotionLink, Stagger, itemVariants, lift, listVariants, press } from "../components/motion/primitives";
+import { PageHeader } from "../components/ui/PageHeader";
+import { Segmented } from "../components/ui/Segmented";
 import { Card, DemoBadge, EmptyState, ErrorState, Money, Skeleton } from "../components/ui/States";
-import { DueTag, FinanceChip, MatchChip, PriorityTag } from "../components/ui/Chip";
+import { Chip, FinanceChip, OrderStateChip } from "../components/ui/Chip";
 import { Avatar } from "../components/ui/Avatar";
 import { cx, formatDate, formatDateTime, formatMoney } from "../lib/format";
 
-const COLUMN_STYLE: Record<BoardColumnId, { pill: string; icon: React.ReactNode; empty: string }> = {
-  borrador: {
-    pill: "bg-violet-tint text-violet-ink",
-    icon: <NotePencil size={16} weight="bold" />,
-    empty: "Los chats, audios e imágenes leídos por la IA aparecen aquí para revisión humana.",
-  },
-  comprobante_pendiente: {
-    pill: "bg-warn-tint text-warn",
-    icon: <Hourglass size={16} weight="bold" />,
-    empty: "Sin comprobantes por validar.",
-  },
-  pago_verificado: {
-    pill: "bg-info-tint text-info",
-    icon: <SealCheck size={16} weight="bold" />,
-    empty: "Valida una evidencia y registra la verificación de fondos para que pase aquí.",
-  },
-  pago_aplicado: {
-    pill: "bg-ok-tint text-ok",
-    icon: <CheckCircle size={16} weight="bold" />,
-    empty: "Todavía no hay pagos aplicados en esta vista.",
-  },
-};
-
-const KIND_ICON = {
-  voucher: <Image size={14} weight="bold" />,
-  chat: <ChatCircleText size={14} weight="bold" />,
-  audio: <Microphone size={14} weight="bold" />,
+const COLUMN_STYLE: Record<OrderColumnId, { pill: string; icon: React.ReactNode; empty: string }> = {
+  por_confirmar: { pill: "bg-violet-tint text-violet-ink", icon: <NotePencil size={16} weight="bold" />, empty: "Las hojas de resumen que arma n8n al escribir /cerrar aparecen aquí." },
+  retenida: { pill: "bg-warn-tint text-warn", icon: <Hourglass size={16} weight="bold" />, empty: "Ninguna orden espera anticipo." },
+  en_produccion: { pill: "bg-info-tint text-info", icon: <Factory size={16} weight="bold" />, empty: "Nada en producción ahora." },
+  por_cobrar: { pill: "bg-[#fdeee0] text-[#8a4b12]", icon: <Truck size={16} weight="bold" />, empty: "No hay saldos por cobrar." },
+  cobrada: { pill: "bg-ok-tint text-ok", icon: <CheckCircle size={16} weight="bold" />, empty: "Todavía no hay órdenes cobradas." },
 };
 
 export function PedidosPage() {
   const { scope } = useScope();
+  const me = useMe();
   const [params, setParams] = useSearchParams();
-  const focus = params.get("pedido");
   const view = params.get("vista") === "lista" ? "lista" : "tablero";
-  const { data, loading, error, reload } = useApi(() => getBoard(scope), [scope]);
-  const setView = (v: "tablero" | "lista") => {
-    const next = new URLSearchParams(params);
-    if (v === "lista") next.set("vista", "lista");
-    else next.delete("vista");
-    setParams(next);
-  };
+  const { data, loading, error, reload } = useApi(() => getOrderBoard(scope), [scope]);
 
   return (
-    <Stagger className="mx-auto flex max-w-[1400px] flex-col gap-6">
-      <PageHeader title="Pedidos y cobro" subtitle={<>Cada comprobante avanza de borrador a pago aplicado. Vista {SCOPE_LABEL[scope]}.</>} actions={<DemoBadge />} />
+    <Stagger className="mx-auto flex max-w-[1500px] flex-col gap-6">
+      <PageHeader
+        title="Pedidos"
+        subtitle={<>Del chat a la cobranza: ninguna orden entra a producción sin crédito aprobado o anticipo verificado. Vista {SCOPE_LABEL[scope]}.</>}
+        actions={
+          <>
+            <DemoBadge />
+            {can(me.role, "captura") && (
+              <MotionLink to="/captura?tipo=orden" {...press} className="inline-flex h-10 items-center gap-2 rounded-full bg-card px-4 text-[13px] font-semibold ring-1 ring-line transition-colors hover:bg-panel">
+                <UploadSimple size={16} weight="bold" /> Cargar pedido a mano
+              </MotionLink>
+            )}
+          </>
+        }
+      />
 
       <motion.div variants={itemVariants}>
         <Segmented
           kind="tab"
           label="Vista de pedidos"
           value={view}
-          onChange={setView}
+          onChange={(v) => setParams(v === "lista" ? { vista: "lista" } : {})}
           options={[
-            { value: "tablero", label: "Tablero de cobro" },
-            { value: "lista", label: "Lista de pedidos" },
+            { value: "tablero", label: "Tablero" },
+            { value: "lista", label: "Lista con fechas" },
           ]}
         />
       </motion.div>
 
-      {focus && <OrderFocus id={focus} onClose={() => setParams(view === "lista" ? { vista: "lista" } : {})} />}
-
       {view === "lista" ? (
-        <OrdersList focus={focus} />
+        <OrdersList />
       ) : error ? (
         <ErrorState error={error} onRetry={reload} />
       ) : loading || !data ? (
-        <div className="grid gap-4 xl:grid-cols-4" aria-busy="true" aria-label="Cargando">
-          {[0, 1, 2, 3].map((i) => (
+        <div className="grid gap-4 xl:grid-cols-5" aria-busy="true" aria-label="Cargando">
+          {[0, 1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-[420px] rounded-[var(--radius-card)]" />
           ))}
         </div>
       ) : (
-        <Board data={data} focus={focus} />
+        <Board data={data} />
       )}
     </Stagger>
   );
 }
 
-function OrderFocus({ id, onClose }: { id: string; onClose: () => void }) {
-  const s = getState();
-  const order = s.orders.find((o) => o.id === id);
-  if (!order) return null;
-  const customer = s.customers.find((c) => c.id === order.customerId)?.name ?? "";
-  const balance = orderBalance(s, order);
-  const d = daysToDue(s, order);
+function Board({ data }: { data: OrderBoardDTO }) {
   return (
-    <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-      <div className="flex min-w-0 flex-1 items-center gap-3">
-        <Avatar name={customer} size="lg" />
-        <div className="min-w-0">
-          <p className="text-sm text-muted">
-            {order.id} · {order.line} · producción {order.modality}
-          </p>
-          <p className="truncate text-lg font-bold">{customer}</p>
-        </div>
-      </div>
-      <dl className="tabular grid grid-cols-3 gap-4 text-sm sm:flex sm:gap-8">
-        <div>
-          <dt className="text-muted">Venta</dt>
-          <dd className="font-bold">
-            <Money cents={order.saleCents} />
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted">Saldo</dt>
-          <dd className={cx("font-bold", balance > 0 && d < 0 && "text-bad")}>
-            <Money cents={balance} />
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted">Vence</dt>
-          <dd className="font-bold">{formatDate(order.dueDate)}</dd>
-        </div>
-      </dl>
-      <div className="flex items-center gap-2">
-        {balance > 0 ? <DueTag daysToDue={d} /> : <span className="text-sm font-semibold text-ok">Cobrado</span>}
-        <button onClick={onClose} aria-label="Quitar filtro de pedido" className="flex size-11 items-center justify-center rounded-full text-muted hover:bg-line-soft">
-          <X size={16} weight="bold" />
-        </button>
-      </div>
-    </Card>
-  );
-}
-
-function Board({ data, focus }: { data: BoardDTO; focus: string | null }) {
-  return (
-    <Stagger className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 xl:mx-0 xl:grid xl:grid-cols-4 xl:overflow-visible xl:px-0">
+    <Stagger className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 2xl:mx-0 2xl:grid 2xl:grid-cols-5 2xl:overflow-visible 2xl:px-0">
       {data.columns.map((col) => {
         const style = COLUMN_STYLE[col.id];
         return (
-          <motion.section variants={itemVariants}
+          <motion.section
+            variants={itemVariants}
             key={col.id}
-            aria-label={`${col.title}, ${col.cards.length} elementos`}
-            className="flex w-[84vw] max-w-[340px] shrink-0 snap-start flex-col gap-3 sm:w-[320px] xl:w-auto xl:max-w-none"
+            aria-label={`${col.title}, ${col.cards.length} órdenes`}
+            className="flex w-[84vw] max-w-[320px] shrink-0 snap-start flex-col gap-3 sm:w-[300px] 2xl:w-auto 2xl:max-w-none"
           >
-            <div className="flex items-center justify-between px-1">
-              <span className={cx("inline-flex h-9 items-center gap-2 rounded-full pl-3 pr-1.5 text-[13px] font-bold", style.pill)}>
-                {style.icon}
-                {col.title}
-                <span className="tabular flex h-6 min-w-6 items-center justify-center rounded-full bg-card px-1.5 text-xs text-ink">{col.cards.length}</span>
-              </span>
-            </div>
+            <span className={cx("inline-flex h-9 w-fit items-center gap-2 rounded-full pl-3 pr-1.5 text-[13px] font-bold", style.pill)}>
+              {style.icon}
+              {col.title}
+              <span className="tabular flex h-6 min-w-6 items-center justify-center rounded-full bg-card px-1.5 text-xs text-ink">{col.cards.length}</span>
+            </span>
             <motion.div variants={listVariants} className="flex min-h-[200px] flex-col gap-3 rounded-[22px] bg-line-soft/60 p-2">
-              {col.cards.length === 0 ? (
-                <EmptyState title="Sin elementos">{style.empty}</EmptyState>
-              ) : (
-                col.cards.map((c) => <BoardCardView key={c.id} card={c} dim={focus != null && c.orderId !== focus} />)
-              )}
+              {col.cards.length === 0 ? <EmptyState title="Sin órdenes">{style.empty}</EmptyState> : col.cards.map((c) => <OrderCardView key={c.id} card={c} />)}
             </motion.div>
           </motion.section>
         );
@@ -170,50 +103,43 @@ function Board({ data, focus }: { data: BoardDTO; focus: string | null }) {
   );
 }
 
-function BoardCardView({ card, dim }: { card: BoardCard; dim: boolean }) {
+function OrderCardView({ card }: { card: OrderCard }) {
   return (
     <MotionLink
-      to={`/conciliacion/${card.id}`}
+      to={`/pedidos/${card.id}`}
       variants={itemVariants}
       {...lift}
-      className={cx(
-        "group relative block rounded-[18px] bg-card p-4 shadow-[var(--shadow-card)] ring-1 ring-line/70 transition-opacity duration-200",
-        dim && "opacity-40",
-      )}
+      className="group relative block rounded-[18px] bg-card p-4 shadow-[var(--shadow-card)] ring-1 ring-line/70"
     >
-      {/* Sombra elevada en una capa propia: al hover solo cambia su opacidad (GPU), no el box-shadow. */}
+      {/* Sombra elevada en capa propia: al hover solo cambia su opacidad (GPU). */}
       <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-[18px] opacity-0 shadow-[var(--shadow-lift)] transition-opacity duration-200 group-hover:opacity-100" />
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
-          {KIND_ICON[card.kind]}
+          {card.origen === "whatsapp" ? <ChatCircleText size={14} weight="bold" /> : card.origen === "manual" ? <UploadSimple size={14} weight="bold" /> : null}
           {card.id}
-          {card.orderId && <span className="text-faint">· {card.orderId}</span>}
         </span>
-        <PriorityTag priority={card.priority} />
+        {card.estado === "pendiente_aprobacion" && card.clienteEnMora && (
+          <Chip tone="bad" icon={<WarningCircle size={12} weight="bold" />} className="rounded-md px-1.5 py-0.5">
+            Cliente en mora
+          </Chip>
+        )}
       </div>
-      <p className="mt-2.5 truncate text-[15px] font-bold leading-snug">{card.customer}</p>
-      <p className="tabular mt-0.5 text-[13px] text-muted">
-        {card.channel ?? "Canal por confirmar"} · recibido {formatDateTime(card.receivedAt)}
-      </p>
+      <p className="mt-2 truncate text-[15px] font-bold leading-snug">{card.customer}</p>
+      <p className="mt-0.5 line-clamp-2 text-[13px] text-muted">{card.description}</p>
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         {card.dueDate ? (
-          <span className="inline-flex items-center gap-1 rounded-md bg-panel px-1.5 py-1 text-xs font-medium text-muted ring-1 ring-line-soft">
-            <CalendarBlank size={13} weight="bold" />
-            Vence: <span className="tabular text-ink">{formatDate(card.dueDate)}</span>
+          <span className="tabular inline-flex items-center gap-1 rounded-md bg-panel px-1.5 py-1 text-xs font-medium text-muted ring-1 ring-line-soft">
+            <CalendarBlank size={13} weight="bold" /> Vence: <span className="text-ink">{formatDate(card.dueDate)}</span>
           </span>
-        ) : (
-          <span className="inline-flex items-center gap-1 rounded-md bg-panel px-1.5 py-1 text-xs font-medium text-muted ring-1 ring-line-soft">
-            <CalendarBlank size={13} weight="bold" />
-            Sin pedido vinculado
+        ) : card.entregaSolicitada ? (
+          <span className="tabular inline-flex items-center gap-1 rounded-md bg-panel px-1.5 py-1 text-xs font-medium text-muted ring-1 ring-line-soft">
+            <CalendarBlank size={13} weight="bold" /> Entrega: <span className="text-ink">{formatDate(card.entregaSolicitada)}</span>
           </span>
-        )}
-        {card.status !== "pago_aplicado" && <MatchChip match={card.match} />}
-        {card.validated && card.status !== "pago_aplicado" && (
-          <span className="inline-flex items-center gap-1 rounded-md bg-ok-tint px-1.5 py-1 text-xs font-semibold text-ok">
-            <CheckCircle size={13} weight="bold" /> Validado
-          </span>
-        )}
+        ) : null}
+        {card.estado === "despachada" && card.balanceCents > 0 && <FinanceChip finance={card.finance} daysToDue={card.daysToDue ?? undefined} />}
+        {card.faltantes > 0 && <Chip tone="warn">Faltan {card.faltantes} datos</Chip>}
+        {card.anticipoPendienteCents > 0 && card.estado === "retenida" && <Chip tone="warn">Anticipo {formatMoney(card.anticipoPendienteCents, { short: true })}</Chip>}
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-2 border-t border-line-soft pt-3">
@@ -225,15 +151,18 @@ function BoardCardView({ card, dim }: { card: BoardCard; dim: boolean }) {
             </>
           )}
         </span>
-        <span className="shrink-0 text-base font-extrabold">
-          {card.amountCents != null ? <Money cents={card.amountCents} /> : <span className="text-sm font-semibold text-warn">Monto pendiente</span>}
+        <span className="shrink-0 text-right">
+          <span className="block text-base font-extrabold">
+            <Money cents={card.estado === "despachada" ? card.balanceCents : card.saleCents} />
+          </span>
+          {card.estado === "despachada" && card.balanceCents > 0 && <span className="tabular block text-[11px] text-faint">de {formatMoney(card.saleCents)}</span>}
         </span>
       </div>
     </MotionLink>
   );
 }
 
-function OrdersList({ focus }: { focus: string | null }) {
+function OrdersList() {
   const { scope } = useScope();
   const { data, loading, error, reload } = useApi(() => getOrders(scope), [scope]);
   if (error) return <ErrorState error={error} onRetry={reload} />;
@@ -242,12 +171,13 @@ function OrdersList({ focus }: { focus: string | null }) {
   return (
     <Card className="overflow-hidden p-0">
       <div className="overflow-x-auto">
-        <table className="tabular w-full min-w-[980px] text-sm">
+        <table className="tabular w-full min-w-[1080px] text-sm">
           <thead className="bg-panel text-left text-xs text-muted">
             <tr>
-              <th className="px-5 py-3 font-semibold">Pedido</th>
-              <th className="px-3 py-3 font-semibold">Fecha pedido</th>
-              <th className="px-3 py-3 font-semibold">Entrega</th>
+              <th className="px-5 py-3 font-semibold">Orden</th>
+              <th className="px-3 py-3 font-semibold">Pedido</th>
+              <th className="px-3 py-3 font-semibold">Entrega pedida</th>
+              <th className="px-3 py-3 font-semibold">Despacho</th>
               <th className="px-3 py-3 font-semibold">Vencimiento</th>
               <th className="px-3 py-3 font-semibold">Último pago</th>
               <th className="px-3 py-3 text-right font-semibold">Venta</th>
@@ -255,18 +185,19 @@ function OrdersList({ focus }: { focus: string | null }) {
               <th className="px-5 py-3 font-semibold">Estado</th>
             </tr>
           </thead>
-          <tbody>
+          <motion.tbody variants={listVariants} initial="hidden" animate="show">
             {data.map((o: OrderRow) => (
-              <tr key={o.id} className={cx("border-t border-line-soft", focus === o.id && "bg-violet-wash")}>
+              <motion.tr variants={itemVariants} key={o.id} className="border-t border-line-soft">
                 <td className="px-5 py-3.5">
-                  <Link to={`/clientes/${o.customerId}`} className="group block">
+                  <Link to={`/pedidos/${o.id}`} className="group block">
                     <span className="block font-bold group-hover:underline">{o.id}</span>
-                    <span className="block max-w-[240px] truncate text-[13px] text-muted">{o.customer}</span>
+                    <span className="block max-w-[220px] truncate text-[13px] text-muted">{o.customer}</span>
                   </Link>
                 </td>
                 <td className="px-3 py-3.5">{formatDate(o.issuedOn)}</td>
-                <td className="px-3 py-3.5">{formatDate(o.deliveredOn)}</td>
-                <td className={cx("px-3 py-3.5", o.balanceCents > 0 && "font-bold")}>{formatDate(o.dueDate)}</td>
+                <td className="px-3 py-3.5 text-muted">{o.entregaSolicitada ? formatDate(o.entregaSolicitada) : "Sin fecha"}</td>
+                <td className="px-3 py-3.5">{o.despachoOn ? formatDate(o.despachoOn) : <span className="text-muted">Pendiente</span>}</td>
+                <td className={cx("px-3 py-3.5", o.balanceCents > 0 && o.dueDate && "font-bold")}>{o.dueDate ? formatDate(o.dueDate) : <span className="font-normal text-muted">Al despachar</span>}</td>
                 <td className="px-3 py-3.5 text-muted">
                   {o.lastPaymentAt ? formatDateTime(o.lastPaymentAt) : "Sin pagos"}
                   {o.daysLate !== null && o.daysLate > 0 && <span className="block text-xs text-bad">{o.daysLate} d tarde</span>}
@@ -274,11 +205,14 @@ function OrdersList({ focus }: { focus: string | null }) {
                 <td className="px-3 py-3.5 text-right">{formatMoney(o.saleCents)}</td>
                 <td className="px-3 py-3.5 text-right font-bold">{formatMoney(o.balanceCents)}</td>
                 <td className="px-5 py-3.5">
-                  <FinanceChip finance={o.finance} daysToDue={o.daysToDue} />
+                  <span className="flex flex-col items-start gap-1">
+                    <OrderStateChip estado={o.estado} />
+                    {o.estado === "despachada" && <FinanceChip finance={o.finance} daysToDue={o.daysToDue ?? undefined} />}
+                  </span>
                 </td>
-              </tr>
+              </motion.tr>
             ))}
-          </tbody>
+          </motion.tbody>
         </table>
       </div>
     </Card>

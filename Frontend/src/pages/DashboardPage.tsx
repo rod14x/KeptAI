@@ -101,7 +101,7 @@ function Kpis({ d, canResult }: { d: DashboardDTO; canResult: boolean }) {
         )}
         <span>
           {d.openOrders} {d.openOrders === 1 ? "pedido con saldo" : "pedidos con saldo"}
-          {d.disputedCents > 0 && <>, {formatMoney(d.disputedCents)} en disputa fuera de la proyección</>}
+          {d.pipelineCount > 0 && <>, {formatMoney(d.pipelineCents)} en {d.pipelineCount} órdenes aún sin despacho</>}
         </span>
       </Kpi>
       <Kpi icon={<Wallet size={20} weight="bold" />} label="Caja / Saldo total" value={d.cashCents} href="/conciliacion">
@@ -132,7 +132,7 @@ function CashCard({ d }: { d: DashboardDTO }) {
           <p className="mt-0.5 text-[13px] text-muted">Cobros por vencimiento menos obligaciones fijas (planillas, terceros, alquiler).</p>
         </div>
         <Chip tone="neutral" icon={<Info size={14} weight="bold" />}>
-          Mora supuesta {Math.round(d.factorMora * 100)}%
+          Factor de cobro {Math.round(d.factorCobro * 100)}%
         </Chip>
       </div>
       {negative && (

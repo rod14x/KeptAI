@@ -21,7 +21,7 @@ const PREVIEW_WEEKS = buildWeeks(createSeed(), "consolidado");
 const DEMO_ACCOUNTS = [
   { label: "Gerencia", email: "patricia.zapata@keptai.pe" },
   { label: "Administración", email: "carmen.ramos@keptai.pe" },
-  { label: "Registro de pagos", email: "jorge.ipanaque@keptai.pe" },
+  { label: "Jefe de taller", email: "jorge.ipanaque@keptai.pe" },
   { label: "Vendedora Corpotex", email: "rosa.chunga@keptai.pe" },
   { label: "Vendedor Unicrack", email: "luis.yarleque@keptai.pe" },
 ];

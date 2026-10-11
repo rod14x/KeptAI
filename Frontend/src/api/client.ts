@@ -1,14 +1,18 @@
 import { getState, nowIso } from "./store";
-import type { Application, AuditEvent, Brand, CreditRequest, Customer, DemoState, Evidence, EvidenceStatus, Order, Role, Scope, Settings } from "./schemas";
+import type { AuditEvent, Brand, CollectionAlert, Customer, DemoState, Evidence, EvidenceStatus, Order, OrderState, OutgoingMessage, Role, Scope, Settings } from "./schemas";
 import {
-  alertSchedule,
+  anticipoRequired,
+  appliedCents,
   cashNow,
   creditSnapshot,
   customerOrders,
   daysLate,
   daysToDue,
+  dueDateOf,
   duplicateOf,
+  gatekeeperPasses,
   inScope,
+  isConfirmed,
   lastPayment,
   matchFor,
   missingFields,
@@ -16,8 +20,10 @@ import {
   orderCost,
   orderFinance,
   orderMargin,
+  perceivedMargin,
   toIsoDate,
   weekWindows,
+  IN_REVIEW,
   type CreditStatus,
   type MatchKind,
   type OrderFinance,
@@ -28,7 +34,7 @@ import type { Preferences } from "../lib/preferences";
 // Cliente de datos. Hoy lee el store de demostración con una latencia simulada;
 // al integrar Spring, cada función pasa a ser un fetch a VITE_API_BASE_URL con el mismo DTO.
 
-const LATENCY_MS = 260;
+const LATENCY_MS = 240;
 
 function respond<T>(build: (s: DemoState) => T): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -51,6 +57,8 @@ const customerOf = (s: DemoState, order: Order | undefined) => s.customers.find(
 const customerName = (s: DemoState, order: Order | undefined) => customerOf(s, order)?.name ?? "Sin cliente";
 const personName = (s: DemoState, id: string | undefined) => s.people.find((p) => p.id === id)?.name ?? null;
 const orderOf = (s: DemoState, ev: Evidence) => s.orders.find((o) => o.id === ev.orderId);
+/** Órdenes sin costo registrado no entran a los totales de margen (no se inventa un costo). */
+export const hasCost = (o: Order) => orderCost(o) > 0;
 
 /* ---------- Dashboard ---------- */
 
@@ -70,16 +78,18 @@ export type WeekPoint = { label: string; range: string; inCents: number; outCent
 
 export type DashboardDTO = {
   cutDate: string;
-  factorMora: number;
+  factorCobro: number;
   expectedCents: number;
   openOrders: number;
   overdueCents: number;
-  disputedCents: number;
+  pipelineCents: number;
+  pipelineCount: number;
   cashCents: number;
   openingCents: number;
   collectedCents: number;
   openingSource: string;
   marginCents: number;
+  perceivedCents: number;
   orderCount: number;
   weeks: WeekPoint[];
   assistant: AssistantNote[];
@@ -88,15 +98,17 @@ export type DashboardDTO = {
 
 export function buildWeeks(s: DemoState, scope: Scope): WeekPoint[] {
   const windows = weekWindows(s.cutDate);
-  // Pedidos en disputa no se proyectan como cobro: dependen de una negociación.
-  const orders = s.orders.filter((o) => inScope(o.brand, scope) && !o.dispute && orderBalance(s, o) > 0);
+  // Solo lo despachado tiene vencimiento; lo que está en producción aún no se proyecta.
+  const orders = s.orders.filter((o) => inScope(o.brand, scope) && dueDateOf(o) && orderBalance(s, o) > 0);
   let running = cashNow(s, scope).total;
   return windows.map((w) => {
     const fromIso = toIsoDate(w.from);
     const toIso = toIsoDate(w.to);
-    // Cobros esperados por vencimiento; lo vencido cae en la primera semana.
-    const due = orders.filter((o) => (w.index === 0 ? o.dueDate <= toIso : o.dueDate >= fromIso && o.dueDate <= toIso));
-    const inCents = Math.round(due.reduce((sum, o) => sum + orderBalance(s, o), 0) * (1 - s.settings.factorMora));
+    const due = orders.filter((o) => {
+      const d = dueDateOf(o)!;
+      return w.index === 0 ? d <= toIso : d >= fromIso && d <= toIso;
+    });
+    const inCents = Math.round(due.reduce((sum, o) => sum + orderBalance(s, o), 0) * s.settings.factorCobro);
     const outs = s.outflows.filter((o) => o.week === w.index && inScope(o.brand, scope));
     const outCents = outs.reduce((sum, o) => sum + o.amountCents, 0);
     running += inCents - outCents;
@@ -114,31 +126,43 @@ export function buildWeeks(s: DemoState, scope: Scope): WeekPoint[] {
 
 function buildAssistant(s: DemoState, scope: Scope, role: Role, notify: Preferences["notify"]): AssistantNote[] {
   const notes: AssistantNote[] = [];
-  const live = s.evidences.filter((e) => inScope(e.brand, scope) && e.status !== "descartado" && e.status !== "pago_aplicado");
+  const orders = s.orders.filter((o) => inScope(o.brand, scope));
+  const live = s.evidences.filter((e) => inScope(e.brand, scope) && e.status !== "descartado" && e.status !== "aplicado");
 
-  if (notify.credito && (role === "gerencia" || role === "vendedor")) {
-    const pending = s.creditRequests.filter((r) => r.status === "pendiente" && inScope(s.customers.find((c) => c.id === r.customerId)!.brand, scope));
-    for (const r of pending) {
-      const c = s.customers.find((x) => x.id === r.customerId)!;
+  if (notify.credito) {
+    for (const o of orders.filter((x) => x.estado === "pendiente_aprobacion")) {
+      const c = customerOf(s, o)!;
+      const snap = creditSnapshot(s, c);
       notes.push({
-        id: `cr-${r.id}`,
-        tone: "violet",
-        title: role === "gerencia" ? `${r.id}: ${c.name} pide crédito por ${formatMoney(r.amountCents)}` : `${r.id} espera decisión de gerencia`,
-        detail: `${creditSnapshot(s, c).suggestion ?? "Cliente sin observaciones de crédito."} Solicitada por ${r.requestedBy}.`,
-        href: `/clientes/${c.id}`,
-        date: r.requestedAt,
+        id: `pend-${o.id}`,
+        tone: snap.status === "en_mora" ? "warn" : "violet",
+        title: role === "vendedor" ? `${o.id} espera tu confirmación` : `${o.id} espera confirmación del vendedor`,
+        detail: `${c.name}, ${formatMoney(o.saleCents)}. ${snap.status === "en_mora" ? "Cliente en mora: el vendedor verá el aviso antes de dar crédito." : "Historial al día."}`,
+        href: `/pedidos/${o.id}`,
+        date: o.issuedOn,
+      });
+    }
+    for (const o of orders.filter((x) => x.estado === "retenida")) {
+      const pending = Math.max(anticipoRequired(o) - appliedCents(s, o.id), 0);
+      notes.push({
+        id: `ret-${o.id}`,
+        tone: "info",
+        title: `${o.id} retenida: falta anticipo de ${formatMoney(pending)}`,
+        detail: "No entra a producción hasta que Administración verifique y aplique el anticipo.",
+        href: `/pedidos/${o.id}`,
+        date: o.issuedOn,
       });
     }
   }
 
-  if (notify.duplicados) {
+  if (notify.duplicados && role !== "vendedor") {
     const dups = live.filter((e) => matchFor(s, e) === "duplicado");
     if (dups.length) {
       notes.push({
         id: "dup",
         tone: "bad",
         title: dups.length === 1 ? `${dups[0].id} parece un comprobante duplicado` : `${dups.length} comprobantes duplicados por revisar`,
-        detail: `Misma operación que ${duplicateOf(s, dups[0])?.id}. No reduce el saldo hasta que lo revises.`,
+        detail: `Mismo código, monto y fecha que ${duplicateOf(s, dups[0])?.id}. No reduce el saldo.`,
         href: `/conciliacion/${dups[0].id}`,
         date: dups[0].receivedAt,
       });
@@ -146,83 +170,77 @@ function buildAssistant(s: DemoState, scope: Scope, role: Role, notify: Preferen
   }
 
   if (notify.vencimientos) {
-    for (const o of s.orders.filter((o) => inScope(o.brand, scope))) {
-      const bal = orderBalance(s, o);
+    for (const o of orders) {
       const fin = orderFinance(s, o);
-      const d = daysToDue(s, o);
       const c = customerOf(s, o)!;
-      if (fin === "vencido") {
+      const due = dueDateOf(o);
+      if (fin === "vencido" && due) {
         notes.push({
           id: `due-${o.id}`,
           tone: "bad",
           title: `${c.name} excedió su fecha de pago`,
-          detail: `${o.id} venció el ${formatDate(o.dueDate)} (hace ${-d} días) con saldo ${formatMoney(bal)}.${d <= -7 ? " Escalamiento a administración (propuesta)." : ""}`,
+          detail: `${o.id} venció el ${formatDate(due)} (hace ${-(daysToDue(s, o) ?? 0)} días) con saldo ${formatMoney(orderBalance(s, o))}.`,
           href: `/clientes/${c.id}`,
-          date: o.dueDate,
+          date: due,
         });
-      } else if (fin === "vence_hoy" || fin === "por_vencer") {
+      } else if ((fin === "vence_hoy" || fin === "por_vencer") && due) {
         notes.push({
           id: `due-${o.id}`,
           tone: "warn",
-          title: d === 0 ? `${o.id} vence hoy` : `${o.id} vence el ${formatDate(o.dueDate)}`,
-          detail: `${c.name}: saldo ${formatMoney(bal)}. Aviso preventivo enviado dentro de la app.`,
+          title: fin === "vence_hoy" ? `${o.id} vence hoy` : `${o.id} vence el ${formatDate(due)}`,
+          detail: `${c.name}: saldo ${formatMoney(orderBalance(s, o))}. Recordatorio por WhatsApp programado.`,
           href: `/clientes/${c.id}`,
-          date: o.dueDate,
+          date: due,
         });
       }
     }
   }
 
-  if (notify.sinPedido) {
-    const orphan = live.filter((e) => matchFor(s, e) === "huerfano");
-    if (orphan.length) {
+  if (notify.sinPedido && role !== "vendedor") {
+    const review = live.filter((e) => ["sin_orden", "no_cuadra", "incompleto"].includes(matchFor(s, e)));
+    if (review.length) {
       notes.push({
-        id: "orphan",
+        id: "review",
         tone: "warn",
-        title: `${orphan[0].id}: pago de ${formatMoney(orphan[0].fields.amountCents ?? 0)} sin pedido`,
-        detail: "Asígnalo a un pedido o descártalo.",
-        href: `/conciliacion/${orphan[0].id}`,
-        date: orphan[0].receivedAt,
+        title: `${review.length} ${review.length === 1 ? "comprobante en revisión" : "comprobantes en revisión"}`,
+        detail: review.map((e) => `${e.id}: ${MATCH_TEXT[matchFor(s, e)]}`).join(". ") + ".",
+        href: `/conciliacion/${review[0].id}`,
+        date: review[0].receivedAt,
       });
     }
-    for (const e of live.filter((e) => matchFor(s, e) === "monto_no_cuadra")) {
+    const errors = s.messages.filter((m) => m.estado === "error" && inScope(s.customers.find((c) => c.id === m.customerId)!.brand, scope));
+    if (errors.length) {
       notes.push({
-        id: `mm-${e.id}`,
-        tone: "warn",
-        title: `${e.id}: el monto no cuadra`,
-        detail: `El chat anuncia ${formatMoney(e.declaredAmountCents ?? 0)} y el comprobante dice ${formatMoney(e.fields.amountCents ?? 0)}.`,
-        href: `/conciliacion/${e.id}`,
-        date: e.receivedAt,
-      });
-    }
-    const drafts = live.filter((e) => e.status === "borrador" && missingFields(e).length);
-    if (drafts.length) {
-      notes.push({
-        id: "drafts",
-        tone: "info",
-        title: `${drafts.length} ${drafts.length === 1 ? "borrador necesita" : "borradores necesitan"} datos`,
-        detail: drafts.map((d) => `${d.id}: falta ${missingFields(d).join(" y ")}`).join(". ") + ".",
-        href: `/conciliacion/${drafts[0].id}`,
-        date: drafts[0].receivedAt,
+        id: "msg-error",
+        tone: "bad",
+        title: `${errors.length} ${errors.length === 1 ? "mensaje de WhatsApp falló" : "mensajes de WhatsApp fallaron"}`,
+        detail: errors[0].error ?? "Revisa y reintenta desde Cobranza.",
+        href: "/cobranza?vista=mensajes",
+        date: errors[0].programadoPara,
       });
     }
   }
   return notes;
 }
 
+const MATCH_TEXT: Record<MatchKind, string> = {
+  total: "cubre el saldo",
+  parcial: "pago parcial",
+  duplicado: "duplicado",
+  sin_orden: "sin orden",
+  no_cuadra: "el monto no cuadra",
+  excede: "excede el saldo",
+  incompleto: "faltan datos",
+};
+
 function activityOf(s: DemoState, a: AuditEvent): ActivityItem {
   const ev = a.evidenceId ? s.evidences.find((e) => e.id === a.evidenceId) : undefined;
   const order = s.orders.find((o) => o.id === a.orderId);
   const customer = a.customerId ? s.customers.find((c) => c.id === a.customerId) : customerOf(s, order);
   const who = customer?.name ?? ev?.fields.payer ?? (a.kind === "configuracion" ? "Configuración" : "Remitente sin identificar");
-  const status: ActivityItem["status"] =
-    a.kind === "aplicado" || a.kind === "credito_aprobado" || a.kind === "validado" || a.kind === "verificado"
-      ? "completado"
-      : a.kind === "duplicado" || a.kind === "descartado" || a.kind === "credito_rechazado" || a.kind === "enlace_revocado"
-        ? "fallido"
-        : a.kind === "entregado" || a.kind === "configuracion" || a.kind === "enlace_creado" || a.kind === "corregido"
-          ? "entregado"
-          : "pendiente";
+  const ok: AuditEvent["kind"][] = ["aplicado", "credito_aprobado", "verificado", "orden_confirmada", "alerta_resuelta"];
+  const bad: AuditEvent["kind"][] = ["duplicado", "descartado", "credito_rechazado", "enlace_revocado"];
+  const neutral: AuditEvent["kind"][] = ["despacho", "produccion", "configuracion", "enlace_creado", "corregido", "mensaje"];
   return {
     id: a.id,
     at: a.at,
@@ -231,33 +249,38 @@ function activityOf(s: DemoState, a: AuditEvent): ActivityItem {
     text: a.text,
     reference: [a.evidenceId, a.orderId].filter(Boolean).join(" · "),
     amountCents: a.amountCents,
-    status,
-    href: a.evidenceId ? `/conciliacion/${a.evidenceId}` : customer ? `/clientes/${customer.id}` : null,
+    status: ok.includes(a.kind) ? "completado" : bad.includes(a.kind) ? "fallido" : neutral.includes(a.kind) ? "entregado" : "pendiente",
+    href: a.evidenceId ? `/conciliacion/${a.evidenceId}` : a.orderId ? `/pedidos/${a.orderId}` : customer ? `/clientes/${customer.id}` : null,
   };
 }
 
 export function getDashboard(scope: Scope, role: Role, notify: Preferences["notify"]) {
   return respond<DashboardDTO>((s) => {
     const orders = s.orders.filter((o) => inScope(o.brand, scope));
-    const open = orders.filter((o) => orderBalance(s, o) > 0);
+    const confirmed = orders.filter(isConfirmed);
+    const dispatchedOpen = confirmed.filter((o) => dueDateOf(o) && orderBalance(s, o) > 0);
+    const pipeline = confirmed.filter((o) => !o.despacho);
     const cash = cashNow(s, scope);
+    const withCost = confirmed.filter(hasCost);
     return {
       cutDate: s.cutDate,
-      factorMora: s.settings.factorMora,
-      expectedCents: open.filter((o) => !o.dispute).reduce((sum, o) => sum + orderBalance(s, o), 0),
-      openOrders: open.length,
-      overdueCents: open.filter((o) => orderFinance(s, o) === "vencido").reduce((sum, o) => sum + orderBalance(s, o), 0),
-      disputedCents: open.filter((o) => o.dispute).reduce((sum, o) => sum + orderBalance(s, o), 0),
+      factorCobro: s.settings.factorCobro,
+      expectedCents: dispatchedOpen.reduce((sum, o) => sum + orderBalance(s, o), 0),
+      openOrders: dispatchedOpen.length,
+      overdueCents: dispatchedOpen.filter((o) => orderFinance(s, o) === "vencido").reduce((sum, o) => sum + orderBalance(s, o), 0),
+      pipelineCents: pipeline.reduce((sum, o) => sum + orderBalance(s, o), 0),
+      pipelineCount: pipeline.length,
       cashCents: cash.total,
       openingCents: cash.opening,
       collectedCents: cash.collected,
       openingSource: s.openings[0]?.source ?? "",
-      marginCents: orders.reduce((sum, o) => sum + orderMargin(o), 0),
-      orderCount: orders.length,
+      marginCents: withCost.reduce((sum, o) => sum + orderMargin(o), 0),
+      perceivedCents: withCost.reduce((sum, o) => sum + perceivedMargin(s, o), 0),
+      orderCount: withCost.length,
       weeks: buildWeeks(s, scope),
       assistant: buildAssistant(s, scope, role, notify),
       activity: s.audit
-        .filter((a) => (a.brand ? inScope(a.brand, scope) : scope === "consolidado") && !["corregido", "validado", "verificado", "configuracion"].includes(a.kind))
+        .filter((a) => (a.brand ? inScope(a.brand, scope) : scope === "consolidado") && !["corregido", "configuracion"].includes(a.kind))
         .sort((a, b) => b.at.localeCompare(a.at))
         .slice(0, 6)
         .map((a) => activityOf(s, a)),
@@ -265,138 +288,271 @@ export function getDashboard(scope: Scope, role: Role, notify: Preferences["noti
   });
 }
 
-/* ---------- Tablero de cobro ---------- */
+/* ---------- Órdenes ---------- */
 
-export type BoardColumnId = Exclude<EvidenceStatus, "descartado">;
-export type BoardCard = {
-  id: string;
-  kind: Evidence["kind"];
-  channel: string | null;
-  orderId: string | null;
-  customer: string;
-  dueDate: string | null;
-  daysToDue: number | null;
-  amountCents: number | null;
-  seller: string | null;
-  priority: "urgente" | "normal";
-  match: MatchKind;
-  validated: boolean;
-  status: EvidenceStatus;
-  receivedAt: string;
-};
-export type BoardDTO = { columns: Array<{ id: BoardColumnId; title: string; cards: BoardCard[] }>; closed: number };
+export type OrderColumnId = "por_confirmar" | "retenida" | "en_produccion" | "por_cobrar" | "cobrada";
 
-const COLUMNS: Array<{ id: BoardColumnId; title: string }> = [
-  { id: "borrador", title: "Borrador (IA)" },
-  { id: "comprobante_pendiente", title: "Comprobante pendiente" },
-  { id: "pago_verificado", title: "Pago verificado" },
-  { id: "pago_aplicado", title: "Pago aplicado" },
-];
-
-function toCard(s: DemoState, ev: Evidence): BoardCard {
-  const order = orderOf(s, ev);
-  const match = matchFor(s, ev);
-  const d = order ? daysToDue(s, order) : null;
-  const urgent =
-    ev.status !== "pago_aplicado" && (match === "duplicado" || match === "huerfano" || match === "monto_no_cuadra" || (d !== null && d < 0));
-  return {
-    id: ev.id,
-    kind: ev.kind,
-    channel: ev.fields.channel,
-    orderId: ev.orderId,
-    customer: order ? customerName(s, order) : (ev.fields.payer ?? "Remitente sin identificar"),
-    dueDate: order?.dueDate ?? null,
-    daysToDue: d,
-    amountCents: ev.fields.amountCents,
-    seller: personName(s, order?.sellerId ?? (ev.brand === "corpotex" ? "u-rosa" : "u-luis")),
-    priority: urgent ? "urgente" : "normal",
-    match,
-    validated: Boolean(ev.validatedBy),
-    status: ev.status,
-    receivedAt: ev.receivedAt,
-  };
-}
-
-export function getBoard(scope: Scope) {
-  return respond<BoardDTO>((s) => {
-    const evs = s.evidences.filter((e) => inScope(e.brand, scope));
-    return {
-      columns: COLUMNS.map((c) => ({
-        ...c,
-        cards: evs
-          .filter((e) => e.status === c.id)
-          .map((e) => toCard(s, e))
-          .sort((a, b) => (a.priority === b.priority ? b.receivedAt.localeCompare(a.receivedAt) : a.priority === "urgente" ? -1 : 1)),
-      })),
-      closed: evs.filter((e) => e.status === "descartado").length,
-    };
-  });
-}
-
-/* ---------- Lista de pedidos ---------- */
-
-export type OrderRow = {
+export type OrderCard = {
   id: string;
   customerId: string;
   customer: string;
   brand: Brand;
-  line: string;
   description: string;
-  seller: string | null;
-  issuedOn: string;
-  deliveredOn: string;
-  dueDate: string;
   saleCents: number;
-  paidCents: number;
   balanceCents: number;
+  estado: OrderState;
   finance: OrderFinance;
-  daysToDue: number;
-  lastPaymentAt: string | null;
-  daysLate: number | null;
-  dispute: Order["dispute"];
+  issuedOn: string;
+  entregaSolicitada: string | null;
+  dueDate: string | null;
+  daysToDue: number | null;
+  seller: string | null;
+  origen: "whatsapp" | "manual" | "historico";
+  faltantes: number;
+  clienteEnMora: boolean;
+  anticipoPendienteCents: number;
 };
 
-function orderRow(s: DemoState, o: Order): OrderRow {
-  const bal = orderBalance(s, o);
+function orderCard(s: DemoState, o: Order): OrderCard {
+  const c = customerOf(s, o)!;
   return {
     id: o.id,
     customerId: o.customerId,
-    customer: customerName(s, o),
+    customer: c.name,
     brand: o.brand,
-    line: o.line,
     description: o.description,
-    seller: personName(s, o.sellerId),
-    issuedOn: o.issuedOn,
-    deliveredOn: o.deliveredOn,
-    dueDate: o.dueDate,
     saleCents: o.saleCents,
-    paidCents: o.saleCents - bal,
-    balanceCents: bal,
+    balanceCents: orderBalance(s, o),
+    estado: o.estado,
     finance: orderFinance(s, o),
+    issuedOn: o.issuedOn,
+    entregaSolicitada: o.fechaEntregaSolicitada,
+    dueDate: dueDateOf(o),
     daysToDue: daysToDue(s, o),
-    lastPaymentAt: lastPayment(s, o.id)?.at ?? null,
-    daysLate: daysLate(s, o),
-    dispute: o.dispute,
+    seller: personName(s, o.sellerId),
+    origen: o.hoja?.origen ?? "historico",
+    faltantes: o.hoja?.estado === "borrador" ? o.hoja.faltantes.length : 0,
+    clienteEnMora: creditSnapshot(s, c).status === "en_mora",
+    anticipoPendienteCents: Math.max(anticipoRequired(o) - appliedCents(s, o.id), 0),
   };
 }
+
+export function columnOf(s: DemoState, o: Order): OrderColumnId | null {
+  if (o.estado === "rechazada") return null;
+  if (o.estado === "pendiente_aprobacion") return "por_confirmar";
+  if (o.estado === "retenida") return "retenida";
+  if (o.estado === "en_produccion") return "en_produccion";
+  return orderBalance(s, o) > 0 ? "por_cobrar" : "cobrada";
+}
+
+export type OrderBoardDTO = { columns: Array<{ id: OrderColumnId; title: string; cards: OrderCard[] }>; rejected: number };
+
+const ORDER_COLUMNS: Array<{ id: OrderColumnId; title: string }> = [
+  { id: "por_confirmar", title: "Por confirmar" },
+  { id: "retenida", title: "Retenida" },
+  { id: "en_produccion", title: "En producción" },
+  { id: "por_cobrar", title: "Por cobrar" },
+  { id: "cobrada", title: "Cobrada" },
+];
+
+export function getOrderBoard(scope: Scope) {
+  return respond<OrderBoardDTO>((s) => {
+    const orders = s.orders.filter((o) => inScope(o.brand, scope));
+    return {
+      columns: ORDER_COLUMNS.map((c) => {
+        let cards = orders.filter((o) => columnOf(s, o) === c.id).map((o) => orderCard(s, o));
+        // Lo urgente primero: vencidos y por vencer arriba; lo cobrado, lo más reciente.
+        cards = cards.sort((a, b) =>
+          c.id === "por_cobrar" ? (a.dueDate ?? "").localeCompare(b.dueDate ?? "") : b.issuedOn.localeCompare(a.issuedOn),
+        );
+        return { ...c, cards: c.id === "cobrada" ? cards.slice(0, 6) : cards };
+      }),
+      rejected: orders.filter((o) => o.estado === "rechazada").length,
+    };
+  });
+}
+
+export type OrderRow = OrderCard & {
+  line: string;
+  despachoOn: string | null;
+  paidCents: number;
+  lastPaymentAt: string | null;
+  daysLate: number | null;
+};
 
 export function getOrders(scope: Scope) {
   return respond<OrderRow[]>((s) =>
     s.orders
       .filter((o) => inScope(o.brand, scope))
       .sort((a, b) => b.issuedOn.localeCompare(a.issuedOn))
-      .map((o) => orderRow(s, o)),
+      .map((o) => ({
+        ...orderCard(s, o),
+        line: o.line,
+        despachoOn: o.despacho?.fecha ?? null,
+        paidCents: appliedCents(s, o.id),
+        lastPaymentAt: lastPayment(s, o.id)?.at ?? null,
+        daysLate: daysLate(s, o),
+      })),
   );
 }
 
+export type OrderDetailDTO = {
+  cutDate: string;
+  order: Order;
+  customer: Customer;
+  seller: string | null;
+  card: OrderCard;
+  credit: ReturnType<typeof creditSnapshot>;
+  paidCents: number;
+  anticipoRequeridoCents: number;
+  gatekeeper: boolean;
+  costCents: number;
+  marginCents: number;
+  perceivedCents: number;
+  payments: Array<{ id: string; at: string; amountCents: number; channel: string; by: string; evidenceId: string | null }>;
+  pendingEvidence: Array<{ id: string; amountCents: number | null; status: EvidenceStatus; match: MatchKind; receivedAt: string }>;
+  messages: OutgoingMessage[];
+  alerts: CollectionAlert[];
+  plazoDefecto: number;
+};
+
+export function getOrder(id: string) {
+  return respond<OrderDetailDTO | null>((s) => {
+    const o = s.orders.find((x) => x.id === id);
+    if (!o) return null;
+    const c = customerOf(s, o)!;
+    return {
+      cutDate: s.cutDate,
+      order: o,
+      customer: c,
+      seller: personName(s, o.sellerId),
+      card: orderCard(s, o),
+      // El aviso de crédito no cuenta esta misma orden como deuda.
+      credit: creditSnapshot(s, c),
+      paidCents: appliedCents(s, o.id),
+      anticipoRequeridoCents: anticipoRequired(o),
+      gatekeeper: gatekeeperPasses(s, o),
+      costCents: orderCost(o),
+      marginCents: orderMargin(o),
+      perceivedCents: perceivedMargin(s, o),
+      payments: s.applications
+        .filter((a) => a.orderId === o.id)
+        .sort((a, b) => b.at.localeCompare(a.at))
+        .map((a) => ({ id: a.id, at: a.at, amountCents: a.amountCents, channel: a.channel, by: a.by, evidenceId: a.evidenceId })),
+      pendingEvidence: s.evidences
+        .filter((e) => e.orderId === o.id && (e.status === "recibido" || e.status === "verificado_banco"))
+        .map((e) => ({ id: e.id, amountCents: e.fields.amountCents, status: e.status, match: matchFor(s, e), receivedAt: e.receivedAt })),
+      messages: s.messages.filter((m) => m.orderId === o.id).sort((a, b) => a.programadoPara.localeCompare(b.programadoPara)),
+      alerts: s.alerts.filter((a) => a.orderId === o.id),
+      plazoDefecto: s.settings.plazoDefecto,
+    };
+  });
+}
+
+/* ---------- Taller ---------- */
+
+export type TallerOrder = {
+  id: string;
+  customer: string;
+  brand: Brand;
+  description: string;
+  items: Order["items"];
+  modality: Order["modality"];
+  issuedOn: string;
+  inicioProduccion: string | null;
+  entregaSolicitada: string | null;
+  plazoDias: number | null;
+  despacho: Order["despacho"];
+  anticipoPendienteCents: number;
+};
+
+export function getTaller(scope: Scope) {
+  return respond((s) => {
+    const map = (o: Order): TallerOrder => ({
+      id: o.id,
+      customer: customerName(s, o),
+      brand: o.brand,
+      description: o.description,
+      items: o.items,
+      modality: o.modality,
+      issuedOn: o.issuedOn,
+      inicioProduccion: o.inicioProduccion,
+      entregaSolicitada: o.fechaEntregaSolicitada,
+      plazoDias: o.condicionPago?.plazoDias ?? null,
+      despacho: o.despacho,
+      anticipoPendienteCents: Math.max(anticipoRequired(o) - appliedCents(s, o.id), 0),
+    });
+    const orders = s.orders.filter((o) => inScope(o.brand, scope));
+    return {
+      cutDate: s.cutDate,
+      enProduccion: orders.filter((o) => o.estado === "en_produccion").sort((a, b) => (a.fechaEntregaSolicitada ?? "").localeCompare(b.fechaEntregaSolicitada ?? "")).map(map),
+      retenidas: orders.filter((o) => o.estado === "retenida").map(map),
+      despachadas: orders
+        .filter((o) => o.despacho)
+        .sort((a, b) => b.despacho!.fecha.localeCompare(a.despacho!.fecha))
+        .slice(0, 5)
+        .map(map),
+    };
+  });
+}
+
 /* ---------- Conciliación ---------- */
+
+export type PaymentCard = {
+  id: string;
+  kind: Evidence["kind"];
+  origen: Evidence["origen"];
+  channel: string | null;
+  orderId: string | null;
+  customer: string;
+  amountCents: number | null;
+  seller: string | null;
+  match: MatchKind;
+  status: EvidenceStatus;
+  receivedAt: string;
+};
+
+function toPaymentCard(s: DemoState, ev: Evidence): PaymentCard {
+  const order = orderOf(s, ev);
+  return {
+    id: ev.id,
+    kind: ev.kind,
+    origen: ev.origen,
+    channel: ev.fields.channel,
+    orderId: ev.orderId,
+    customer: order ? customerName(s, order) : (ev.fields.payer ?? "Remitente sin identificar"),
+    amountCents: ev.fields.amountCents,
+    seller: personName(s, order?.sellerId ?? (ev.brand === "corpotex" ? "u-rosa" : "u-luis")),
+    match: matchFor(s, ev),
+    status: ev.status,
+    receivedAt: ev.receivedAt,
+  };
+}
+
+export type QueueFilter = "recibidos" | "verificados" | "aplicados" | "revision";
+
+export function queueGroup(c: PaymentCard): QueueFilter | null {
+  if (c.status === "descartado") return null;
+  if (c.status === "aplicado") return "aplicados";
+  if (c.status === "verificado_banco") return "verificados";
+  return IN_REVIEW.includes(c.match) ? "revision" : "recibidos";
+}
+
+export function getQueue(scope: Scope) {
+  return respond((s) =>
+    s.evidences
+      .filter((e) => inScope(e.brand, scope))
+      .sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))
+      .map((e) => toPaymentCard(s, e)),
+  );
+}
 
 export type EvidenceDetailDTO = {
   evidence: Evidence;
   appliedBy: string | null;
   match: MatchKind;
   duplicateOfId: string | null;
-  order: (Order & { customer: string; balanceCents: number; daysToDue: number; seller: string | null }) | null;
+  order: (Order & { customer: string; balanceCents: number; daysToDue: number | null; dueDate: string | null; seller: string | null }) | null;
   missing: string[];
   openOrders: Array<{ id: string; label: string }>;
 };
@@ -412,24 +568,57 @@ export function getEvidence(id: string) {
       match: matchFor(s, ev),
       duplicateOfId: duplicateOf(s, ev)?.id ?? null,
       order: order
-        ? { ...order, customer: customerName(s, order), balanceCents: orderBalance(s, order), daysToDue: daysToDue(s, order), seller: personName(s, order.sellerId) }
+        ? { ...order, customer: customerName(s, order), balanceCents: orderBalance(s, order), daysToDue: daysToDue(s, order), dueDate: dueDateOf(order), seller: personName(s, order.sellerId) }
         : null,
       missing: missingFields(ev),
       openOrders: s.orders
-        .filter((o) => o.brand === ev.brand && orderBalance(s, o) > 0)
+        .filter((o) => o.brand === ev.brand && isConfirmed(o) && orderBalance(s, o) > 0)
         .map((o) => ({ id: o.id, label: `${o.id} · ${customerName(s, o)} · saldo ${formatMoney(orderBalance(s, o))}` })),
     };
   });
 }
 
-export function getQueue(scope: Scope) {
-  const rank: Record<EvidenceStatus, number> = { comprobante_pendiente: 0, borrador: 1, pago_verificado: 2, pago_aplicado: 3, descartado: 4 };
-  return respond((s) =>
-    s.evidences
-      .filter((e) => inScope(e.brand, scope))
-      .sort((a, b) => rank[a.status] - rank[b.status] || b.receivedAt.localeCompare(a.receivedAt))
-      .map((e) => toCard(s, e)),
-  );
+/* ---------- Cobranza ---------- */
+
+export type ReceivableRow = { id: string; customerId: string; customer: string; seller: string | null; dueDate: string; daysToDue: number; balanceCents: number; finance: OrderFinance };
+export type AlertRow = CollectionAlert & { customer: string; customerId: string; balanceCents: number; dueDate: string | null };
+export type MessageRow = OutgoingMessage & { customer: string; contacto: string };
+
+export function getCobranza(scope: Scope) {
+  return respond((s) => {
+    const orders = s.orders.filter((o) => inScope(o.brand, scope) && dueDateOf(o) && orderBalance(s, o) > 0);
+    const receivables: ReceivableRow[] = orders
+      .map((o) => ({
+        id: o.id,
+        customerId: o.customerId,
+        customer: customerName(s, o),
+        seller: personName(s, o.sellerId),
+        dueDate: dueDateOf(o)!,
+        daysToDue: daysToDue(s, o)!,
+        balanceCents: orderBalance(s, o),
+        finance: orderFinance(s, o),
+      }))
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    const inScopeCustomer = (id: string) => inScope(s.customers.find((c) => c.id === id)!.brand, scope);
+    const alerts: AlertRow[] = s.alerts
+      .filter((a) => {
+        const o = s.orders.find((x) => x.id === a.orderId);
+        return o && inScope(o.brand, scope);
+      })
+      .map((a) => {
+        const o = s.orders.find((x) => x.id === a.orderId)!;
+        return { ...a, customer: customerName(s, o), customerId: o.customerId, balanceCents: orderBalance(s, o), dueDate: dueDateOf(o) };
+      })
+      .sort((a, b) => (a.estado === b.estado ? b.creadaAt.localeCompare(a.creadaAt) : a.estado === "abierta" ? -1 : 1));
+    const messages: MessageRow[] = s.messages
+      .filter((m) => inScopeCustomer(m.customerId))
+      .map((m) => {
+        const c = s.customers.find((x) => x.id === m.customerId)!;
+        return { ...m, customer: c.name, contacto: c.contactoWhatsapp };
+      })
+      .sort((a, b) => b.programadoPara.localeCompare(a.programadoPara));
+    return { cutDate: s.cutDate, receivables, alerts, messages };
+  });
 }
 
 /* ---------- Clientes ---------- */
@@ -438,10 +627,9 @@ export type CustomerRow = {
   id: string;
   name: string;
   brand: Brand;
-  kind: Customer["kind"];
+  tipo: Customer["tipo"];
   seller: string | null;
   since: string;
-  termDays: number;
   creditLimitCents: number;
   usedCents: number;
   overdueCents: number;
@@ -450,7 +638,7 @@ export type CustomerRow = {
   avgDaysLate: number | null;
   lastPaymentAt: string | null;
   nextDue: { id: string; date: string; overdue: boolean } | null;
-  pendingRequest: string | null;
+  pendingOrders: number;
 };
 
 export function getCustomers(scope: Scope) {
@@ -459,14 +647,14 @@ export function getCustomers(scope: Scope) {
       .filter((c) => inScope(c.brand, scope))
       .map((c) => {
         const snap = creditSnapshot(s, c);
+        const due = snap.nextDue ? dueDateOf(snap.nextDue) : null;
         return {
           id: c.id,
           name: c.name,
           brand: c.brand,
-          kind: c.kind,
+          tipo: c.tipo,
           seller: personName(s, c.sellerId),
           since: c.since,
-          termDays: c.termDays,
           creditLimitCents: c.creditLimitCents,
           usedCents: snap.usedCents,
           overdueCents: snap.overdueCents,
@@ -474,8 +662,8 @@ export function getCustomers(scope: Scope) {
           status: snap.status,
           avgDaysLate: snap.avgDaysLate,
           lastPaymentAt: snap.lastPaymentAt,
-          nextDue: snap.nextDue ? { id: snap.nextDue.id, date: snap.nextDue.dueDate, overdue: snap.nextDue.dueDate < s.cutDate } : null,
-          pendingRequest: s.creditRequests.find((r) => r.customerId === c.id && r.status === "pendiente")?.id ?? null,
+          nextDue: snap.nextDue && due ? { id: snap.nextDue.id, date: due, overdue: due < s.cutDate } : null,
+          pendingOrders: s.orders.filter((o) => o.customerId === c.id && o.estado === "pendiente_aprobacion").length,
         };
       })
       .sort((a, b) => b.overdueCents - a.overdueCents || b.usedCents - a.usedCents),
@@ -485,26 +673,31 @@ export function getCustomers(scope: Scope) {
 export type TimelineItem = {
   id: string;
   at: string;
-  kind: "pedido" | "entrega" | "vencimiento" | "pago" | "credito" | "disputa" | "enlace" | "alerta";
+  kind: "pedido" | "despacho" | "vencimiento" | "pago" | "credito" | "mensaje" | "enlace";
   title: string;
   detail: string;
   amountCents: number | null;
   tone: "ok" | "warn" | "bad" | "violet" | "neutral" | "info";
   future: boolean;
+  dateOnly: boolean;
 };
+
+export type CreditDecisionRow = { orderId: string; decision: "aprobado" | "rechazado"; by: string; at: string; avisoMoraMostrado: boolean; tipo: string; plazoDias: number; nota: string | null; saleCents: number };
 
 export type CustomerDetailDTO = {
   cutDate: string;
   customer: Customer;
   seller: string | null;
   snapshot: ReturnType<typeof creditSnapshot>;
-  orders: Array<OrderRow & { alerts: ReturnType<typeof alertSchedule> }>;
-  payments: Array<Application & { evidence: string | null }>;
-  requests: CreditRequest[];
+  orders: OrderRow[];
+  payments: Array<{ id: string; at: string; orderId: string; amountCents: number; channel: string; by: string; evidence: string | null }>;
+  decisions: CreditDecisionRow[];
+  messages: OutgoingMessage[];
   links: Array<{ token: string; createdBy: string; createdAt: string; expiresAt: string; revokedAt: string | null; state: "activo" | "vencido" | "revocado" }>;
   timeline: TimelineItem[];
-  termOptions: number[];
 };
+
+const TIPO_PAGO: Record<string, string> = { credito: "Crédito", anticipo: "Anticipo", contado: "Contado" };
 
 export function getCustomer(id: string) {
   return respond<CustomerDetailDTO | null>((s) => {
@@ -514,30 +707,55 @@ export function getCustomer(id: string) {
     const payments = s.applications
       .filter((a) => orders.some((o) => o.id === a.orderId))
       .sort((a, b) => b.at.localeCompare(a.at))
-      .map((a) => ({ ...a, evidence: a.evidenceId }));
-    const requests = s.creditRequests.filter((r) => r.customerId === c.id).sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
+      .map((a) => ({ id: a.id, at: a.at, orderId: a.orderId, amountCents: a.amountCents, channel: a.channel, by: a.by, evidence: a.evidenceId }));
+    const decisions: CreditDecisionRow[] = orders
+      .filter((o) => o.credito)
+      .map((o) => ({
+        orderId: o.id,
+        decision: o.credito!.decision,
+        by: o.credito!.by,
+        at: o.credito!.at,
+        avisoMoraMostrado: o.credito!.avisoMoraMostrado,
+        tipo: TIPO_PAGO[o.condicionPago?.tipo ?? "credito"],
+        plazoDias: o.condicionPago?.plazoDias ?? 0,
+        nota: o.credito!.nota,
+        saleCents: o.saleCents,
+      }))
+      .sort((a, b) => b.at.localeCompare(a.at));
+    const messages = s.messages.filter((m) => m.customerId === c.id).sort((a, b) => b.programadoPara.localeCompare(a.programadoPara));
     const now = nowIso();
 
     const timeline: TimelineItem[] = [];
     for (const o of orders) {
-      timeline.push({ id: `${o.id}-p`, at: `${o.issuedOn}T09:00:00`, kind: "pedido", title: `Pedido ${o.id}`, detail: o.description, amountCents: o.saleCents, tone: "neutral", future: false });
-      timeline.push({ id: `${o.id}-e`, at: `${o.deliveredOn}T12:00:00`, kind: "entrega", title: `Entrega de ${o.id}`, detail: `Inicia el plazo de ${daysLateLabel(o)}`, amountCents: null, tone: "info", future: o.deliveredOn > s.cutDate });
+      timeline.push({ id: `${o.id}-p`, at: `${o.issuedOn}T09:00:00`, kind: "pedido", title: `Pedido ${o.id}`, detail: o.description, amountCents: o.saleCents, tone: "neutral", future: false, dateOnly: true });
+      if (o.despacho) {
+        timeline.push({
+          id: `${o.id}-d`,
+          at: `${o.despacho.fecha}T12:00:00`,
+          kind: "despacho",
+          title: `Despacho de ${o.id}`,
+          detail: `${o.despacho.acta}. Inicia el plazo de ${o.condicionPago?.plazoDias ?? 0} días.`,
+          amountCents: null,
+          tone: "info",
+          future: false,
+          dateOnly: true,
+        });
+      }
+      const due = dueDateOf(o);
       const bal = orderBalance(s, o);
-      if (bal > 0) {
-        const d = daysToDue(s, o);
+      if (due && bal > 0) {
+        const d = daysToDue(s, o)!;
         timeline.push({
           id: `${o.id}-v`,
-          at: `${o.dueDate}T23:59:00`,
+          at: `${due}T23:59:00`,
           kind: "vencimiento",
           title: d < 0 ? `${o.id} vencido` : `Vence ${o.id}`,
           detail: `Saldo ${formatMoney(bal)}`,
           amountCents: bal,
           tone: d < 0 ? "bad" : d <= 3 ? "warn" : "neutral",
-          future: o.dueDate > s.cutDate,
+          future: due > s.cutDate,
+          dateOnly: true,
         });
-      }
-      if (o.dispute) {
-        timeline.push({ id: `${o.id}-d`, at: `${o.dispute.since}T10:00:00`, kind: "disputa", title: `Disputa en ${o.id}`, detail: o.dispute.note, amountCents: null, tone: "warn", future: false });
       }
     }
     for (const a of payments) {
@@ -546,29 +764,41 @@ export function getCustomer(id: string) {
         at: a.at,
         kind: "pago",
         title: `Pago aplicado a ${a.orderId}`,
-        detail: `${a.channel}${a.evidenceId ? ` · ${a.evidenceId}` : " · registro histórico"} · por ${a.by}`,
+        detail: `${a.channel}${a.evidence ? ` · ${a.evidence}` : " · registro histórico"} · por ${a.by}`,
         amountCents: a.amountCents,
         tone: "ok",
         future: false,
+        dateOnly: false,
       });
     }
-    for (const r of requests) {
-      timeline.push({ id: `${r.id}-s`, at: r.requestedAt, kind: "credito", title: `${r.id}: solicitud de crédito`, detail: `${r.requestedBy} · ${r.termDays} días · ${r.reason}`, amountCents: r.amountCents, tone: "violet", future: false });
-      if (r.decidedAt) {
-        timeline.push({
-          id: `${r.id}-d`,
-          at: r.decidedAt,
-          kind: "credito",
-          title: `${r.id} ${r.status === "aprobada" ? "aprobada" : "rechazada"}`,
-          detail: `${r.decidedBy}: ${r.decisionNote}`,
-          amountCents: null,
-          tone: r.status === "aprobada" ? "ok" : "bad",
-          future: false,
-        });
-      }
+    for (const d of decisions) {
+      timeline.push({
+        id: `${d.orderId}-c`,
+        at: d.at,
+        kind: "credito",
+        title: `${d.orderId}: ${d.decision === "aprobado" ? `${d.tipo.toLowerCase()} aprobado` : "crédito rechazado"}`,
+        detail: `${d.by}${d.avisoMoraMostrado ? " · vio el aviso de mora" : ""}${d.nota ? ` · ${d.nota}` : ""}`,
+        amountCents: null,
+        tone: d.decision === "aprobado" ? (d.avisoMoraMostrado ? "warn" : "violet") : "bad",
+        future: false,
+        dateOnly: false,
+      });
     }
-    for (const l of s.shareLinks.filter((l) => l.customerId === c.id)) {
-      timeline.push({ id: `${l.token}-c`, at: l.createdAt, kind: "enlace", title: "Estado de cuenta compartido", detail: `Por ${l.createdBy}`, amountCents: null, tone: "info", future: false });
+    for (const m of messages.filter((x) => x.estado === "enviado" || x.estado === "error")) {
+      timeline.push({
+        id: m.id,
+        at: m.enviadoAt ?? m.programadoPara,
+        kind: "mensaje",
+        title: `WhatsApp: ${MESSAGE_LABEL[m.tipo]}`,
+        detail: m.estado === "error" ? `Error: ${m.error}` : m.texto,
+        amountCents: null,
+        tone: m.estado === "error" ? "bad" : "info",
+        future: false,
+        dateOnly: false,
+      });
+    }
+    for (const l of s.shareLinks.filter((x) => x.customerId === c.id)) {
+      timeline.push({ id: `${l.token}-c`, at: l.createdAt, kind: "enlace", title: "Estado de cuenta compartido", detail: `Por ${l.createdBy}`, amountCents: null, tone: "info", future: false, dateOnly: false });
     }
     timeline.sort((a, b) => b.at.localeCompare(a.at));
 
@@ -577,22 +807,34 @@ export function getCustomer(id: string) {
       customer: c,
       seller: personName(s, c.sellerId),
       snapshot: creditSnapshot(s, c),
-      orders: orders.map((o) => ({ ...orderRow(s, o), alerts: alertSchedule(s, o) })),
+      orders: orders.map((o) => ({
+        ...orderCard(s, o),
+        line: o.line,
+        despachoOn: o.despacho?.fecha ?? null,
+        paidCents: appliedCents(s, o.id),
+        lastPaymentAt: lastPayment(s, o.id)?.at ?? null,
+        daysLate: daysLate(s, o),
+      })),
       payments,
-      requests,
+      decisions,
+      messages,
       links: s.shareLinks
         .filter((l) => l.customerId === c.id)
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
         .map((l) => ({ ...l, state: l.revokedAt ? "revocado" : l.expiresAt < now ? "vencido" : "activo" })),
       timeline,
-      termOptions: s.settings.termOptions,
     };
-
-    function daysLateLabel(o: Order) {
-      return `${c!.termDays} días (vence ${formatDate(o.dueDate)})`;
-    }
   });
 }
+
+export const MESSAGE_LABEL: Record<OutgoingMessage["tipo"], string> = {
+  cobranza_preventiva: "Aviso preventivo (−3 días)",
+  cobranza_vencimiento: "Vence hoy",
+  mora_temprana: "Mora temprana (+3 días)",
+  estado_cuenta: "Estado de cuenta",
+  confirmacion_pago: "Confirmación de pago",
+  resumen_orden: "Resumen de la orden",
+};
 
 /* ---------- Estado de cuenta compartido (vista del cliente) ---------- */
 
@@ -607,7 +849,7 @@ export type StatementDTO =
       balanceCents: number;
       overdueCents: number;
       nextDue: { id: string; date: string; amountCents: number } | null;
-      orders: Array<{ id: string; description: string; issuedOn: string; deliveredOn: string; dueDate: string; saleCents: number; paidCents: number; balanceCents: number; state: "Pagado" | "Vencido" | "Por pagar" | "En revisión" }>;
+      orders: Array<{ id: string; description: string; issuedOn: string; despachoOn: string | null; dueDate: string | null; saleCents: number; paidCents: number; balanceCents: number; state: "Pagado" | "Vencido" | "Por pagar" | "En producción" }>;
       payments: Array<{ id: string; at: string; orderId: string; amountCents: number; channel: string }>;
     };
 
@@ -618,8 +860,9 @@ export function getStatement(token: string) {
     if (link.revokedAt) return { ok: false, reason: "revocado" };
     if (link.expiresAt < nowIso()) return { ok: false, reason: "vencido" };
     const c = s.customers.find((x) => x.id === link.customerId)!;
-    const orders = customerOrders(s, c.id);
+    const orders = customerOrders(s, c.id).filter(isConfirmed);
     const snap = creditSnapshot(s, c);
+    const nextDue = snap.nextDue ? { id: snap.nextDue.id, date: dueDateOf(snap.nextDue)!, amountCents: orderBalance(s, snap.nextDue) } : null;
     return {
       ok: true,
       customer: c.name,
@@ -628,7 +871,7 @@ export function getStatement(token: string) {
       expiresAt: link.expiresAt,
       balanceCents: snap.usedCents,
       overdueCents: snap.overdueCents,
-      nextDue: snap.nextDue ? { id: snap.nextDue.id, date: snap.nextDue.dueDate, amountCents: orderBalance(s, snap.nextDue) } : null,
+      nextDue,
       orders: orders.map((o) => {
         const bal = orderBalance(s, o);
         const fin = orderFinance(s, o);
@@ -636,12 +879,12 @@ export function getStatement(token: string) {
           id: o.id,
           description: o.description,
           issuedOn: o.issuedOn,
-          deliveredOn: o.deliveredOn,
-          dueDate: o.dueDate,
+          despachoOn: o.despacho?.fecha ?? null,
+          dueDate: dueDateOf(o),
           saleCents: o.saleCents,
           paidCents: o.saleCents - bal,
           balanceCents: bal,
-          state: fin === "cobrado" ? "Pagado" : fin === "en_disputa" ? "En revisión" : fin === "vencido" ? "Vencido" : "Por pagar",
+          state: fin === "cobrado" ? "Pagado" : fin === "vencido" ? "Vencido" : fin === "sin_vencimiento" ? "En producción" : "Por pagar",
         };
       }),
       payments: s.applications
@@ -662,19 +905,22 @@ export type ResultRow = {
   line: string;
   description: string;
   modality: Order["modality"];
+  costOrigin: Order["costOrigin"];
   issuedOn: string;
   saleCents: number;
   costCents: number;
   costs: Order["costs"];
+  hasCost: boolean;
   marginCents: number;
+  perceivedCents: number;
   collectedCents: number;
   balanceCents: number;
-  dueDate: string;
+  dueDate: string | null;
 };
 export type ResultsDTO = {
   cutDate: string;
   rows: ResultRow[];
-  byBrand: Array<{ brand: Brand; saleCents: number; marginCents: number; collectedCents: number }>;
+  byBrand: Array<{ brand: Brand; saleCents: number; marginCents: number; perceivedCents: number; collectedCents: number }>;
   byLine: Array<{ line: string; saleCents: number; marginCents: number; orders: number }>;
   workshop: null | {
     orderIds: string[];
@@ -688,7 +934,8 @@ export type ResultsDTO = {
 
 export function getResults(scope: Scope) {
   return respond<ResultsDTO>((s) => {
-    const orders = s.orders.filter((o) => inScope(o.brand, scope)).sort((a, b) => b.issuedOn.localeCompare(a.issuedOn));
+    const orders = s.orders.filter((o) => inScope(o.brand, scope) && isConfirmed(o)).sort((a, b) => b.issuedOn.localeCompare(a.issuedOn));
+    const counted = orders.filter(hasCost);
     const rows: ResultRow[] = orders.map((o) => ({
       id: o.id,
       customer: customerName(s, o),
@@ -697,61 +944,58 @@ export function getResults(scope: Scope) {
       line: o.line,
       description: o.description,
       modality: o.modality,
+      costOrigin: o.costOrigin,
       issuedOn: o.issuedOn,
       saleCents: o.saleCents,
       costCents: orderCost(o),
       costs: o.costs,
+      hasCost: hasCost(o),
       marginCents: orderMargin(o),
-      collectedCents: o.saleCents - orderBalance(s, o),
+      perceivedCents: perceivedMargin(s, o),
+      collectedCents: appliedCents(s, o.id),
       balanceCents: orderBalance(s, o),
-      dueDate: o.dueDate,
+      dueDate: dueDateOf(o),
     }));
     const brands: Brand[] = scope === "consolidado" ? ["corpotex", "unicrack"] : [scope];
-    const own = orders.filter((o) => o.modality === "propia" && o.internalChargeCents != null);
+    const own = counted.filter((o) => o.modality === "propia" && o.internalChargeCents != null);
     const charge = own.reduce((sum, o) => sum + (o.internalChargeCents ?? 0), 0);
     const cost = own.reduce((sum, o) => sum + orderCost(o), 0);
     const sale = own.reduce((sum, o) => sum + o.saleCents, 0);
-    const lines = [...new Set(orders.map((o) => o.line))];
+    const lines = [...new Set(counted.map((o) => o.line))];
     return {
       cutDate: s.cutDate,
       rows,
       byBrand: brands.map((b) => {
-        const bo = orders.filter((o) => o.brand === b);
+        const bo = counted.filter((o) => o.brand === b);
         return {
           brand: b,
           saleCents: bo.reduce((x, o) => x + o.saleCents, 0),
           marginCents: bo.reduce((x, o) => x + orderMargin(o), 0),
-          collectedCents: bo.reduce((x, o) => x + o.saleCents - orderBalance(s, o), 0),
+          perceivedCents: bo.reduce((x, o) => x + perceivedMargin(s, o), 0),
+          collectedCents: bo.reduce((x, o) => x + appliedCents(s, o.id), 0),
         };
       }),
       byLine: lines.map((line) => {
-        const lo = orders.filter((o) => o.line === line);
+        const lo = counted.filter((o) => o.line === line);
         return { line, saleCents: lo.reduce((x, o) => x + o.saleCents, 0), marginCents: lo.reduce((x, o) => x + orderMargin(o), 0), orders: lo.length };
       }),
       workshop: own.length
-        ? {
-            orderIds: own.map((o) => o.id),
-            costCents: cost,
-            internalChargeCents: charge,
-            workshopResultCents: charge - cost,
-            commercialResultCents: sale - charge,
-            consolidatedMarginCents: sale - cost,
-          }
+        ? { orderIds: own.map((o) => o.id), costCents: cost, internalChargeCents: charge, workshopResultCents: charge - cost, commercialResultCents: sale - charge, consolidatedMarginCents: sale - cost }
         : null,
     };
   });
 }
 
-/** CSV para el sistema contable: IDs, marca, moneda, fechas y estado. */
+/** CSV para el sistema contable (Factura Ya, formato por verificar): IDs, marca, moneda, fechas y estado. */
 export function ordersCsv(scope: Scope) {
   const s = getState();
-  const header = ["pedido", "marca", "cliente", "linea", "modalidad", "moneda", "fecha_pedido", "fecha_entrega", "vencimiento", "venta", "costo", "margen", "cobrado", "saldo", "estado", "fecha_corte"];
+  const header = ["orden", "marca", "cliente", "linea", "modalidad", "moneda", "fecha_pedido", "fecha_despacho", "vencimiento", "venta", "costo", "margen", "cobrado", "saldo", "estado", "fecha_corte"];
   const rows = s.orders
-    .filter((o) => inScope(o.brand, scope))
+    .filter((o) => inScope(o.brand, scope) && isConfirmed(o))
     .map((o) => {
       const bal = orderBalance(s, o);
       const n = (c: number) => (c / 100).toFixed(2);
-      return [o.id, o.brand, customerName(s, o), o.line, o.modality, "PEN", o.issuedOn, o.deliveredOn, o.dueDate, n(o.saleCents), n(orderCost(o)), n(orderMargin(o)), n(o.saleCents - bal), n(bal), orderFinance(s, o), s.cutDate];
+      return [o.id, o.brand, customerName(s, o), o.line, o.modality, "PEN", o.issuedOn, o.despacho?.fecha ?? "", dueDateOf(o) ?? "", n(o.saleCents), n(orderCost(o)), n(orderMargin(o)), n(o.saleCents - bal), n(bal), o.estado, s.cutDate];
     });
   const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
   return [header, ...rows].map((r) => r.map(esc).join(",")).join("\n");
@@ -761,27 +1005,40 @@ export function ordersCsv(scope: Scope) {
 
 export type ProfileDTO = {
   activity: ActivityItem[];
-  counts: { validados: number; aplicados: number; corregidos: number; solicitudes: number; decisiones: number };
+  counts: Array<{ label: string; value: number }>;
   settings: Settings;
   ownOrders: Array<{ id: string; customer: string; costCents: number; internalChargeCents: number; saleCents: number }>;
 };
 
-export function getProfile(name: string) {
+export function getProfile(name: string, role: Role) {
   return respond<ProfileDTO>((s) => {
     const mine = s.audit.filter((a) => a.by === name).sort((a, b) => b.at.localeCompare(a.at));
     const count = (kinds: AuditEvent["kind"][]) => mine.filter((a) => kinds.includes(a.kind)).length;
+    const counts: Record<Role, Array<{ label: string; value: number }>> = {
+      vendedor: [
+        { label: "Órdenes confirmadas", value: count(["orden_confirmada"]) },
+        { label: "Créditos aprobados", value: count(["credito_aprobado"]) },
+        { label: "Créditos rechazados", value: count(["credito_rechazado"]) },
+        { label: "Cargas manuales", value: count(["orden_ingresada", "recibido"]) },
+      ],
+      administracion: [
+        { label: "Pagos verificados", value: count(["verificado"]) },
+        { label: "Pagos aplicados", value: count(["aplicado"]) },
+        { label: "Correcciones", value: count(["corregido"]) },
+        { label: "Alertas resueltas", value: count(["alerta_resuelta"]) },
+      ],
+      gerencia: [
+        { label: "Cambios de supuestos", value: count(["configuracion"]) },
+        { label: "Estados de cuenta compartidos", value: count(["enlace_creado"]) },
+      ],
+      jefe_taller: [{ label: "Despachos registrados", value: count(["despacho"]) }],
+    };
     return {
       activity: mine.slice(0, 30).map((a) => activityOf(s, a)),
-      counts: {
-        validados: count(["validado"]),
-        aplicados: count(["aplicado"]),
-        corregidos: count(["corregido"]),
-        solicitudes: count(["credito_solicitado"]),
-        decisiones: count(["credito_aprobado", "credito_rechazado"]),
-      },
+      counts: counts[role],
       settings: s.settings,
       ownOrders: s.orders
-        .filter((o) => o.modality === "propia")
+        .filter((o) => o.modality === "propia" && isConfirmed(o))
         .map((o) => ({ id: o.id, customer: customerName(s, o), costCents: orderCost(o), internalChargeCents: o.internalChargeCents ?? 0, saleCents: o.saleCents })),
     };
   });

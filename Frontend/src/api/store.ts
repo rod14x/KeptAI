@@ -1,14 +1,26 @@
-import { DemoStateSchema, type AuditEvent, type DemoState, type Evidence, type FieldKey, type Person, type Settings } from "./schemas";
+import {
+  DemoStateSchema,
+  PLAZO_MAX,
+  PLAZO_MIN,
+  type AuditEvent,
+  type DemoState,
+  type Evidence,
+  type FieldKey,
+  type Order,
+  type OutgoingMessage,
+  type Person,
+  type Settings,
+} from "./schemas";
 import { createSeed } from "./seed";
-import { addDays, matchFor, missingFields, orderBalance } from "./domain";
+import { addDays, anticipoRequired, appliedCents, creditSnapshot, gatekeeperPasses, matchFor, orderBalance, scheduleCollection } from "./domain";
 import { can, ROLE_LABEL, type Permission } from "../lib/permissions";
 import { formatMoney } from "../lib/format";
 
-// Store en memoria que simula al backend mientras Spring no está disponible.
+// Store en memoria que simula al backend (Spring) mientras no está disponible.
 // Se guarda en localStorage para sobrevivir a recargas y compartirse entre pestañas
 // (por ejemplo, el enlace de estado de cuenta abierto en otra pestaña).
 
-const STORAGE_KEY = "keptai-demo-v2";
+const STORAGE_KEY = "keptai-demo-v3";
 
 function load(): DemoState {
   try {
@@ -59,9 +71,9 @@ export function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
-export type ActionResult = { ok: true; message: string } | { ok: false; message: string };
+export type ActionResult = { ok: true; message: string } | { ok: false; message: string; code?: "aviso_mora" };
 
-const fail = (message: string): ActionResult => ({ ok: false, message });
+const fail = (message: string, code?: "aviso_mora"): ActionResult => ({ ok: false, message, code });
 const done = (message: string): ActionResult => ({ ok: true, message });
 
 export function nowIso() {
@@ -70,23 +82,28 @@ export function nowIso() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-const eid = () => `E-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+const uid = (p: string) => `${p}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
-function audit(ev: Evidence, kind: AuditEvent["kind"], by: string, text: string, amountCents = ev.fields.amountCents): AuditEvent {
-  return { id: eid(), at: nowIso(), by, kind, brand: ev.brand, evidenceId: ev.id, orderId: ev.orderId, customerId: null, amountCents, text };
+function event(kind: AuditEvent["kind"], by: string, text: string, extra: Partial<AuditEvent>): AuditEvent {
+  return { id: uid("E"), at: nowIso(), by, kind, brand: null, evidenceId: null, orderId: null, customerId: null, amountCents: null, text, ...extra };
+}
+
+function evEvent(ev: Evidence, kind: AuditEvent["kind"], by: string, text: string, amountCents = ev.fields.amountCents): AuditEvent {
+  return event(kind, by, text, { brand: ev.brand, evidenceId: ev.id, orderId: ev.orderId, amountCents });
+}
+
+function message(customerId: string, orderId: string | null, tipo: OutgoingMessage["tipo"], texto: string): OutgoingMessage {
+  // En la demo el envío por WF3 se simula como inmediato al contacto de prueba.
+  const at = nowIso();
+  return { id: uid("M"), customerId, orderId, tipo, texto, estado: "enviado", programadoPara: at, intentos: 1, enviadoAt: at, error: null };
 }
 
 function updateEvidence(id: string, fn: (ev: Evidence) => Evidence, events: AuditEvent[] = []) {
-  commit({
-    ...state,
-    evidences: state.evidences.map((e) => (e.id === id ? fn(e) : e)),
-    audit: [...state.audit, ...events],
-  });
+  commit({ ...state, evidences: state.evidences.map((e) => (e.id === id ? fn(e) : e)), audit: [...state.audit, ...events] });
 }
 
-function find(id: string) {
-  return state.evidences.find((e) => e.id === id) ?? null;
-}
+const findEv = (id: string) => state.evidences.find((e) => e.id === id) ?? null;
+const findOrder = (id: string) => state.orders.find((o) => o.id === id) ?? null;
 
 /** Permiso del rol y, para vendedores, que el registro sea de su marca. */
 function guard(actor: Person, permission: Permission, brand?: string | null): ActionResult | null {
@@ -95,15 +112,22 @@ function guard(actor: Person, permission: Permission, brand?: string | null): Ac
   return null;
 }
 
+function nextId(prefix: string, ids: string[]) {
+  const n = ids.filter((i) => i.startsWith(prefix)).map((i) => Number(i.slice(prefix.length)) || 0);
+  return `${prefix}${String(Math.max(0, ...n) + 1).padStart(3, "0")}`;
+}
+
+export type PaymentTerms = { tipo: "contado" | "anticipo" | "credito"; plazoDias: number; anticipoPct: number | null };
+
 export const actions = {
+  /* ---------- Conciliación ---------- */
+
   editField(id: string, field: FieldKey, raw: string, actor: Person): ActionResult {
-    const ev = find(id);
-    if (!ev) return fail("No se encontró la evidencia.");
+    const ev = findEv(id);
+    if (!ev) return fail("No se encontró el comprobante.");
     const denied = guard(actor, "editar_evidencia");
     if (denied) return denied;
-    if (ev.status === "pago_aplicado" || ev.status === "pago_verificado") {
-      return fail("Un pago verificado ya no se edita. Registra una corrección con administración.");
-    }
+    if (ev.status !== "recibido") return fail("Un pago verificado ya no se edita. Registra una corrección con un ajuste auditado.");
     const prev = ev.fields[field];
     let next: string | number | null = raw.trim() === "" ? null : raw.trim();
     if (field === "amountCents" && next !== null) {
@@ -117,211 +141,236 @@ export const actions = {
       (e) => ({
         ...e,
         fields: { ...e.fields, [field]: next },
-        // Si el humano corrige el monto, deja de compararse contra lo anunciado.
         mismatchAccepted: field === "amountCents" ? false : e.mismatchAccepted,
-        validatedBy: null,
-        validatedAt: null,
         corrections: [...e.corrections, { field, from: prev == null ? null : String(prev), to: next == null ? null : String(next), by: actor.name, at: nowIso() }],
       }),
-      [audit(ev, "corregido", actor.name, `Campo corregido: ${field === "amountCents" ? "monto" : field}`)],
+      [evEvent(ev, "corregido", actor.name, `Campo corregido: ${field === "amountCents" ? "monto" : field}`)],
     );
     return done("Campo actualizado. Queda registrado quién lo corrigió y cuándo.");
   },
 
   assignOrder(id: string, orderId: string, actor: Person): ActionResult {
-    const ev = find(id);
-    if (!ev) return fail("No se encontró la evidencia.");
+    const ev = findEv(id);
+    if (!ev) return fail("No se encontró el comprobante.");
     const denied = guard(actor, "editar_evidencia");
     if (denied) return denied;
-    if (!state.orders.some((o) => o.id === orderId)) return fail("Pedido no válido.");
-    updateEvidence(id, (e) => ({ ...e, orderId, validatedBy: null, validatedAt: null }), [audit(ev, "corregido", actor.name, `Asignado a ${orderId}`)]);
+    if (!findOrder(orderId)) return fail("Orden no válida.");
+    updateEvidence(id, (e) => ({ ...e, orderId }), [evEvent(ev, "corregido", actor.name, `Vinculado a ${orderId}`)]);
     return done(`Comprobante vinculado a ${orderId}.`);
   },
 
-  confirmDraft(id: string, actor: Person): ActionResult {
-    const ev = find(id);
-    if (!ev) return fail("No se encontró la evidencia.");
-    const denied = guard(actor, "editar_evidencia");
-    if (denied) return denied;
-    if (ev.status !== "borrador") return fail("Este borrador ya fue confirmado.");
-    const missing = missingFields(ev);
-    if (missing.length) return fail(`Faltan datos: ${missing.join(", ")}. Complétalos o pide el dato al cliente.`);
-    updateEvidence(id, (e) => ({ ...e, status: "comprobante_pendiente" }), [audit(ev, "recibido", actor.name, "Borrador confirmado")]);
-    return done("Borrador confirmado. Pasa a comprobante pendiente; todavía no reduce el saldo.");
-  },
-
-  validate(id: string, actor: Person, acceptMismatch = false): ActionResult {
-    const ev = find(id);
-    if (!ev) return fail("No se encontró la evidencia.");
-    const denied = guard(actor, "validar");
-    if (denied) return denied;
-    if (ev.status !== "comprobante_pendiente") return fail("Solo se valida un comprobante pendiente.");
-    if (ev.validatedBy) return fail("La evidencia ya está validada.");
-    const match = matchFor(state, ev);
-    if (match === "duplicado") return fail("Es un duplicado: márcalo como tal, no se valida.");
-    if (match === "huerfano") return fail("Asigna un pedido antes de validar.");
-    if (match === "incompleto") return fail("Faltan datos del comprobante.");
-    if (match === "excede") return fail("El monto supera el saldo del pedido. Un sobrepago requiere una regla acordada.");
-    if (match === "monto_no_cuadra" && !acceptMismatch) return fail("Confirma la diferencia de monto antes de validar.");
-    updateEvidence(id, (e) => ({ ...e, validatedBy: actor.name, validatedAt: nowIso(), mismatchAccepted: e.mismatchAccepted || acceptMismatch }), [
-      audit(ev, "validado", actor.name, "Evidencia validada"),
-    ]);
-    return done("Evidencia validada. Siguiente paso: registrar la verificación de fondos.");
-  },
-
-  verifyFunds(id: string, actor: Person): ActionResult {
-    const ev = find(id);
-    if (!ev) return fail("No se encontró la evidencia.");
+  verifyFunds(id: string, actor: Person, acceptMismatch = false): ActionResult {
+    const ev = findEv(id);
+    if (!ev) return fail("No se encontró el comprobante.");
     const denied = guard(actor, "verificar");
     if (denied) return denied;
-    if (ev.status === "pago_verificado" || ev.status === "pago_aplicado") return fail("Los fondos ya fueron verificados.");
-    if (!ev.validatedBy) return fail("Primero valida la evidencia.");
-    updateEvidence(id, (e) => ({ ...e, status: "pago_verificado", verifiedBy: actor.name, verifiedAt: nowIso() }), [
-      audit(ev, "verificado", actor.name, "Fondos verificados (simulado)"),
+    if (ev.status !== "recibido") return fail("Este pago ya fue verificado.");
+    const match = matchFor(state, ev);
+    if (match === "duplicado") return fail("Es un duplicado: márcalo como tal, no se verifica.");
+    if (match === "sin_orden") return fail("Vincula una orden antes de verificar.");
+    if (match === "incompleto") return fail("Faltan datos del comprobante.");
+    if (match === "excede") return fail("El monto supera el saldo de la orden. Un sobrepago requiere una regla acordada.");
+    if (match === "no_cuadra" && !acceptMismatch) return fail("Confirma la diferencia de monto antes de verificar.");
+    updateEvidence(id, (e) => ({ ...e, status: "verificado_banco", verifiedBy: actor.name, verifiedAt: nowIso(), mismatchAccepted: e.mismatchAccepted || acceptMismatch }), [
+      evEvent(ev, "verificado", actor.name, "Verificado en banco"),
     ]);
-    return done("Verificación registrada. Ya puedes aplicar el pago al pedido.");
+    return done("Pago verificado en banco. Ya puedes aplicarlo a la orden.");
   },
 
+  /** Transacción única: aplicación + auditoría + cancelación de alertas y mensajes + gatekeeper. */
   applyPayment(id: string, actor: Person): ActionResult {
-    const ev = find(id);
-    if (!ev) return fail("No se encontró la evidencia.");
+    const ev = findEv(id);
+    if (!ev) return fail("No se encontró el comprobante.");
     // Idempotente: aplicar de nuevo no duplica el pago.
-    if (ev.status === "pago_aplicado" || state.applications.some((a) => a.evidenceId === id)) {
-      return fail("Este pago ya fue aplicado. No se vuelve a sumar.");
-    }
+    if (ev.status === "aplicado" || state.applications.some((a) => a.evidenceId === id)) return fail("Este pago ya fue aplicado. No se vuelve a sumar.");
     const denied = guard(actor, "aplicar");
     if (denied) return denied;
-    if (ev.status !== "pago_verificado") return fail("Solo se aplica un pago verificado.");
-    const order = state.orders.find((o) => o.id === ev.orderId);
-    if (!order || ev.fields.amountCents == null) return fail("El pago no tiene pedido o monto.");
+    if (ev.status !== "verificado_banco") return fail("Solo se aplica un pago verificado en banco.");
+    const order = ev.orderId ? findOrder(ev.orderId) : null;
+    if (!order || ev.fields.amountCents == null) return fail("El pago no tiene orden o monto.");
     const balance = orderBalance(state, order);
-    if (ev.fields.amountCents > balance) return fail("El monto supera el saldo pendiente del pedido.");
+    if (ev.fields.amountCents > balance) return fail("El monto supera el saldo pendiente de la orden.");
+
     const at = nowIso();
-    commit({
+    const amount = ev.fields.amountCents;
+    const left = balance - amount;
+    const customer = state.customers.find((c) => c.id === order.customerId)!;
+    let next: DemoState = {
       ...state,
-      evidences: state.evidences.map((e) => (e.id === id ? { ...e, status: "pago_aplicado", appliedAt: at } : e)),
-      applications: [
-        ...state.applications,
-        { id: `A-${Date.now()}`, evidenceId: id, orderId: order.id, amountCents: ev.fields.amountCents, channel: ev.fields.channel ?? "Sin canal", at, by: actor.name },
-      ],
-      audit: [...state.audit, audit(ev, "aplicado", actor.name, "Pago aplicado")],
-    });
-    const left = balance - ev.fields.amountCents;
-    return done(left === 0 ? `Pago aplicado. ${order.id} queda sin saldo y sus alertas se cancelan.` : `Pago aplicado. Saldo de ${order.id}: ${formatMoney(left)}.`);
+      evidences: state.evidences.map((e) => (e.id === id ? { ...e, status: "aplicado", appliedAt: at } : e)),
+      applications: [...state.applications, { id: uid("A"), evidenceId: id, orderId: order.id, amountCents: amount, channel: ev.fields.channel ?? "Sin canal", at, by: actor.name }],
+      audit: [...state.audit, evEvent(ev, "aplicado", actor.name, "Pago aplicado")],
+      messages: [...state.messages, message(customer.id, order.id, "confirmacion_pago", `Hola ${customer.name}, registramos tu pago de ${formatMoney(amount)} para ${order.id}. Saldo: ${formatMoney(left)}.`)],
+    };
+    const notes: string[] = [];
+    if (left === 0) {
+      next = {
+        ...next,
+        messages: next.messages.map((m) => (m.orderId === order.id && m.estado === "pendiente" ? { ...m, estado: "cancelado" } : m)),
+        alerts: next.alerts.map((a) => (a.orderId === order.id && a.estado === "abierta" ? { ...a, estado: "cancelada", resolucion: "Pago completo aplicado", resueltaBy: actor.name, resueltaAt: at } : a)),
+      };
+      notes.push("sus recordatorios y alertas se cancelan");
+    }
+    // Gatekeeper: el anticipo verificado libera la orden retenida.
+    const updated = next.orders.find((o) => o.id === order.id)!;
+    if (updated.estado === "retenida" && gatekeeperPasses(next, updated)) {
+      next = {
+        ...next,
+        orders: next.orders.map((o) => (o.id === order.id ? { ...o, estado: "en_produccion", inicioProduccion: next.cutDate } : o)),
+        audit: [...next.audit, event("produccion", actor.name, "Anticipo verificado: liberada a producción", { brand: order.brand, orderId: order.id, customerId: order.customerId })],
+      };
+      notes.push("el anticipo está cubierto y la orden pasa a producción");
+    }
+    commit(next);
+    return done(`Pago aplicado. Saldo de ${order.id}: ${formatMoney(left)}${notes.length ? `; ${notes.join(" y ")}` : ""}.`);
   },
 
   markDuplicate(id: string, actor: Person): ActionResult {
-    const ev = find(id);
-    if (!ev) return fail("No se encontró la evidencia.");
-    const denied = guard(actor, "validar");
+    const ev = findEv(id);
+    if (!ev) return fail("No se encontró el comprobante.");
+    const denied = guard(actor, "verificar");
     if (denied) return denied;
-    if (matchFor(state, ev) !== "duplicado") return fail("Esta evidencia no figura como duplicada.");
-    updateEvidence(id, (e) => ({ ...e, status: "descartado", discardReason: "Duplicado" }), [
-      audit(ev, "duplicado", actor.name, "Marcado como duplicado, no reduce el saldo"),
-    ]);
-    return done("Marcado como duplicado. El saldo del pedido no cambia.");
+    if (matchFor(state, ev) !== "duplicado") return fail("Este comprobante no figura como duplicado.");
+    updateEvidence(id, (e) => ({ ...e, status: "descartado", discardReason: "Duplicado" }), [evEvent(ev, "duplicado", actor.name, "Marcado como duplicado, no reduce el saldo")]);
+    return done("Marcado como duplicado. El saldo de la orden no cambia.");
   },
 
   discard(id: string, actor: Person, reason: string): ActionResult {
-    const ev = find(id);
-    if (!ev) return fail("No se encontró la evidencia.");
+    const ev = findEv(id);
+    if (!ev) return fail("No se encontró el comprobante.");
     const denied = guard(actor, "descartar");
     if (denied) return denied;
-    if (ev.status === "pago_aplicado") return fail("Un pago aplicado no se descarta; se corrige con un ajuste auditado.");
-    updateEvidence(id, (e) => ({ ...e, status: "descartado", discardReason: reason }), [audit(ev, "descartado", actor.name, `Descartado: ${reason}`)]);
-    return done("Evidencia descartada. Queda en el historial.");
+    if (ev.status === "aplicado") return fail("Un pago aplicado no se descarta; se corrige con un ajuste auditado.");
+    updateEvidence(id, (e) => ({ ...e, status: "descartado", discardReason: reason }), [evEvent(ev, "descartado", actor.name, `Descartado: ${reason}`)]);
+    return done("Comprobante descartado. Queda en el historial.");
   },
 
-  requestCredit(customerId: string, amountCents: number, termDays: number, reason: string, actor: Person): ActionResult {
-    const c = state.customers.find((x) => x.id === customerId);
-    if (!c) return fail("Cliente no encontrado.");
-    const denied = guard(actor, "solicitar_credito", c.brand);
+  /* ---------- Órdenes ---------- */
+
+  /**
+   * Equivale a `/ok ORD-123`: el vendedor fija la condición de pago, aprueba el crédito y confirma la hoja.
+   * Si el cliente está en mora, la primera llamada devuelve `aviso_mora`: la UI muestra el aviso y el
+   * vendedor decide. La mora no bloquea (D-005).
+   */
+  confirmOrder(orderId: string, terms: PaymentTerms, actor: Person, opts: { moraAcknowledged: boolean; nota: string | null }): ActionResult {
+    const order = findOrder(orderId);
+    if (!order) return fail("Orden no encontrada.");
+    const denied = guard(actor, "confirmar_orden", order.brand) ?? guard(actor, "aprobar_credito", order.brand);
     if (denied) return denied;
-    if (!Number.isInteger(amountCents) || amountCents <= 0) return fail("Indica un monto mayor que cero.");
-    if (!state.settings.termOptions.includes(termDays)) return fail("Plazo no permitido en la configuración.");
-    if (reason.trim().length < 5) return fail("Describe el motivo del pedido.");
-    if (state.creditRequests.some((r) => r.customerId === customerId && r.status === "pendiente")) {
-      return fail("Este cliente ya tiene una solicitud pendiente.");
-    }
+    if (order.estado !== "pendiente_aprobacion") return fail("Esta orden ya fue confirmada o rechazada.");
+    if (terms.tipo !== "contado" && (terms.plazoDias < PLAZO_MIN || terms.plazoDias > PLAZO_MAX)) return fail(`El plazo va de ${PLAZO_MIN} a ${PLAZO_MAX} días.`);
+    if (terms.tipo === "anticipo" && (!terms.anticipoPct || terms.anticipoPct <= 0 || terms.anticipoPct >= 100)) return fail("El anticipo debe estar entre 1% y 99%.");
+    const customer = state.customers.find((c) => c.id === order.customerId)!;
+    const snap = creditSnapshot(state, customer);
+    const enMora = snap.status === "en_mora";
+    if (enMora && terms.tipo !== "contado" && !opts.moraAcknowledged) return fail(snap.aviso ?? "Cliente en mora.", "aviso_mora");
+
     const at = nowIso();
-    const id = `CR-${String(state.creditRequests.length + 1).padStart(3, "0")}`;
+    const condicion = { tipo: terms.tipo, plazoDias: terms.tipo === "contado" ? 0 : terms.plazoDias, anticipoPct: terms.tipo === "anticipo" ? terms.anticipoPct : null };
+    let updated: Order = {
+      ...order,
+      condicionPago: condicion,
+      credito: { decision: "aprobado", by: actor.name, at, avisoMoraMostrado: enMora, saldoReferenciaCents: snap.usedCents, nota: opts.nota },
+      hoja: order.hoja ? { ...order.hoja, estado: "confirmada", revisadoPor: actor.name, revisadoAt: at } : null,
+    };
+    const passes = gatekeeperPasses(state, updated);
+    updated = { ...updated, estado: passes ? "en_produccion" : "retenida", inicioProduccion: passes ? state.cutDate : null };
+    const resumen =
+      terms.tipo === "credito"
+        ? `crédito a ${condicion.plazoDias} días desde el despacho`
+        : terms.tipo === "anticipo"
+          ? `anticipo ${condicion.anticipoPct}% (${formatMoney(anticipoRequired(updated))}) y saldo a ${condicion.plazoDias} días`
+          : "pago al contado antes de producir";
     commit({
       ...state,
-      creditRequests: [
-        ...state.creditRequests,
-        { id, customerId, requestedBy: actor.name, requestedAt: at, amountCents, termDays, reason: reason.trim(), status: "pendiente", decidedBy: null, decidedAt: null, decisionNote: null },
-      ],
+      orders: state.orders.map((o) => (o.id === orderId ? updated : o)),
+      messages: [...state.messages, message(customer.id, orderId, "resumen_orden", `Resumen de ${orderId}: ${order.description}, total ${formatMoney(order.saleCents)}. Condición: ${resumen}.`)],
       audit: [
         ...state.audit,
-        { id: eid(), at, by: actor.name, kind: "credito_solicitado", brand: c.brand, evidenceId: null, orderId: null, customerId, amountCents, text: `Solicitud de crédito ${id}` },
+        event("credito_aprobado", actor.name, enMora ? "Crédito aprobado tras aviso de mora" : `Condición aprobada: ${terms.tipo}`, { brand: order.brand, orderId, customerId: customer.id, amountCents: order.saleCents }),
+        event("orden_confirmada", actor.name, passes ? "Orden confirmada y liberada a producción" : "Orden confirmada; retenida hasta verificar el anticipo", { brand: order.brand, orderId, customerId: customer.id }),
       ],
     });
-    return done(`Solicitud ${id} enviada a gerencia. El crédito no está aprobado todavía.`);
+    return done(passes ? `${orderId} confirmada y liberada a producción. El cliente recibe el resumen.` : `${orderId} confirmada. Queda retenida hasta verificar ${formatMoney(anticipoRequired(updated))}.`);
   },
 
-  decideCredit(requestId: string, approve: boolean, note: string, actor: Person): ActionResult {
-    const r = state.creditRequests.find((x) => x.id === requestId);
-    if (!r) return fail("Solicitud no encontrada.");
-    const denied = guard(actor, "decidir_credito");
+  rejectOrder(orderId: string, nota: string, actor: Person): ActionResult {
+    const order = findOrder(orderId);
+    if (!order) return fail("Orden no encontrada.");
+    const denied = guard(actor, "aprobar_credito", order.brand);
     if (denied) return denied;
-    if (r.status !== "pendiente") return fail("Esta solicitud ya fue decidida.");
-    if (note.trim().length < 5) return fail("Registra el motivo de la decisión.");
-    const c = state.customers.find((x) => x.id === r.customerId);
-    const at = nowIso();
+    if (order.estado !== "pendiente_aprobacion") return fail("Esta orden ya fue decidida.");
+    if (nota.trim().length < 5) return fail("Registra el motivo.");
+    const customer = state.customers.find((c) => c.id === order.customerId)!;
+    const snap = creditSnapshot(state, customer);
     commit({
       ...state,
-      creditRequests: state.creditRequests.map((x) =>
-        x.id === requestId ? { ...x, status: approve ? "aprobada" : "rechazada", decidedBy: actor.name, decidedAt: at, decisionNote: note.trim() } : x,
+      orders: state.orders.map((o) =>
+        o.id === orderId
+          ? { ...o, estado: "rechazada", credito: { decision: "rechazado", by: actor.name, at: nowIso(), avisoMoraMostrado: snap.status === "en_mora", saldoReferenciaCents: snap.usedCents, nota: nota.trim() } }
+          : o,
       ),
-      audit: [
-        ...state.audit,
-        {
-          id: eid(),
-          at,
-          by: actor.name,
-          kind: approve ? "credito_aprobado" : "credito_rechazado",
-          brand: c?.brand ?? null,
-          evidenceId: null,
-          orderId: null,
-          customerId: r.customerId,
-          amountCents: r.amountCents,
-          text: `Crédito ${approve ? "aprobado" : "rechazado"} ${r.id}`,
-        },
-      ],
+      audit: [...state.audit, event("credito_rechazado", actor.name, `Crédito rechazado: ${nota.trim()}`, { brand: order.brand, orderId, customerId: customer.id, amountCents: order.saleCents })],
     });
-    return done(approve ? `${r.id} aprobada. Queda registrado quién decidió y por qué.` : `${r.id} rechazada. El vendedor verá el motivo.`);
+    return done(`${orderId} rechazada. Queda registrado el motivo.`);
   },
 
-  updateSettings(patch: Partial<Pick<Settings, "factorMora" | "termOptions" | "termStartEvent">>, actor: Person): ActionResult {
-    const denied = guard(actor, "configurar");
+  /** El acta de despacho fija el vencimiento (despacho + plazo) y programa la cobranza −3/0/+3. */
+  registerDispatch(orderId: string, fecha: string, acta: string, actor: Person): ActionResult {
+    const order = findOrder(orderId);
+    if (!order) return fail("Orden no encontrada.");
+    const denied = guard(actor, "registrar_despacho");
     if (denied) return denied;
-    if (patch.factorMora != null && (patch.factorMora < 0 || patch.factorMora > 0.9)) return fail("El factor de mora va de 0% a 90%.");
-    if (patch.termOptions && patch.termOptions.length === 0) return fail("Debe quedar al menos un plazo.");
+    if (order.estado !== "en_produccion") return fail("Solo se despacha una orden en producción.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return fail("Indica la fecha de despacho.");
+    if (order.inicioProduccion && fecha < order.inicioProduccion) return fail("El despacho no puede ser anterior al inicio de producción.");
+    if (acta.trim().length < 3) return fail("Indica el número de acta o guía.");
+    const customer = state.customers.find((c) => c.id === order.customerId)!;
+    const updated: Order = { ...order, estado: "despachada", costOrigin: "real", despacho: { fecha, acta: acta.trim(), by: actor.name } };
+    const balance = orderBalance(state, updated);
+    const scheduled = balance > 0 ? scheduleCollection(updated, customer, balance, uid("M")) : [];
+    commit({
+      ...state,
+      orders: state.orders.map((o) => (o.id === orderId ? updated : o)),
+      messages: [...state.messages, ...scheduled],
+      audit: [...state.audit, event("despacho", actor.name, `Despacho registrado (${acta.trim()})`, { brand: order.brand, orderId, customerId: customer.id, amountCents: order.saleCents })],
+    });
+    const due = addDays(fecha, updated.condicionPago?.plazoDias ?? 0);
+    return done(balance > 0 ? `Despacho registrado. Vence el ${due.split("-").reverse().join("/")}; se programaron 3 recordatorios.` : "Despacho registrado. La orden ya estaba pagada.");
+  },
+
+  /* ---------- Cobranza ---------- */
+
+  resolveAlert(alertId: string, resolucion: string, actor: Person): ActionResult {
+    const a = state.alerts.find((x) => x.id === alertId);
+    if (!a) return fail("Alerta no encontrada.");
+    const denied = guard(actor, "gestionar_cobranza");
+    if (denied) return denied;
+    if (a.estado !== "abierta") return fail("La alerta ya está cerrada.");
+    if (resolucion.trim().length < 5) return fail("Describe qué se acordó con el cliente.");
+    const order = findOrder(a.orderId);
     const at = nowIso();
     commit({
       ...state,
-      settings: { ...state.settings, ...patch, updatedBy: actor.name, updatedAt: at },
-      audit: [...state.audit, { id: eid(), at, by: actor.name, kind: "configuracion", brand: null, evidenceId: null, orderId: null, customerId: null, amountCents: null, text: "Supuestos actualizados" }],
+      alerts: state.alerts.map((x) => (x.id === alertId ? { ...x, estado: "resuelta", resolucion: resolucion.trim(), resueltaBy: actor.name, resueltaAt: at } : x)),
+      audit: [...state.audit, event("alerta_resuelta", actor.name, `Alerta resuelta: ${resolucion.trim()}`, { brand: order?.brand ?? null, orderId: a.orderId, customerId: order?.customerId ?? null })],
     });
-    return done("Supuestos guardados. Las proyecciones se recalculan con estos valores.");
+    return done("Alerta resuelta. Queda la resolución con tu nombre y la hora.");
   },
 
-  setInternalCharge(orderId: string, cents: number, actor: Person): ActionResult {
-    const denied = guard(actor, "configurar");
+  retryMessage(id: string, actor: Person): ActionResult {
+    const m = state.messages.find((x) => x.id === id);
+    if (!m) return fail("Mensaje no encontrado.");
+    const denied = guard(actor, "gestionar_cobranza");
     if (denied) return denied;
-    const o = state.orders.find((x) => x.id === orderId);
-    if (!o || o.modality !== "propia") return fail("Solo los pedidos de producción propia tienen cargo interno.");
-    if (!Number.isInteger(cents) || cents < 0) return fail("Monto no válido.");
+    if (m.estado !== "error") return fail("Solo se reintenta un envío con error.");
     const at = nowIso();
     commit({
       ...state,
-      orders: state.orders.map((x) => (x.id === orderId ? { ...x, internalChargeCents: cents } : x)),
-      audit: [
-        ...state.audit,
-        { id: eid(), at, by: actor.name, kind: "configuracion", brand: o.brand, evidenceId: null, orderId, customerId: null, amountCents: cents, text: `Precio de transferencia de ${orderId}` },
-      ],
+      messages: state.messages.map((x) => (x.id === id ? { ...x, estado: "enviado", intentos: x.intentos + 1, enviadoAt: at, error: null } : x)),
+      audit: [...state.audit, event("mensaje", actor.name, "Reintento de envío por WhatsApp", { orderId: m.orderId, customerId: m.customerId })],
     });
-    return done(`Cargo interno de ${orderId} actualizado a ${formatMoney(cents)}.`);
+    return done("Reintento enviado al contacto de prueba (simulado en la demo).");
   },
 
   createShareLink(customerId: string, actor: Person): ActionResult & { token?: string } {
@@ -336,9 +385,24 @@ export const actions = {
     commit({
       ...state,
       shareLinks: [...state.shareLinks, { token, customerId, createdBy: actor.name, createdAt: at, expiresAt: `${addDays(at.slice(0, 10), 7)}T23:59:59`, revokedAt: null }],
-      audit: [...state.audit, { id: eid(), at, by: actor.name, kind: "enlace_creado", brand: c.brand, evidenceId: null, orderId: null, customerId, amountCents: null, text: "Enlace de estado de cuenta creado" }],
+      audit: [...state.audit, event("enlace_creado", actor.name, "Enlace de estado de cuenta creado", { brand: c.brand, customerId })],
     });
     return { ok: true, message: "Enlace creado. Vence en 7 días y puedes revocarlo cuando quieras.", token };
+  },
+
+  /** Envía el enlace por WhatsApp (WF3, tipo ESTADO_CUENTA) al contacto de prueba. */
+  sendStatement(customerId: string, token: string, actor: Person): ActionResult {
+    const denied = guard(actor, "compartir_estado");
+    if (denied) return denied;
+    const c = state.customers.find((x) => x.id === customerId);
+    const link = state.shareLinks.find((l) => l.token === token && !l.revokedAt);
+    if (!c || !link) return fail("Genera un enlace activo primero.");
+    commit({
+      ...state,
+      messages: [...state.messages, message(customerId, null, "estado_cuenta", `Hola ${c.name}, aquí puedes ver tu estado de cuenta actualizado: …/estado-cuenta/${token.slice(0, 8)}…`)],
+      audit: [...state.audit, event("mensaje", actor.name, "Estado de cuenta enviado por WhatsApp", { brand: c.brand, customerId })],
+    });
+    return done("Estado de cuenta enviado por WhatsApp al contacto de prueba.");
   },
 
   revokeShareLink(token: string, actor: Person): ActionResult {
@@ -347,16 +411,131 @@ export const actions = {
     const link = state.shareLinks.find((l) => l.token === token);
     if (!link || link.revokedAt) return fail("El enlace no existe o ya fue revocado.");
     const c = state.customers.find((x) => x.id === link.customerId);
-    const at = nowIso();
     commit({
       ...state,
-      shareLinks: state.shareLinks.map((l) => (l.token === token ? { ...l, revokedAt: at } : l)),
-      audit: [
-        ...state.audit,
-        { id: eid(), at, by: actor.name, kind: "enlace_revocado", brand: c?.brand ?? null, evidenceId: null, orderId: null, customerId: link.customerId, amountCents: null, text: "Enlace de estado de cuenta revocado" },
-      ],
+      shareLinks: state.shareLinks.map((l) => (l.token === token ? { ...l, revokedAt: nowIso() } : l)),
+      audit: [...state.audit, event("enlace_revocado", actor.name, "Enlace de estado de cuenta revocado", { brand: c?.brand ?? null, customerId: link.customerId })],
     });
     return done("Enlace revocado. Quien lo tenga ya no podrá abrirlo.");
+  },
+
+  /* ---------- Captura manual (respaldo de WhatsApp) ---------- */
+
+  captureVoucher(
+    input: { brand: "corpotex" | "unicrack"; orderId: string | null; amountCents: number; operationRef: string; payer: string; paidAt: string; channel: string },
+    actor: Person,
+  ): ActionResult & { id?: string } {
+    const denied = guard(actor, "captura", input.brand);
+    if (denied) return denied;
+    if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) return fail("Indica el monto del comprobante.");
+    if (input.operationRef.trim().length < 4) return fail("Indica el número de operación.");
+    const id = nextId("V-", state.evidences.map((e) => e.id));
+    const ev: Evidence = {
+      id,
+      brand: input.brand,
+      kind: "voucher",
+      origen: "manual",
+      receivedAt: nowIso(),
+      orderId: input.orderId,
+      fields: { amountCents: input.amountCents, operationRef: input.operationRef.trim(), payer: input.payer.trim() || null, paidAt: input.paidAt || null, channel: input.channel },
+      declaredAmountCents: null,
+      legible: true,
+      chat: [],
+      transcript: null,
+      status: "recibido",
+      mismatchAccepted: false,
+      verifiedBy: null,
+      verifiedAt: null,
+      appliedAt: null,
+      discardReason: null,
+      corrections: [],
+    };
+    commit({ ...state, evidences: [...state.evidences, ev], audit: [...state.audit, evEvent(ev, "recibido", actor.name, "Comprobante cargado a mano")] });
+    return { ok: true, message: `${id} registrado como recibido. Administración lo verifica en su banca.`, id };
+  },
+
+  captureOrder(
+    input: { customerId: string; description: string; cantidad: number; totalCents: number; entrega: string | null; chatText: string },
+    actor: Person,
+  ): ActionResult & { id?: string } {
+    const c = state.customers.find((x) => x.id === input.customerId);
+    if (!c) return fail("Elige un cliente.");
+    const denied = guard(actor, "captura", c.brand);
+    if (denied) return denied;
+    if (input.description.trim().length < 3) return fail("Describe el pedido.");
+    if (!Number.isInteger(input.cantidad) || input.cantidad <= 0) return fail("Indica la cantidad.");
+    if (!Number.isInteger(input.totalCents) || input.totalCents <= 0) return fail("Indica el total.");
+    const id = nextId("ORD-", state.orders.map((o) => o.id));
+    const faltantes = ["costos estimados", ...(input.entrega ? [] : ["fecha de entrega"])];
+    const chat = input.chatText
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .slice(0, 20)
+      .map((text) => ({ from: "cliente" as const, text, time: "" }));
+    const o: Order = {
+      id,
+      customerId: c.id,
+      brand: c.brand,
+      line: c.brand === "corpotex" ? "Profesional" : c.tipo === "colegio" ? "Escolar" : "Deportivo",
+      description: input.description.trim(),
+      items: [{ descripcion: input.description.trim(), cantidad: input.cantidad, detalle: "Cargado a mano", precioUnitCents: Math.round(input.totalCents / input.cantidad) }],
+      modality: "tercerizada",
+      saleCents: input.totalCents,
+      costs: { materiales: 0, manoObra: 0, terceros: 0, indirectos: 0 },
+      costOrigin: "teorico",
+      internalChargeCents: null,
+      sellerId: c.sellerId,
+      estado: "pendiente_aprobacion",
+      condicionPago: null,
+      credito: null,
+      hoja: {
+        version: 1,
+        origen: "manual",
+        md: `Cliente: ${c.name}\nPedido: ${input.description.trim()}\nCantidad: ${input.cantidad}\nTotal: ${formatMoney(input.totalCents)}${input.entrega ? `\nEntrega solicitada: ${input.entrega.split("-").reverse().join("/")}` : ""}`,
+        faltantes,
+        confianza: null,
+        estado: "borrador",
+        revisadoPor: null,
+        revisadoAt: null,
+        chat,
+      },
+      issuedOn: state.cutDate,
+      fechaEntregaSolicitada: input.entrega,
+      inicioProduccion: null,
+      despacho: null,
+    };
+    commit({ ...state, orders: [...state.orders, o], audit: [...state.audit, event("orden_ingresada", actor.name, "Orden cargada a mano", { brand: c.brand, orderId: id, customerId: c.id, amountCents: o.saleCents })] });
+    return { ok: true, message: `${id} creada como borrador. El vendedor la confirma y define la condición de pago.`, id };
+  },
+
+  /* ---------- Configuración ---------- */
+
+  updateSettings(patch: Partial<Pick<Settings, "factorCobro" | "plazoDefecto">>, actor: Person): ActionResult {
+    const denied = guard(actor, "configurar");
+    if (denied) return denied;
+    if (patch.factorCobro != null && (patch.factorCobro < 0.1 || patch.factorCobro > 1)) return fail("El factor de cobro va de 10% a 100%.");
+    if (patch.plazoDefecto != null && (patch.plazoDefecto < PLAZO_MIN || patch.plazoDefecto > PLAZO_MAX)) return fail(`El plazo va de ${PLAZO_MIN} a ${PLAZO_MAX} días.`);
+    commit({
+      ...state,
+      settings: { ...state.settings, ...patch, updatedBy: actor.name, updatedAt: nowIso() },
+      audit: [...state.audit, event("configuracion", actor.name, "Supuestos actualizados", {})],
+    });
+    return done("Supuestos guardados. Las proyecciones se recalculan con estos valores.");
+  },
+
+  setInternalCharge(orderId: string, cents: number, actor: Person): ActionResult {
+    const denied = guard(actor, "configurar");
+    if (denied) return denied;
+    const o = findOrder(orderId);
+    if (!o || o.modality !== "propia") return fail("Solo las órdenes de producción propia tienen cargo interno.");
+    if (!Number.isInteger(cents) || cents < 0) return fail("Monto no válido.");
+    commit({
+      ...state,
+      orders: state.orders.map((x) => (x.id === orderId ? { ...x, internalChargeCents: cents } : x)),
+      audit: [...state.audit, event("configuracion", actor.name, `Precio de transferencia de ${orderId}`, { brand: o.brand, orderId, amountCents: cents })],
+    });
+    return done(`Cargo interno de ${orderId} actualizado a ${formatMoney(cents)}.`);
   },
 
   reset(): ActionResult {
@@ -364,3 +543,8 @@ export const actions = {
     return done("Demo reiniciada con los datos de la semilla.");
   },
 };
+
+/** Útil para pantallas: cuánto anticipo falta para liberar una orden retenida. */
+export function anticipoPendiente(order: Order) {
+  return Math.max(anticipoRequired(order) - appliedCents(state, order.id), 0);
+}

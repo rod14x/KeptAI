@@ -20,7 +20,7 @@ const FILTERS: Array<{ id: Filter; label: string }> = [
   { id: "todos", label: "Todos" },
   { id: "en_mora", label: "En mora" },
   { id: "por_vencer", label: "Por vencer" },
-  { id: "en_disputa", label: "En disputa" },
+  { id: "sobre_linea", label: "Sobre la línea" },
   { id: "al_dia", label: "Al día" },
 ];
 
@@ -41,7 +41,7 @@ export function ClientesPage() {
       used: d.reduce((s, r) => s + r.usedCents, 0),
       overdue: d.reduce((s, r) => s + r.overdueCents, 0),
       inMora: d.filter((r) => r.status === "en_mora").length,
-      pending: d.filter((r) => r.pendingRequest).length,
+      pending: d.reduce((s, r) => s + r.pendingOrders, 0),
     };
   }, [data]);
 
@@ -61,7 +61,7 @@ export function ClientesPage() {
           <motion.dl variants={listVariants} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Stat label="Crédito en uso" value={<Money cents={totals.used} />} hint={`${data.length} clientes`} />
             <Stat label="Saldo vencido" value={<Money cents={totals.overdue} />} hint={`${totals.inMora} ${totals.inMora === 1 ? "cliente en mora" : "clientes en mora"}`} bad={totals.overdue > 0} />
-            <Stat label="Solicitudes pendientes" value={String(totals.pending)} hint="Esperan decisión de gerencia" />
+            <Stat label="Órdenes por confirmar" value={String(totals.pending)} hint="Esperan la decisión del vendedor" />
             <Stat
               label="Pago promedio"
               value={avgLabel(data)}
@@ -148,7 +148,7 @@ function CustomerRowView({ r }: { r: CustomerRow }) {
           <span className="min-w-0">
             <span className="block truncate font-bold">{r.name}</span>
             <span className="block truncate text-[13px] text-muted">
-              {r.brand === "corpotex" ? "Corpotex" : "Unicrack"} · {r.kind === "corporativo" ? "Corporativo" : "De a pie"} · {r.seller}
+              {r.brand === "corpotex" ? "Corpotex" : "Unicrack"} · {r.tipo === "colegio" ? "Colegio" : r.tipo === "empresa" ? "Empresa" : "Persona"} · {r.seller}
             </span>
           </span>
         </span>
@@ -159,7 +159,7 @@ function CustomerRowView({ r }: { r: CustomerRow }) {
             <span className="text-muted">de {formatMoney(r.creditLimitCents, { short: true })}</span>
           </span>
           <Meter value={r.creditLimitCents ? r.usedCents / r.creditLimitCents : 0} label={`Crédito usado de ${r.name}`} />
-          <span className="text-xs text-muted">Plazo {r.termDays} días</span>
+          <span className="text-xs text-muted">Línea de referencia</span>
         </span>
 
         <span className="tabular text-[13px] xl:text-right">
@@ -196,9 +196,9 @@ function CustomerRowView({ r }: { r: CustomerRow }) {
 
         <span className="col-span-2 flex flex-wrap items-center gap-1.5 xl:col-span-1 xl:flex-col xl:items-start">
           <CreditChip status={r.status} />
-          {r.pendingRequest && (
+          {r.pendingOrders > 0 && (
             <Chip tone="violet" icon={<HandCoins size={14} weight="bold" />}>
-              {r.pendingRequest}
+              {r.pendingOrders} por confirmar
             </Chip>
           )}
         </span>

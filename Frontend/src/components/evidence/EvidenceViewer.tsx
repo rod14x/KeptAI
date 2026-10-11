@@ -1,5 +1,5 @@
 import { Image, Microphone, EyeSlash } from "@phosphor-icons/react";
-import type { Evidence } from "../../api/schemas";
+import type { ChatMessage, Evidence } from "../../api/schemas";
 import { cx, formatDateTime, formatMoney } from "../../lib/format";
 
 // Representación de la evidencia recibida. En la demo no hay imágenes reales:
@@ -46,11 +46,11 @@ export function VoucherMock({ ev, compact = false }: { ev: Evidence; compact?: b
   );
 }
 
-export function ChatThread({ ev }: { ev: Evidence }) {
-  if (ev.chat.length === 0) return null;
+export function ChatThread({ chat }: { chat: ChatMessage[] }) {
+  if (chat.length === 0) return null;
   return (
     <div className="flex flex-col gap-2 rounded-[20px] bg-[#f1efe9] p-3.5" aria-label="Conversación de WhatsApp">
-      {ev.chat.map((m, i) => (
+      {chat.map((m, i) => (
         <div key={i} className={cx("flex", m.from === "vendedor" ? "justify-end" : "justify-start")}>
           <div
             className={cx(
@@ -65,7 +65,7 @@ export function ChatThread({ ev }: { ev: Evidence }) {
             ) : (
               m.text
             )}
-            <span className="tabular ml-2 inline-block translate-y-0.5 text-[10px] text-faint">{m.time}</span>
+            {m.time && <span className="tabular ml-2 inline-block translate-y-0.5 text-[10px] text-faint">{m.time}</span>}
           </div>
         </div>
       ))}
@@ -103,7 +103,7 @@ export function EvidenceViewer({ ev }: { ev: Evidence }) {
     <div className="flex flex-col gap-4">
       <p className="text-xs font-semibold text-muted">Evidencia original · recibida {formatDateTime(ev.receivedAt)}</p>
       {ev.kind === "audio" ? <AudioNote ev={ev} /> : <VoucherMock ev={ev} />}
-      <ChatThread ev={ev} />
+      <ChatThread chat={ev.chat} />
     </div>
   );
 }
