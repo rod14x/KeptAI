@@ -46,16 +46,104 @@ Enfoque en claridad operativa, densidad controlada y leyes de la Gestalt (proxim
 - Informativo: `#03509B` / fondo `#E2EDF8` (oscuro: `#7FB8F0` / `#163A62`)
 - Gráfico de caja: ingresos `#21B090`, egresos `#03509B` (oscuro: `#4FC9A8` / `#7FB8F0`)
 
-## 3. Tipografía y geometría
-- **Familia:** Manrope Variable con soporte tabular estricto (`tabular-nums` / `tnum`) en todos los importes, códigos y fechas.
-- **Escala de bordes y radios:**
-  - Controles (botones, inputs, selectores): `8px` (`rounded-lg`)
-  - Tarjetas y contenedores: `12px` (`rounded-xl`)
-  - Modales: `12px`
-  - Chips de estado: `6px` (`rounded-md`, eliminando la forma de cápsula universal)
-- **Elevación y sombras:** bordes nítidos de 1px como estructura visual primaria; elevación reservada exclusivamente para diálogos modales y menús flotantes.
+## 3. 🔤 Sistema de Tipografía
 
-## 4. Accesibilidad y estándares técnicos
+### 3.1. Familias Tipográficas (Font Stacks)
+- **Sans-Serif Principal (UI & Dashboards):**
+  ```css
+  font-family: 'Inter', 'Source Sans Pro', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  ```
+  - `Inter`: Con soporte óptico (`opsz: 14..32`) importado vía Google Fonts.
+  - Fallback secundario: `'Source Sans Pro'`.
+- **Monospace (Terminal, Métricas NIST, Códigos, Logs):**
+  ```css
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  ```
+- **Serif (Documentos / Reportes Formales):**
+  ```css
+  font-family: 'Merriweather', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  ```
+
+### 3.2. Pesos Disponibles (Font Weights)
+| Peso | Valor Numérico | Uso Común |
+|---|---|---|
+| Light | 300 | Subtítulos suaves, detalles decorativos |
+| Regular | 400 | Texto corrido (body), párrafos, descripciones |
+| Medium | 500 | Botones, labels de formulario, ítems de menú |
+| Semi-Bold | 600 | Encabezados de tarjetas, títulos de sección, stats |
+| Bold | 700 | Títulos principales (H1, H2), KPIs destacados |
+| Extra-Bold | 800 | Números de impacto hero, banners principales |
+| Black | 900 | Landing highlights |
+
+### 3.3. Escala Tipográfica y Line-Height
+| Clase | Tamaño (rem / px) | Line-Height | Uso en el Sistema |
+|---|---|---|---|
+| `text-xs` | 0.75rem (12px) | 1rem (16px) | Badges, tags, timestamps, texto de ayuda |
+| `text-sm` | 0.875rem (14px) | 1.25rem (20px) | Labels de forms, celdas de tabla, botones |
+| `text-base` | 1rem (16px) | 1.5rem (24px) | Texto base por defecto, párrafos descriptivos |
+| `text-lg` | 1.125rem (18px) | 1.75rem (28px) | Subtítulos de sección, cabeceras de card |
+| `text-xl` | 1.25rem (20px) | 1.75rem (28px) | Títulos de modales, sub-headers de módulo |
+| `text-2xl` | 1.5rem (24px) | 2rem (32px) | Títulos de vista, números de resumen |
+| `text-3xl` | 1.875rem (30px) | 2.25rem (36px) | Encabezado principal de página (H1) |
+| `text-4xl` | 2.25rem (36px) | 2.5rem (40px) | Hero titles / landing banners |
+
+### 3.4. Reglas Tipográficas Globales
+- Suavizado de fuente activo: `antialiased` (`-webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;`).
+- Títulos y encabezados usan kerning cerrado: `tracking-tight` (`letter-spacing: -0.025em;`).
+- Elementos `<select>` y `<option>` mantienen capitalización natural (`text-transform: none`).
+
+---
+
+## 4. 📐 Sistema de Diseño (Estructura, Geometría y Layout)
+
+### 4.1. Radios de Esquina (Border Radius)
+- **Variable Base (`--radius`):** `0.75rem` (12px) en Frontend / `0.5rem` (8px) en Backend.
+- `rounded-lg`: `var(--radius)` (12px). Tarjetas principales, modales, drawers.
+- `rounded-md`: `calc(var(--radius) - 2px)` (10px). Botones, inputs, selects, dropdown menus.
+- `rounded-sm`: `calc(var(--radius) - 4px)` (8px). Badges, tooltips, tags compactos.
+- `rounded-full`: `9999px`. Avatares, switches, pills de estado, orbes flotantes.
+
+### 4.2. Sombras y Elevación (Box Shadows)
+- `shadow-soft`: `0 10px 30px rgba(15, 23, 42, 0.08)` (Tarjetas flotantes y paneles limpios).
+- `card-hover`: `0 8px 30px rgba(0, 0, 0, 0.3)` acompañado de micro-desplazamiento vertical `translateY(-2px)`.
+- **Elevaciones Estándar:** `2xs`, `xs`, `sm`, `md`, `lg`, `xl`, `2xl`.
+- **Arrastre / Resize Grid:** `box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3)`.
+
+### 4.3. Layout y Grillas (Grid & Containers)
+- **Contenedor Principal (`.main-container`, `.container`):** Centrado automático con padding horizontal de `2rem` (32px) y max-width en pantalla 2xl de `1400px`.
+- **Breakpoints:**
+  - `sm`: 640px
+  - `md`: 768px
+  - `lg`: 1024px
+  - `xl`: 1280px
+  - `2xl`: 1400px
+- **Columnas Especiales:**
+  - `grid-cols-15`: 15 columnas para matrices de subcategorías NIST.
+  - `grid-cols-20`: 20 columnas para visualizaciones de cobertura.
+- **Viewport Móvil:** Altura con soporte dinámico `min-height: 100svh` (fallback a `100vh`).
+
+### 4.4. Ergonomía de Componentes (Dimensiones de Interfaz)
+- **Botones:**
+  - `sm`: Altura 36px (`h-9`), padding `px-3`, texto `text-sm`.
+  - `default`: Altura 40px (`h-10`), padding `px-4 py-2`, texto `text-sm`.
+  - `lg`: Altura 44px (`h-11`), padding `px-8`, texto `text-base`.
+  - `icon`: 40px × 40px (`h-10 w-10`).
+- **Inputs & Selects:** Altura base `h-9` o `h-10`, padding interno `px-3 py-2`, borde 1px.
+- **Icon Circles:** Círculos estándar de 40px × 40px (`w-10 h-10 rounded-full flex items-center justify-center`).
+
+### 4.5. Scrollbars y Transiciones
+- **Scrollbar Personalizado:**
+  - Ancho y alto: 6px.
+  - Border radius de track y thumb: 3px.
+- **Animaciones Definidas:**
+  - Acordeones: `0.2s ease-out` (`accordion-down` y `accordion-up` basados en `var(--radix-accordion-content-height)`).
+  - Hover en Cards: `transition: all 0.3s ease`.
+  - Grid Dashboard: `transition: height 200ms ease`.
+  - Burbujas decorativas: `float 8s ease-in-out infinite` con aceleración por GPU.
+
+---
+
+## 5. Accesibilidad y estándares técnicos
 - Botones e interactivos con altura táctil mínima de 44px (`min-h-11`).
 - Trampa de foco y retorno de foco con tecla `Escape` en todos los diálogos y menú lateral móvil.
 - Atajo de accesibilidad para saltar al contenido principal (`.skip-link`).
@@ -63,7 +151,7 @@ Enfoque en claridad operativa, densidad controlada y leyes de la Gestalt (proxim
 - `prefers-reduced-motion` respetado en todas las transiciones y gráficos.
 - Soporte para impresión (`@media print`) limpio sin barras laterales ni controles de interfaz.
 
-## 5. Pulido final de la interfaz · 11/10/2026
+## 6. Pulido final de la interfaz · 11/10/2026
 
 Responsable de implementación: Codex, por solicitud del usuario, en la rama `frontend`.
 Alcance: acabado visual de la aplicación existente. Se conservan arquitectura, rutas, roles,
