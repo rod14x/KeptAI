@@ -8,7 +8,7 @@ import org.junit.jupiter.api.*;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import static org.assertj.core.api.Assertions.*;
 
-/** Migraciones reales V1-V6, rol no propietario, tenant y transacciones reales; sin Supabase remoto. */
+/** Migraciones reales V1-V7, rol no propietario, tenant y transacciones reales; sin Supabase remoto. */
 class SchemaRlsTests {
  static final PostgreSQLContainer PG=new PostgreSQLContainer("postgres:17-alpine");
  static final String A="10000000-0000-4000-8000-000000000001", B="10000000-0000-4000-8000-000000000002";
@@ -18,6 +18,7 @@ class SchemaRlsTests {
  static final String RA="50000000-0000-4000-8000-000000000001", RB="50000000-0000-4000-8000-000000000002";
  static final String PA="60000000-0000-4000-8000-000000000001", PB="60000000-0000-4000-8000-000000000002";
  static final String SA="70000000-0000-4000-8000-000000000001";
+ static final String UV="20000000-0000-4000-8000-000000000003", UJ="20000000-0000-4000-8000-000000000004", OC="40000000-0000-4000-8000-000000000003";
  @BeforeAll static void setup() throws Exception {
   PG.start();
   try(Connection c=owner()){exec(c,"CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role");}
@@ -29,6 +30,10 @@ class SchemaRlsTests {
     exec(c,"INSERT INTO organizacion(id,nombre) VALUES ('"+g+"','Demo'); INSERT INTO usuario(id,organizacion_id,auth_user_id,nombre,rol) VALUES ('"+u+"','"+g+"','"+u+"','Demo','ADMIN'); INSERT INTO cliente(id,organizacion_id,razon_social,tipo) VALUES ('"+cl+"','"+g+"','Demo','EMPRESA'); INSERT INTO orden(id,organizacion_id,ref,cliente_id,condicion_pago,plazo_dias,total) VALUES ('"+o+"','"+g+"','P-00"+i+"','"+cl+"','CREDITO',30,100); INSERT INTO obligacion_cobro(id,organizacion_id,orden_id,monto,plazo_dias) VALUES ('"+r+"','"+g+"','"+o+"',100,30); INSERT INTO pago(id,organizacion_id,cliente_id,monto,fecha_pago,medio,fase,verificado_por,verificado_en) VALUES ('"+p+"','"+g+"','"+cl+"',100,current_date,'YAPE','VERIFICADO_BANCO','"+u+"',now())");
    }
    exec(c,"INSERT INTO integracion_servicio(id,organizacion_id,instancia,alcance,clave_hash) VALUES ('"+SA+"','"+A+"','ventas-01','INGESTA',repeat('a',64))");
+   exec(c,"INSERT INTO usuario(id,organizacion_id,auth_user_id,nombre,rol) VALUES ('"+UV+"','"+A+"','"+UV+"','Demo','VENDEDOR'),('"+UJ+"','"+A+"','"+UJ+"','Demo','JEFE_TALLER')");
+   exec(c,"INSERT INTO orden(id,organizacion_id,ref,cliente_id,condicion_pago,total,estado) VALUES ('"+OC+"','"+A+"','P-003','"+CA+"','CONTADO',100,'PENDIENTE_APROBACION')");
+   exec(c,"INSERT INTO apertura_caja(organizacion_id,fecha,importe,fuente) VALUES ('"+A+"',current_date,1000,'demo'); INSERT INTO egreso_caja(organizacion_id,concepto,fecha_prevista,monto,fuente) VALUES ('"+A+"','demo',current_date,10,'demo')");
+   exec(c,"INSERT INTO evento_auditoria(organizacion_id,actor,operacion,entidad,entidad_id) VALUES ('"+A+"','SISTEMA','PAGO_APLICADO','pago','"+PA+"'),('"+A+"','SISTEMA','ETAPA_AVANZADA','orden_etapa','"+OA+"')");
    // Emulacion minima de catalogos Storage y auth.uid para validar SQL/politicas;
    // no acredita API Storage, JWT real ni configuracion remota de Supabase.
    exec(c,"CREATE SCHEMA auth; CREATE SCHEMA storage; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$; CREATE FUNCTION storage.foldername(text) RETURNS text[] LANGUAGE sql IMMUTABLE AS $$ SELECT string_to_array($1,'/') $$; CREATE TABLE storage.buckets(id text PRIMARY KEY,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]); CREATE TABLE storage.objects(id uuid DEFAULT gen_random_uuid(),bucket_id text REFERENCES storage.buckets(id),name text); ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY; GRANT USAGE ON SCHEMA storage,auth TO authenticated,anon; GRANT SELECT,INSERT,UPDATE,DELETE ON storage.objects TO authenticated,anon; CREATE POLICY test_broad_permissive ON storage.objects FOR ALL TO PUBLIC USING(true) WITH CHECK(true)");
@@ -49,7 +54,7 @@ class SchemaRlsTests {
  }
  static String application(String id,String amount){return "INSERT INTO aplicacion_pago(id,organizacion_id,pago_id,obligacion_id,monto_aplicado,aplicado_por) VALUES ('"+id+"','"+A+"','"+PA+"','"+RA+"',"+amount+",'"+UA+"')";}
  @Test void migrationsAndPrivacy()throws Exception{try(Connection c=owner()){
-  assertThat(scalar(c,"SELECT count(*) FROM keptai.flyway_schema_history WHERE success AND version IS NOT NULL")).isEqualTo("6");
+  assertThat(scalar(c,"SELECT count(*) FROM keptai.flyway_schema_history WHERE success AND version IS NOT NULL")).isEqualTo("7");
   assertThat(scalar(c,"SELECT count(*) FROM information_schema.tables WHERE table_schema='keptai' AND table_name IN ('mensaje','mensaje_saliente','contacto','nota_cliente')")).isEqualTo("0");
   assertThat(scalar(c,"SELECT count(*) FROM information_schema.columns WHERE table_schema='keptai' AND column_name IN ('contenido_texto','texto','mensaje_id')")).isEqualTo("0");
   assertThat(scalar(c,"SELECT count(*) FROM pg_tables WHERE schemaname='keptai' AND tablename<>'flyway_schema_history' AND NOT rowsecurity")).isEqualTo("0");
@@ -133,6 +138,55 @@ class SchemaRlsTests {
  assertThat(scalar(c,"WITH t AS (UPDATE storage.objects SET name='overwrite' RETURNING id) SELECT count(*) FROM t")).isEqualTo("0");
  c.rollback();exec(c,"RESET ROLE;SET ROLE anon");
  assertThat(scalar(c,"SELECT count(*) FROM storage.objects")).isEqualTo("0");
+ }}
+ static String credit(String by){return "INSERT INTO aprobacion_credito(organizacion_id,orden_id,decision,aprobado_por,decidido_en,plazo_dias) VALUES ('"+A+"','"+OA+"','APROBADO','"+by+"',now(),30)";}
+ @Test void onlyTheSellerDecidesCreditAndAsThemself()throws Exception{try(Connection c=runtime()){
+  context(c,A,"",SA);denied(c,credit(UV));
+  context(c,A,UA,"");denied(c,credit(UA));
+  context(c,A,UV,"");denied(c,credit(UA));
+  exec(c,credit(UV));
+ }}
+ @Test void authorshipAndAuditActorCannotBeSpoofed()throws Exception{try(Connection c=runtime()){
+  context(c,A,UA,"");
+  denied(c,"INSERT INTO aplicacion_pago(organizacion_id,pago_id,obligacion_id,monto_aplicado,aplicado_por) VALUES ('"+A+"','"+PA+"','"+RA+"',10,'"+UV+"')");
+  String audit="INSERT INTO evento_auditoria(organizacion_id,usuario_id,actor,operacion,entidad,entidad_id) VALUES ('"+A+"',";
+  denied(c,audit+"'"+UV+"','USUARIO','X','pago','"+PA+"')");
+  denied(c,audit+"'"+UV+"','SISTEMA','X','pago','"+PA+"')");
+  denied(c,audit+"NULL,'N8N','X','pago','"+PA+"')");
+  exec(c,audit+"'"+UA+"','USUARIO','X','pago','"+PA+"')");
+  context(c,A,"",SA);
+  denied(c,audit+"'"+UA+"','USUARIO','X','pago','"+PA+"')");
+  exec(c,audit+"NULL,'N8N','X','pago','"+PA+"')");
+ }}
+ @Test void financialParentsAreFrozenWhileApplicationsAreActive()throws Exception{try(Connection c=runtime()){
+  context(c,A,UA,"");String id=UUID.randomUUID().toString();exec(c,application(id,"60"));
+  denied(c,"UPDATE pago SET monto=50 WHERE id='"+PA+"'");
+  denied(c,"UPDATE pago SET fase='RECIBIDO',verificado_por=NULL,verificado_en=NULL WHERE id='"+PA+"'");
+  denied(c,"UPDATE obligacion_cobro SET estado='ANULADA' WHERE id='"+RA+"'");
+  denied(c,"UPDATE obligacion_cobro SET monto=50 WHERE id='"+RA+"'");
+  denied(c,"UPDATE orden SET total=200 WHERE id='"+OA+"'");
+  exec(c,"UPDATE aplicacion_pago SET anulada_en=now(),anulada_por='"+UA+"',motivo_anulacion='Correccion demo' WHERE id='"+id+"'");
+  exec(c,"UPDATE pago SET monto=50 WHERE id='"+PA+"'");
+  exec(c,"UPDATE orden SET total=200 WHERE id='"+OA+"'");
+ }}
+ @Test void costClosureAndConfirmedOrdersAreProtected()throws Exception{try(Connection c=runtime()){
+  context(c,A,UV,"");denied(c,"UPDATE orden SET costos_reales_completos=true WHERE id='"+OA+"'");
+  context(c,A,"",SA);
+  assertThat(scalar(c,"WITH t AS (UPDATE orden SET total=1 WHERE id='"+OC+"' RETURNING id) SELECT count(*) FROM t")).isEqualTo("0");
+  denied(c,"INSERT INTO orden_item(organizacion_id,orden_id,descripcion,cantidad,precio_unit) VALUES ('"+A+"','"+OC+"','Demo',1,1)");
+  exec(c,"INSERT INTO orden_item(organizacion_id,orden_id,descripcion,cantidad,precio_unit) VALUES ('"+A+"','"+OA+"','Demo',1,1)");
+ }}
+ @Test void readsFollowLeastPrivilege()throws Exception{try(Connection c=runtime()){
+  context(c,A,UA,"");assertThat(scalar(c,"SELECT count(*) FROM apertura_caja")).isEqualTo("1");assertThat(scalar(c,"SELECT count(*) FROM v_margen_orden")).isEqualTo("2");
+  context(c,A,UV,"");assertThat(scalar(c,"SELECT count(*) FROM apertura_caja")).isEqualTo("0");assertThat(scalar(c,"SELECT count(*) FROM egreso_caja")).isEqualTo("0");
+  context(c,A,"",SA);
+  for(String t:new String[]{"apertura_caja","egreso_caja","aplicacion_pago","obligacion_cobro","aprobacion_credito"})assertThat(scalar(c,"SELECT count(*) FROM "+t)).as(t).isEqualTo("0");
+  assertThat(scalar(c,"SELECT count(*) FROM pago")).isEqualTo("1");
+  context(c,A,UJ,"");
+  assertThat(scalar(c,"SELECT count(*) FROM orden")).isEqualTo("0");
+  assertThat(scalar(c,"SELECT count(*) FROM v_margen_orden")).isEqualTo("0");
+  assertThat(scalar(c,"SELECT entidad FROM evento_auditoria")).isEqualTo("orden_etapa");
+  assertThat(scalar(c,"SELECT count(*) FROM cliente")).isEqualTo("0");
  }}
  @Test void concurrentApplicationsCannotOverApply()throws Exception{
   ExecutorService e=Executors.newFixedThreadPool(2);CountDownLatch first=new CountDownLatch(1);

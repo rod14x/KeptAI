@@ -26,6 +26,7 @@ Estas instrucciones aplican a este repositorio KeptAI: cerebro/ conserva conocim
 - Sin commit/push/reset/clean/cambio de rama automático. Miguel revisa Git y publica. No controlar terminales ajenas ni lanzar agentes en Herdr desde esta tarea.
 
 ## Resumen vigente de Miguel
+- D-010/V7 (Andrés): 6 roles conservados. Solo VENDEDOR decide crédito, autoría = usuario autenticado, padres financieros congelados con aplicaciones vigentes, INGESTA solo BORRADOR, lecturas por mínimo privilegio. 146 tests locales OK. Detalle: BD/revision-sql-rls.md (DB-REV-003). Spring debe fijar `aprobado_por`/`*_por` desde el JWT y no escribir crédito con ADMIN o INGESTA.
 - D-009 adoptada: BD/validaciones-pre-supabase.md define seis condiciones obligatorias. V5/V6 y 25 tablas se conservan; integridad/RLS/reversión/concurrencia parciales en local, idempotencia HTTP y aceptación integrada pendientes. MIG-03 a MIG-08 deben registrar evidencia por entorno. No confundir Flyway Success o 141 tests previos con cierre para Supabase.
 
 
