@@ -52,9 +52,11 @@ export function PerfilPage() {
             <span className="inline-flex items-center gap-1">
               <Storefront size={14} /> {me.brand ? (me.brand === "corpotex" ? "Corpotex" : "Unicrack") : "Corpotex y Unicrack"}
             </span>
-            <span className="inline-flex items-center gap-1">
-              <CalendarBlank size={14} /> En el equipo desde {formatDate(me.since)}
-            </span>
+            {me.since && (
+              <span className="inline-flex items-center gap-1">
+                <CalendarBlank size={14} /> En el equipo desde {formatDate(me.since)}
+              </span>
+            )}
           </p>
         </div>
       </div>

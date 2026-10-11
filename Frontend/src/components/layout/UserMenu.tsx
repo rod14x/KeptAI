@@ -7,13 +7,17 @@ import { Avatar } from "../ui/Avatar";
 import { useAuth } from "../../context/AuthContext";
 import { can, ROLE_LABEL } from "../../lib/permissions";
 import { cx } from "../../lib/format";
+import { IS_MOCK } from "../../config";
 
-const ITEMS = [
-  { to: "/perfil", label: "Mi perfil", icon: UserCircle },
-  { to: "/perfil?tab=actividad", label: "Mi actividad", icon: ClockCounterClockwise },
-  { to: "/perfil?tab=preferencias", label: "Preferencias", icon: SlidersHorizontal },
-  { to: "/perfil?tab=configuracion", label: "Configuración", icon: GearSix },
-];
+// En modo api el perfil y sus pestañas consultan módulos de negocio pendientes: el menú solo ofrece la identidad (inicio).
+const ITEMS = IS_MOCK
+  ? [
+      { to: "/perfil", label: "Mi perfil", icon: UserCircle },
+      { to: "/perfil?tab=actividad", label: "Mi actividad", icon: ClockCounterClockwise },
+      { to: "/perfil?tab=preferencias", label: "Preferencias", icon: SlidersHorizontal },
+      { to: "/perfil?tab=configuracion", label: "Configuración", icon: GearSix },
+    ]
+  : [{ to: "/", label: "Mi identidad", icon: UserCircle }];
 
 export function UserMenu() {
   const { person, signOut } = useAuth();

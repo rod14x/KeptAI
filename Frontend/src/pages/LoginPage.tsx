@@ -24,12 +24,12 @@ const DEMO_ACCOUNTS = [
 ];
 
 export function LoginPage() {
-  const { person } = useAuth();
+  const { person, error, retry, signOut } = useAuth();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? "/";
+  const from = IS_MOCK ? ((location.state as { from?: string } | null)?.from ?? "/") : "/";
 
   // Mientras la persona escribe, se descarga la pantalla de inicio: entrar es inmediato.
-  useEffect(() => prefetch(["pendientes"]), []);
+  useEffect(() => IS_MOCK ? prefetch(["pendientes"]) : undefined, []);
 
   if (person) return <Navigate to={from} replace />;
 
@@ -49,7 +49,14 @@ export function LoginPage() {
         <p className="login-story-footer text-xs text-muted">KeptAI · Gestión de cobros y caja</p>
       </aside>
       <main className="login-form-panel">
-        <div className="mb-8 flex items-center justify-between gap-3"><DemoBadge /><ThemeToggle /></div>
+        <div className="mb-8 flex items-center justify-between gap-3">{IS_MOCK && <DemoBadge />}<ThemeToggle /></div>
+        {error && <div role="alert" className="mb-6 rounded-xl bg-card p-4 ring-1 ring-line">
+          <p>{error.message}</p>
+          {error.retryable && <div className="mt-3 flex gap-2">
+            <Button size="sm" onClick={retry}>Reintentar</Button>
+            <Button size="sm" variant="secondary" onClick={signOut}>Cerrar sesión</Button>
+          </div>}
+        </div>}
         <section aria-labelledby="login-title"><LoginForm from={from} /></section>
         <p className="mt-10 text-center text-xs text-muted">Tu espacio de trabajo, según tu rol.</p>
       </main>

@@ -79,3 +79,11 @@ Usa `openapi-spec-validator` 0.8.4 (OpenAPI 3.1) y `jsonschema` 4.24.1 (formatos
 ## Base local V6 (25 tablas)
 
 Ver [BD/local/README.md](../BD/local/README.md). Ejecutar db.sh up/migrate y arrancar desde Backend/ con ./mvnw spring-boot:run -Dspring-boot.run.profiles=local. El perfil lee BD/local/.env, usa runtime y no ejecuta Flyway; dev sigue sin DB. Health/401 probados; JWT/API/motor siguen pendientes.
+
+## Seguridad: configuración y matriz (MIG-03-A, 10/10/2026)
+Matriz de acceso y decisiones pendientes: [docs/matriz-acceso.md](docs/matriz-acceso.md). Propiedades tipadas `keptai.security.*` (`config/KeptaiSecurityProperties`): JWT del panel (issuer, JWKS, audiencia), CORS por orígenes exactos y webhook saliente a WF3. Variables de ejemplo en `.env.example` (sin valores reales). El perfil `local` admite el frontend en `http://localhost:5173`. **Todavía no hay validación de JWT, API key ni endpoints de negocio**: salvo `/actuator/health/**`, todo responde 401.
+
+## JWT del panel y `GET /api/v1/me` (MIG-03-B, 10/10/2026)
+Valida el JWT (RS256/ES256, issuer, audiencia, exp, nbf) con `keptai.security.jwt.*` y resuelve usuario, organización y rol con `keptai_private.resolver_usuario` por la conexión runtime. Detalle y límites en [docs/matriz-acceso.md](docs/matriz-acceso.md) §6.1.
+- Pruebas (fixtures; JWKS local de prueba y PostgreSQL de Testcontainers, no tocan tu base): `sg docker -c "./mvnw -o test -Dtest='Jwt*Tests'"`.
+- Prueba manual con tu base local y un Auth real, sin pegar secretos en Git ni en el chat: (1) exporta `KEPTAI_JWT_ISSUER_URI`, `KEPTAI_JWT_JWK_SET_URI` y `KEPTAI_JWT_AUDIENCES` desde tu proyecto Supabase; (2) asegura que existe una fila en `usuario` con `auth_user_id` igual al `sub` de tu sesión (la insertas tú como migrador); (3) arranca con `-Dspring-boot.run.profiles=local` en un puerto libre; (4) toma el `access_token` de tu sesión y ejecuta `curl -i -H "Authorization: Bearer $TOKEN" localhost:<puerto>/api/v1/me`. Esperado: 200 con `user_id`, `organization_id` y `role`; sin token 401; con varias membresías 409.

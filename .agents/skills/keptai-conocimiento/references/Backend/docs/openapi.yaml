@@ -58,8 +58,16 @@ paths:
       - Contexto
       operationId: getMyContext
       summary: Usuario autenticado, organización resuelta y rol (solo lectura).
+      description: 'Implementado en MIG-03-B y probado con JWKS de prueba y PostgreSQL real (fixtures); la integración con Supabase Auth real sigue
+        pendiente. Valida firma (RS256/ES256), issuer, audiencia, exp y nbf; el `sub` se resuelve con `keptai_private.resolver_usuario`.
+        Con una sola membresía activa responde 200. Sin membresía activa: 403 `FORBIDDEN`. Con varias: 409
+        `ORGANIZATION_SELECTION_REQUIRED` (propuesta; la selección de organización aún no está definida y no se elige ninguna).
+        Fallo de base o JWKS: 503 `SERVICE_UNAVAILABLE`.
+
+        '
       x-keptai-owner: miguel
       x-keptai-status: proposed
+      x-keptai-implemented: MIG-03-B (fixture JWKS; Auth real pendiente)
       x-keptai-task: MIG-03
       x-keptai-proposed-roles:
       - VENDEDOR
@@ -83,6 +91,10 @@ paths:
                   $ref: '#/components/examples/UserContextDemo'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/v1/evidences/text:
     post:
       tags:
@@ -1594,7 +1606,9 @@ paths:
       - Integracion n8n
       operationId: n8nIngestOrder
       summary: '[n8n WF1] Recibir la hoja de resumen y el transcript de un chat cerrado con /cerrar.'
-      description: 'Ruta EXACTA que llama el nodo `Enviar pedido al backend` de `WF1_cierre_venta.json`. Cuerpo y nombres
+      description: 'IMPLEMENTADO SOLO COMO RECEPCION: devuelve 200 VALIDADO_SIN_PERSISTIR tras validar JSON e instancia del servicio. No guarda cuerpo, no crea orden, no ejecuta IA y no encola trabajo. Los JID no se resuelven contra usuarios en esta etapa. La respuesta 201, idempotencia y procesamiento descritos a continuacion son objetivos pendientes de MIG-05.
+
+        Ruta EXACTA que llama el nodo `Enviar pedido al backend` de `WF1_cierre_venta.json`. Cuerpo y nombres
         tal como los arma el nodo `Parsear y hoja resumen`
 
         (camelCase y español; el JSON de `extraccion` sigue el prompt del nodo `Preparar LLM`). Los importes llegan en SOLES
@@ -1619,6 +1633,7 @@ paths:
         '
       x-keptai-owner: miguel
       x-keptai-status: proposed
+      x-keptai-reception-status: implemented
       x-keptai-task: MIG-05
       x-keptai-proposed-roles:
       - service_n8n
@@ -1642,6 +1657,30 @@ paths:
               parseFailure:
                 $ref: '#/components/examples/N8nIngestaParseFailure'
       responses:
+        '200':
+          description: JSON validado sin persistencia ni procesamiento; no se ha creado una orden.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [estado, persistido, procesado, request_id]
+                properties:
+                  estado:
+                    type: string
+                    enum: [VALIDADO_SIN_PERSISTIR]
+                  persistido:
+                    type: boolean
+                    enum: [false]
+                  procesado:
+                    type: boolean
+                    enum: [false]
+                  request_id:
+                    type: string
+                    format: uuid
         '201':
           description: Borrador creado (o repetido de forma idempotente con `Idempotency-Replayed`).
           headers:
@@ -1835,7 +1874,7 @@ paths:
       description: 'Ruta EXACTA del nodo `Callback estado al backend` de `WF3_enviar_mensaje.json`: `POST /api/v1/mensajes/{mensajeId}/estado`
         con el cuerpo del nodo `Estado de envío` / `Estado inválido`.
 
-        `{id}` es el UUID de `mensaje_saliente.id` y `mensajeId` del cuerpo debe coincidir (400 `ID_MISMATCH`); WF3 solo llama
+        `{id}` es el UUID de `envio_notificacion.id` y `mensajeId` del cuerpo debe coincidir (400 `ID_MISMATCH`); WF3 solo llama
         si `mensajeId` no está vacío. El servidor solo acepta el mensaje de la organización de la credencial.
 
         Transiciones: `PENDIENTE -> ENVIADO|ERROR`; repetir el mismo `estado` es idempotente; un estado terminal contradictorio
@@ -2058,7 +2097,7 @@ components:
               $ref: '#/components/examples/ErrorNotFound'
     Conflict:
       description: 'Conflicto de estado o idempotencia. Códigos propuestos: `IDEMPOTENCY_KEY_CONFLICT`, `IDEMPOTENCY_IN_PROGRESS`,
-        `REVISION_CONFLICT`, `INVALID_STATE`.
+        `REVISION_CONFLICT`, `INVALID_STATE`, `ORGANIZATION_SELECTION_REQUIRED` (solo `getMyContext`/panel con varias membresías).
 
         '
       headers:
@@ -3650,7 +3689,7 @@ components:
       description: 'Tabla de origen `alerta_cobranza`: apunta a una obligación, a un pago en revisión o a ambos. Los desfases
         -3/0/+3 de la cobranza al cliente son de la cola de mensajes
 
-        salientes (`mensaje_saliente`, WF3), no de la alerta. La resolución es texto libre en BD; sus dos valores son propuesta.
+        salientes (`envio_notificacion`, WF3), no de la alerta. La resolución es texto libre en BD; sus dos valores son propuesta.
 
         '
       required:
@@ -4552,7 +4591,7 @@ components:
       - ESTADO_CUENTA
       - CONFIRMACION_PAGO
       - RESUMEN_VENDEDOR
-      description: Idéntico a `mensaje_saliente.tipo`.
+      description: Idéntico a `envio_notificacion.tipo`.
     N8nEstadoMensajeSaliente:
       type: string
       enum:
@@ -4560,7 +4599,7 @@ components:
       - ENVIADO
       - ERROR
       - CANCELADO
-      description: Idéntico a `mensaje_saliente.estado`.
+      description: Idéntico a `envio_notificacion.estado`.
     N8nEstadoEnvio:
       type: string
       enum:
@@ -6673,10 +6712,10 @@ webhooks:
         WF3 responde 202 `{aceptado, mensajeId}` ANTES de enviar y luego informa el resultado por callback (`n8nReportMessageStatus`).
         `numero` solo dígitos (WF3 antepone 51 a un celular de 9 dígitos),
 
-        `delayMs` opcional (si falta, WF3 elige 2.5 a 8.5 s). Solo se envían mensajes ya registrados en `mensaje_saliente`
+        `delayMs` opcional (si falta, WF3 elige 2.5 a 8.5 s). Solo se envían mensajes ya registrados en `envio_notificacion`
         (idempotencia `idempotencyKey` única por organización). `clienteId` lo ignora WF3 hoy.
 
-        Los tipos son los 7 de `mensaje_saliente.tipo`; la cadencia (-3, 0, +3 días) y la ventana horaria las decide Spring.
+        Los tipos son los 7 de `envio_notificacion.tipo`; la cadencia (-3, 0, +3 días) y la ventana horaria las decide Spring.
 
         '
       x-keptai-owner: miguel_adapter_andres_engine

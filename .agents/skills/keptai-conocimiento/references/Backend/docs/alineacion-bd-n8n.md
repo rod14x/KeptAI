@@ -37,3 +37,6 @@ D-009 exige [DB-VAL-001](../../BD/validaciones-pre-supabase.md). Un contrato DTO
 
 
 V4 admite campos ausentes únicamente en BORRADOR y retira MENSAJE/texto saliente. V5 refuerza pagos, gate de producción y costos. Pendientes: upload de voucher en WF2, motor/semilla, mapper entidades, cierre de costos, lectura RLS desde Spring y configuración remota. No cerrar MIG-03 ni MIG-07 con DTOs o mocks.
+
+## Muestra recibida del entorno de Isabella — 11/10/2026
+Ver [MIG-N8N-ISA-001](integracion-n8n-isabella.md): payload WF1, no export de workflow. Extraccion vacia incumple faltantes/confianza; envoltura de items no acredita body HTTP. Isabella mantiene n8n; D3 backend no sobrescribe sus workflows. Sin llamadas externas ni ingesta implementada.

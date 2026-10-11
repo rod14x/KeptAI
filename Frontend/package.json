@@ -8,6 +8,7 @@
     "preview": "vite preview",
     "e2e": "node e2e/recorrido.mjs",
     "e2e:diseno": "node e2e/diseno.mjs",
+    "e2e:api": "node e2e/identidad-api.mjs",
     "test": "vitest run"
   },
   "dependencies": {

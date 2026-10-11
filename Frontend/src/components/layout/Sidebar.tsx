@@ -8,19 +8,21 @@ import { Logo } from "./Logo";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { capabilities, commands } from "../../api/client";
+import { isModuleAvailable } from "../../lib/availability";
+import { NAV } from "./nav";
 import { cx } from "../../lib/format";
 import { ROLE_LABEL } from "../../lib/permissions";
 import { IS_MOCK } from "../../config";
 
-type NavItem = { to: string; label: string; icon: typeof SquaresFour; end: boolean };
+type NavItem = { to: string; label: string; icon: typeof SquaresFour; end: boolean; module: import("../../lib/availability").ModuleKey };
 
-const PENDIENTES: NavItem = { to: "/", label: "Pendientes", icon: Tray, end: true };
-const INICIO: NavItem = { to: "/", label: "Inicio", icon: SquaresFour, end: true };
-const PEDIDOS: NavItem = { to: "/pedidos", label: "Pedidos", icon: Kanban, end: false };
-const CLIENTES: NavItem = { to: "/clientes", label: "Clientes", icon: UsersThree, end: false };
-const PAGOS: NavItem = { to: "/conciliacion", label: "Pagos", icon: Receipt, end: false };
-const COBRANZA: NavItem = { to: "/cobranza", label: "Cobranza", icon: Bell, end: false };
-const RESULTADO: NavItem = { to: "/resultado", label: "Resultado", icon: ChartPieSlice, end: false };
+const PENDIENTES: NavItem = { to: "/", label: "Pendientes", icon: Tray, end: true, module: "inicio" };
+const INICIO: NavItem = { to: "/", label: "Inicio", icon: SquaresFour, end: true, module: "inicio" };
+const PEDIDOS: NavItem = { to: "/pedidos", label: "Pedidos", icon: Kanban, end: false, module: "pedidos" };
+const CLIENTES: NavItem = { to: "/clientes", label: "Clientes", icon: UsersThree, end: false, module: "clientes" };
+const PAGOS: NavItem = { to: "/conciliacion", label: "Pagos", icon: Receipt, end: false, module: "conciliacion" };
+const COBRANZA: NavItem = { to: "/cobranza", label: "Cobranza", icon: Bell, end: false, module: "cobranza" };
+const RESULTADO: NavItem = { to: "/resultado", label: "Resultado", icon: ChartPieSlice, end: false, module: "resultado" };
 
 /**
  * Menú corto por rol (ley de Hick): solo lo que cada rol usa a diario, máximo cuatro opciones.
@@ -48,7 +50,7 @@ const EXTRA_LABELS: Array<[string, string]> = [
 
 /** Nombre de la sección actual para la ruta del encabezado. */
 export function sectionLabel(pathname: string, role: Role | undefined) {
-  const own = (role ? NAV_BY_ROLE[role] : []).find((n) => (n.end ? pathname === n.to : pathname.startsWith(n.to)));
+  const own = (IS_MOCK ? (role ? NAV_BY_ROLE[role] : []) : NAV).find((n) => (n.end ? pathname === n.to : pathname.startsWith(n.to)));
   if (own) return own.label;
   return EXTRA_LABELS.find(([p]) => pathname.startsWith(p))?.[1] ?? "Inicio";
 }
@@ -56,7 +58,7 @@ export function sectionLabel(pathname: string, role: Role | undefined) {
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { person } = useAuth();
   const toast = useToast();
-  const items = person ? NAV_BY_ROLE[person.role] : [];
+  const items = person ? (IS_MOCK ? NAV_BY_ROLE[person.role] : NAV.filter((n) => !n.show || n.show(person.role))) : [];
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
   // Bugfix: Ajuste de threshold y rootMargin del IntersectionObserver para evitar
@@ -110,8 +112,22 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <p className="text-sm font-semibold">Espacio de trabajo</p>
         <p className="mt-1 text-xs text-muted">{person && ROLE_LABEL[person.role]}</p>
       </div>
-      <nav aria-label="Principal" className="flex flex-col gap-1.5">
-        {items.map(({ to, label, icon: Icon, end }) => (
+      <nav aria-label="Principal" className="mt-8 flex flex-col gap-1">
+        <p className="px-3 pb-2 text-xs font-semibold text-faint">Menú</p>
+        {items.map(({ to, label, icon: Icon, end, module }) =>
+          !isModuleAvailable(module) ? (
+            // Módulo pendiente: no es un enlace, no navega ni dispara cargas.
+            <span
+              key={to}
+              aria-disabled="true"
+              title="Aún no disponible: depende de endpoints del backend pendientes"
+              className="flex h-11 cursor-not-allowed items-center gap-3 rounded-xl px-3 text-sm font-semibold text-faint"
+            >
+              <Icon size={20} />
+              <span>{label}</span>
+              <span className="ml-auto text-[11px] font-semibold">Pronto</span>
+            </span>
+          ) : (
           <NavLink
             key={to}
             to={to}
@@ -143,7 +159,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               );
             }}
           </NavLink>
-        ))}
+          ),
+        )}
       </nav>
 
       <div className="mt-auto flex flex-col gap-3 pt-12">
@@ -151,7 +168,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <p className="text-xs font-semibold text-muted">{IS_MOCK ? "Entorno de demostración" : "KeptAI · Cobros y caja"}</p>
           <p className="mt-1 text-xs leading-relaxed text-faint">{IS_MOCK ? "Los datos son ficticios." : "Cada pago, con su evidencia."}</p>
         </div>
-        {capabilities.resetDemo && (
+        {IS_MOCK && capabilities.resetDemo && (
           <button
             onClick={async () => {
               const r = await commands.reset();

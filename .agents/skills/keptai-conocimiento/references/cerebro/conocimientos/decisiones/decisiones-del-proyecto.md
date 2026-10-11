@@ -11,6 +11,13 @@
 - Implementado: exige evidencia de ejecución; estos documentos no acreditan implementación del software.
 
 ## Dirección expresada por el equipo
+### D-010 — Autorización crítica por rol (V7)
+Fecha: 10/10/2026. Responsable: Andrés (DB/Flyway, según AGENTS). Fuente: solicitud directa de Andrés de revisar V6 y corregir lo crítico en seguridad. Estado: **implementada y probada en local**; revisión de Miguel y aplicación en Supabase pendientes.
+
+V6 se conserva. [V7](../../../BD/migrations/V7__autorizacion_critica.sql) mantiene los 6 roles de negocio (VENDEDOR, ADMIN, GERENTE, JEFE_TALLER, INGESTA, SCHEDULER) y corrige sus permisos. Solo el vendedor decide crédito (D-005); ni n8n ni administración lo aprueban. La autoría la fija el usuario autenticado. Los padres financieros no se alteran con aplicaciones vigentes. INGESTA queda limitada a borradores. Las lecturas siguen el mínimo privilegio. Análisis y fundamento: [DB-REV-003](../../../BD/revision-sql-rls.md).
+
+Pendientes, sin decidir: alcance del vendedor por marca/cartera, segregación registrar ≠ verificar pagos y corrección de crédito por ADMIN. Aporta evidencia parcial a VAL-01/03/04 (D-009); no las cierra.
+
 ### D-009 — Validaciones obligatorias de cierre y despliegue
 Fecha: 10/10/2026. Responsable de la dirección: Miguel. Fuente: USR-DB-VALIDACION-001, instrucción directa del equipo. Estado: condiciones de cierre adoptadas; validación integral pendiente.
 

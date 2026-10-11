@@ -6,7 +6,7 @@ Lectura inicial: [Idea de negocio vigente](empresa/idea-negocio-replanteada.md),
 - D-009 / [validaciones obligatorias antes de Supabase](../../BD/validaciones-pre-supabase.md): integridad, idempotencia, aislamiento, reversión, concurrencia y aceptación. Fuente: nueva instrucción de Miguel; condiciones adoptadas, pruebas integradas pendientes.
 
 
-**D-008 vigente:** base inicial de 25 tablas aprobada por Miguel, [DER V6](../diagramas/keptai-der-v6.md) y [guia local Docker/Flyway](../../BD/local/README.md). V5 de 27 tablas y su mapeo se conservan como antecedentes.
+**D-008 vigente:** base inicial de 25 tablas aprobada por Miguel, [DER V6](../diagramas/keptai-der-v6.md) (antecedente; vigente: [DER V9, 27 tablas](../diagramas/keptai-der-v9.md)) y [guia local Docker/Flyway](../../BD/local/README.md). V5 de 27 tablas y su mapeo se conservan como antecedentes.
 
 [Trazabilidad y necesidad por tabla](decisiones/trazabilidad-tablas-mvp.md): fuente original -> requisito/decision -> dato -> tabla; distingue conocimiento empresarial de elecciones tecnicas. 27 actuales no es minimo obligatorio; 25 recomendadas y 2 opcionales. C-05/C-06 aun tienen extensiones pendientes.
 
@@ -43,6 +43,12 @@ Dirección técnica vigente: D-004, Spring Boot por experiencia del equipo; MVP 
 
 ## Desarrollo de Miguel — Claude Code y OpenCode
 
+- [MIG-03-D por bloques](desarrollo/miguel/plan-mig-03-d.md): comenzar D1 identidad de servicio/contexto; D2 permisos, D3 webhooks despues de revision.
+
+- [MIG-03-C: contexto JDBC por transaccion](desarrollo/miguel/plan-mig-03-c.md): siguiente tarea tras auditoria contrastada; aislamiento con login runtime real y pruebas de pool/rollback.
+
+- [Conexión frontend/Auth/Spring MIG-FE-AUTH-001](desarrollo/miguel/plan-conexion-frontend-auth.md): login y /me; no endpoints financieros ni mezcla con mocks.
+
 - [Tarea general y entregables](desarrollo/miguel/tarea-general.md).
 - [Plan de implementación y delegación](desarrollo/miguel/plan-implementacion.md): etapas A–F, un escritor por archivo y gates reales.
 - [Tareas pequeñas MIG-00..08](desarrollo/miguel/tareas.md).
@@ -65,3 +71,5 @@ El mapa combina un flujo general propuesto con sistemas descritos en entrevistas
 - [Revisión SQL/RLS](../../BD/revision-sql-rls.md): V4/V5, Storage separado, índices y verificación.
 - [Contrato alineado](../../Backend/docs/contrato-api.md) y [mapeo API/BD/n8n](../../Backend/docs/alineacion-bd-n8n.md).
 - [Estado de Miguel](desarrollo/miguel/estado.md) y [preparación Supabase](desarrollo/miguel/preparacion-supabase-rls.md).
+
+- [Continuación después de integrar los backends](desarrollo/miguel/plan-continuacion-backend-integrado.md) — MIG-INTEGRADO-001, secuencia vigente y criterios de cierre real.

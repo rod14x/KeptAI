@@ -22,7 +22,7 @@ Las últimas consideraciones son:
 - Stock, cotizaciones y recompra pertenecen a fase 2. Costos, margen, cobranza y caja pertenecen al núcleo actual.
 - El 80% y el significado del 30% siguen sin verificación empresarial; no son reglas ni datos iniciales del motor.
 
-La sección DER histórica de Actores/flujos no sustituye el [DER físico V6 visible](../cerebro/diagramas/keptai-der-v6.md). Ante diferencias, contrastar migraciones/diccionario con esta definición y corregir mediante una migración nueva; no hacer que una contradicción desaparezca solo cambiando documentación.
+La sección DER histórica de Actores/flujos no sustituye el [DER físico vigente V9](../cerebro/diagramas/keptai-der-v9.md). Ante diferencias, contrastar migraciones/diccionario con esta definición y corregir mediante una migración nueva; no hacer que una contradicción desaparezca solo cambiando documentación.
 
 ## 2. Arquitectura de acceso
 
@@ -122,18 +122,20 @@ Distinguir conciliación de caja bancaria: un ingreso verificado todavía no apl
 
 V4 aplica aislamiento por organización e identidad activa; sin contexto, identidad inválida o identidad dual no hay acceso. No hay DELETE runtime. Las vistas usan security_invoker. Las funciones bootstrap privadas tienen search_path fijo y EXECUTE limitado.
 
-Permisos SQL actuales, que Spring debe restringir por recurso/campo:
+Permisos SQL actuales (V4 + V7), que Spring debe restringir además por recurso/campo:
 - Catálogos/organización/membresías: lectura según actor; alta/configuración por provisionador.
-- VENDEDOR: órdenes, resúmenes, cliente/canal y aprobación; no verificar/aplicar pagos.
-- ADMIN: operaciones financieras y revisión; también gestiona producción.
-- JEFE_TALLER: etapas, costos y despacho; sin acceso financiero a pagos/vouchers.
-- GERENTE: consulta; no escritura de negocio.
-- INGESTA: datos de captura; orden solo BORRADOR y pago solo RECIBIDO; no actualización de pago ni aplicación.
+- VENDEDOR: órdenes, resúmenes, cliente/canal y **única decisión de crédito** (firmada por sí mismo); no verificar/aplicar pagos, no certificar costeo, no leer caja.
+- ADMIN: verificar/aplicar/anular pagos, caja y revisión; también gestiona producción y certifica costeo. No decide crédito (D-005).
+- JEFE_TALLER: etapas, costos y despacho; ve solo órdenes liberadas y auditoría de producción; sin pagos, vouchers, margen ni clientes.
+- GERENTE: consulta total; no escritura de negocio.
+- INGESTA: captura; orden, ítems y resumen solo en BORRADOR, pago solo RECIBIDO; sin crédito, caja, obligaciones ni aplicaciones.
 - SCHEDULER: alertas y metadatos de envío, nunca verificación/aplicación.
+- Autoría (`*_por`, `evento_auditoria.usuario_id`): siempre el usuario autenticado; los servicios no firman como personas.
+- Padres financieros: con aplicaciones vigentes, pago/obligación/orden no cambian importe, cliente, moneda ni anulación; primero se anula la aplicación.
 - Auditoría: INSERT sin UPDATE; idempotencia requiere actualización del resultado por actores autorizados.
 - integracion_servicio: sin lectura directa runtime; bootstrap privado por hash.
 
-Las políticas actuales no restringen todas las lecturas del vendedor a sus pedidos ni impiden cada cambio sensible por columna. Esas restricciones deben implementarse en Spring; RLS V4 no equivale a autorización completa de la API.
+Las políticas no restringen las lecturas del vendedor a sus pedidos o marca (decisión pendiente, ver DB-REV-003) ni implementan la máquina de estados de orden. Esas restricciones van en Spring; RLS no equivale a autorización completa de la API. Análisis de roles: [revisión V7](revision-sql-rls.md).
 
 ## 8. Voucher y no retención
 

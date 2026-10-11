@@ -55,3 +55,6 @@ Antes de que se agote uso/contexto: esperar/cerrar encargos activos, registrar a
 Si termina el principal: OpenCode puede QA/refinamientos concretos. Si se agota Claude antes: traspaso explícito a OpenCode para siguiente tarea pendiente, con los mismos permisos/fronteras y estado incompleto. El agente nuevo no asume que un scaffold equivale a backend terminado. Guía y prompts en [guia-trabajo.md](guia-trabajo.md).
 
 Fuentes oficiales de delegación: [subagentes Claude](https://code.claude.com/docs/en/sub-agents); guía consultada 10/10/2026. Para esquema y negocio: [MIG-GENERAL](tarea-general.md), [tareas](tareas.md), [estado](estado.md).
+
+## Continuación vigente tras integración (11/10/2026)
+Los estados iniciales anteriores son históricos. La integración de seguridad/API de Miguel y motores/V8/V9 de Andrés está validada en215bcad y se incorpora a main. Consultar plan-continuacion-backend-integrado.md (MIG-INTEGRADO-001) para secuencia vigente y estado.md para evidencias. Próxima entrega AUTH-FE-01/04 + MIG-03-E real; después D3, MIG-04..08. La IA/extracción es n8n transitoria según D-007, sin cliente Gemini en Spring ni persistencia de mensajes.

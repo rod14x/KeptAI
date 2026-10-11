@@ -2,7 +2,37 @@
 
 D-009: aplicar las [seis validaciones de cierre](validaciones-pre-supabase.md). La revisión y el diccionario describen la base; no acreditan aceptación integral ni aislamiento remoto.
 
-DER visible del SQL local: [tres láminas PNG y fuente editable](../cerebro/diagramas/keptai-der-v6.md).
+DER visible del SQL vigente V9: [tres láminas PNG y fuente editable](../cerebro/diagramas/keptai-der-v9.md) (V6 conservado como antecedente).
+
+## Actualización V7 — DB-REV-003 (Andrés, 10/10/2026)
+
+Revisión de arquitectura sobre el esquema efectivo V1→V6. V6 es correcta: guarda de datos, DROP sin CASCADE, 25 tablas. Los fallos estaban en las políticas por rol de V4 y en la mutación de padres financieros. [V7](migrations/V7__autorizacion_critica.sql) los corrige sin tocar V1–V6 ni cambiar tablas o columnas (el DER V6 sigue vigente).
+
+**Roles: 6 de negocio** (4 humanos: VENDEDOR, ADMIN, GERENTE, JEFE_TALLER; 2 servicios: INGESTA, SCHEDULER). Los seis responden a un actor del problema (reto §03, Actores §1) y separan controles que se romperían al fusionarlos. No sobra ninguno ni falta uno obligatorio para el MVP. Antes de V7, la autorización era correcta en GERENTE/SCHEDULER, parcial en ADMIN/JEFE_TALLER e incorrecta en INGESTA (crítico) y VENDEDOR (excesiva).
+
+| Fallo V4/V5 | Riesgo | Corrección V7 |
+|---|---|---|
+| `aprobacion_credito` escribible por INGESTA/ADMIN | La IA podía crear una aprobación APROBADO que `fn_validar_liberacion` acepta; liberaba producción sin decisión del vendedor (contra D-005 y la regla central) | Escritura solo VENDEDOR |
+| `*_por` y `evento_auditoria.usuario_id/actor` libres | Firmar aplicaciones, verificaciones o créditos como otro usuario; auditoría como SISTEMA | Trigger `keptai_private.validar_autoria` (autoría = `app.usuario_id`; servicios no firman) y política restrictiva `p_auditoria_actor` |
+| Padres mutables con aplicaciones vigentes | Bajar monto del pago, regresar fase, anular obligación o cambiar total hacía desaparecer o inflar saldo | Triggers DEFINER `proteger_pago/obligacion/orden`: anular aplicaciones primero |
+| Cierre de costeo por cualquier escritor de orden | VENDEDOR certificaba margen | Solo ADMIN/JEFE_TALLER marcan `costos_*_completos=true` |
+| INGESTA actualizaba cualquier orden (V4 solo limitaba el estado final) | Reabrir a BORRADOR un pedido confirmado y cambiar total/ítems | Restrictivas: INGESTA solo actualiza orden/ítems/resumen en BORRADOR |
+| Lecturas amplias | INGESTA leía caja/aplicaciones/obligaciones; VENDEDOR caja; JEFE_TALLER órdenes no liberadas, auditoría de pagos y margen | `p_lectura` por mínimo privilegio; JEFE_TALLER solo órdenes liberadas y auditoría de producción (`entidad` = nombre de tabla); `v_margen_orden` solo VENDEDOR/ADMIN/GERENTE |
+
+**Decisiones pendientes:**
+- alcance del vendedor por marca o por cartera propia (el reto habla de "vendedores de cada marca" y `usuario` no tiene marca);
+- segregación registrar ≠ verificar pagos (hoy `pago` no tiene `registrado_por`);
+- si ADMIN puede corregir una decisión de crédito.
+
+**Fuera de V7, no crítico de seguridad:**
+- máquina de estados de orden;
+- estado de obligación persistido vs calculado;
+- plazo/anticipo duplicados;
+- UNIQUE de `orden_etapa` por unidad;
+- DELETE de ítems en BORRADOR;
+- CHECKs de formato e índices FK.
+
+INGESTA todavía puede actualizar `cliente.limite_credito` (sin efecto en la lógica SQL) y JEFE_TALLER ve `orden_item` de órdenes no liberadas.
 
 Actualizacion D-008: V6 deja 25 tablas y excluye contacto/notas solo si vacias. La revision V4-V5 siguiente sigue explicando sus mecanismos; el indice de contacto es antecedente retirado en V6. [Guia local](local/README.md).
 

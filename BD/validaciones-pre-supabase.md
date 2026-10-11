@@ -24,7 +24,13 @@ Cada resultado registra versión Git o hashes si hay cambios sin commit, version
 - Anulación de obligación, cambio de cliente/importe/moneda con aplicaciones previas y reversos no pueden invalidar saldos silenciosamente; diseñar transiciones del motor y rechazarlas hasta que exista flujo coherente.
 - No imponer no-negatividad a métricas donde el negativo es válido: margen/caja pueden ser negativos y deben mostrarse. La deuda exigible y la suma aplicada no se corrigen mediante truncar a cero.
 
-**Evidencia actual:** parcial. V1–V6 y SchemaRlsTests prueban varias FK, moneda, fase y sobreaplicación locales. No prueban toda la operación API/motor ni todos los cambios posteriores de padres.
+**Evidencia actual:** probado en local en el motor (11/10/2026, Andrés).
+- `MotorPagosTests`: pago recibido, duplicado o huérfano no se aplica; sobreaplicación por importe; moneda y cliente distintos.
+- V7: padres financieros congelados con aplicaciones vigentes (monto o anulación de la obligación, total de la orden).
+- Reversión total ante un fallo de auditoría después de insertar la aplicación (`falloAntesDelCommit…`).
+- `RecorridoDemoTests` repite el ciclo completo en una sola base.
+
+En Supabase: V7–V9 aplicadas con los mismos triggers. Falta la prueba por API (MIG-07) y en el destino con el login runtime.
 
 **Responsable:** Andrés, con pruebas API de Miguel. **Etapas:** motor y MIG-07; regresión MIG-08.
 
@@ -43,7 +49,7 @@ Cada resultado registra versión Git o hashes si hay cambios sin commit, version
 
 Reserva/resultado idempotente y mutación de negocio deben coordinarse transaccionalmente. Hash/JSON de respuesta seguros, sin mensajes ni transcript. No basta que exista solicitud_idempotente o que DTOs documenten Idempotency-Key.
 
-**Evidencia actual:** pendiente en backend. Existen contrato, tabla y restricciones; no están implementadas/probadas estas rutas con motor real.
+**Evidencia actual:** pendiente en backend (MIG-05/07, Miguel). El motor garantiza que un reintento no sobreaplica (reaplicar V-002 da `INSUFFICIENT_BALANCE`) y que `marcarDuplicado` es idempotente. La reserva y el replay de `solicitud_idempotente` siguen sin implementar y sin probar.
 
 **Responsables:** Miguel (HTTP/adapters) y Andrés (transacción/motor). **Etapas:** MIG-05/06/07 y MIG-08.
 
@@ -62,7 +68,13 @@ Reserva/resultado idempotente y mutación de negocio deben coordinarse transacci
 
 RLS habilitado sin políticas deniega filas al rol sujeto a RLS, pero **no protege por sí solo a una aplicación conectada como propietario/superuser/BYPASSRLS**. Grants, políticas concretas, identidad validada y credenciales adecuadas forman el control conjunto.
 
-**Evidencia actual:** parcial local. SchemaRlsTests y login runtime local acreditan varios controles DB. Storage fue emulado; falta prueba JWT/API, pool real, uploader y Supabase destino.
+**Evidencia actual:** probado en local en la base de datos y los motores.
+- `SchemaRlsTests`, más un login runtime real en `Motor*Tests` y `RecorridoDemoTests`.
+- Otra organización recibe NOT_FOUND o 0 filas.
+- Roles por operación devuelven FORBIDDEN.
+- V7: el taller solo ve órdenes liberadas.
+
+En Supabase: verificado el estado estructural: RLS en las 27 tablas, 0 grants a anon/authenticated/service_role y `keptai_runtime` sin BYPASSRLS ni login. La prueba funcional con el rol runtime no se ejecutó (falta crear `keptai_app`). Pendientes JWT/API, pool, uploader y Storage real.
 
 **Responsables:** Miguel, revisión DB de Andrés. **Etapas:** MIG-03/04 y MIG-08.
 
@@ -78,7 +90,12 @@ RLS habilitado sin políticas deniega filas al rol sujeto a RLS, pero **no prote
 - Distinguir anular aplicación de revertir fondos bancarios. El reverso requiere flujo/registro propio coherente con caja/deuda y autorización; no dar por implementado por existir anulada_en.
 - No conservar conversaciones en auditoría/idempotencia ni borrar historia como corrección de saldo.
 
-**Evidencia actual:** parcial. Inmutabilidad/anulación y privilegios locales probados; reverso bancario/caja y auditoría transaccional API completos pendientes. No hay integración bancaria en el MVP: la decisión humana no acredita un conector al banco.
+**Evidencia actual:** probado en local.
+- Anular con motivo y autor, reanular rechazado, reaplicar tras corregir: el saldo es reconstruible.
+- Cargos internos corregidos por anulación.
+- Auditoría append-only en la misma transacción, con 10 operaciones verificadas en `RecorridoDemoTests`.
+
+Falta: reverso bancario (sin integración bancaria en el MVP) y la prueba por API.
 
 **Responsable:** Andrés; Miguel prueba exposición/autorización. **Etapas:** MIG-07/08.
 
@@ -94,7 +111,7 @@ RLS habilitado sin políticas deniega filas al rol sujeto a RLS, pero **no prote
 - Locks padre pago→obligación y orden estable en lotes; deadlock/serialization failure con reintento acotado de transacción completa y misma idempotencia.
 - Verificar resultado final desde una tercera transacción: aplicaciones, saldo, fases/estados y auditoría. Sin éxito parcial ni deadlock indefinido.
 
-**Evidencia actual:** parcial. concurrentApplicationsCannotOverApply prueba localmente dos aplicaciones sobre el mismo pago. No acredita pagos distintos, reversos concurrentes, carreras de idempotencia ni concurrencia por HTTP.
+**Evidencia actual:** probado en local en el motor (`val05Concurrencia…`): mismo pago y dos pagos distintos sobre una obligación. Una sola aplicación pasa y el saldo final es correcto; los bloqueos van en orden pago → obligación. Falta: concurrencia por HTTP, reversos concurrentes y carreras de idempotencia (MIG-05/07).
 
 **Responsables:** Andrés/Miguel. **Etapas:** MIG-07/08.
 
@@ -112,13 +129,26 @@ RLS habilitado sin políticas deniega filas al rol sujeto a RLS, pero **no prote
 - C-07: reporte automático reproducible con período, fuentes, supuestos y datos ficticios identificados.
 - C-03/C-04: voucher real de prueba, revisión y trazabilidad, sin historial de conversaciones retenido.
 
-**Evidencia actual:** pendiente de aceptación integrada. C-05/C-06 requieren asignación por ítem y transferencia interna definidas en DB-DEF-001 §9, aún sin SQL/motor. Despacho/vencimiento y caja son flujos pendientes; semilla/DTOs/ejemplos no los cierran.
+**Evidencia actual:** probado en local a nivel de motor; falta la aceptación integrada por UI y API.
+- V9 y `MotorCostos`: costos por ítem con residuo en centavos y cargo interno.
+- `MotorResultados`: margen −40/150/110 por pedido, marca y línea; centro productivo −20/−20/−40 eliminando el cargo interno; resumen 800/400/400/690/110; CSV exacto.
+- V8: el vencimiento se calcula desde el despacho.
+- `MotorCaja`: 250/250/−50/−50 sin doble conteo.
+- `RecorridoDemoTests`: P-040 completo.
+- La semilla está cargada en Supabase con las mismas cifras.
 
 **Responsables:** Andrés (cálculo), Miguel (API), Germán/Isabella (UI/reglas); validación empresarial cuando corresponda. **Etapas:** MIG-07/08 y entregas DB/motor del roadmap.
 
 ## Registro de cierre
 
-Registrar cada VAL-01…06 con evidencia y estado en la bitácora; enlazar pruebas/logs sin secretos. Las seis están abiertas actualmente: 01/03/04/05 parciales; 02/06 pendientes. No activar una etiqueta «esquema terminado» por el conteo de tablas.
+Registrar cada VAL-01…06 con evidencia y estado en la bitácora; enlazar pruebas y logs sin secretos.
+
+Estado al 11/10/2026:
+- **01/03/04/05:** probadas en local en base de datos y motor.
+- **06:** probada a nivel de motor.
+- **02:** pendiente.
+
+Ninguna se cierra en el entorno de destino: faltan API (MIG-03/05/07), el login runtime en Supabase y la aceptación por UI. No activar una etiqueta «esquema terminado» por el conteo de tablas.
 
 Un defecto se corrige con migración/servicio/prueba nueva y actualización de diccionario/DER/contrato afectados. Conservar V1–V6 y las fuentes originales. Esta solicitud establece validaciones; no autoriza aplicar SQL remoto, purgar datos ni publicar Git automáticamente.
 

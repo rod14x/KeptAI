@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "1b5375e1b757dc0a0533d6d293f3e56d072c595e",
+  "source_head_at_generation": "2180c1a03d638d7fa79f1fad40fc0feddae4b758",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -10,31 +10,19 @@
     "diagramas/keptai-roadmap-fuentes.md"
   ],
   "source_changes_at_generation": [
-    "M  cerebro/conocimientos/INDICE.md",
-    "M  cerebro/conocimientos/decisiones/actores-flujos-y-der-mvp.md",
+    "MM cerebro/conocimientos/INDICE.md",
     "M  cerebro/conocimientos/decisiones/decisiones-del-proyecto.md",
-    "M  cerebro/conocimientos/decisiones/infraestructura-desarrollo-mvp.md",
-    "M  cerebro/conocimientos/decisiones/modelo-base-datos-mvp.md",
-    "M  cerebro/conocimientos/decisiones/reto-6-corpotex-conciliacion-y-rentabilidad.md",
-    "M  cerebro/conocimientos/decisiones/roadmap-german-frontend.md",
-    "M  cerebro/conocimientos/decisiones/roadmap-hackathon-equipo.md",
-    "A  cerebro/conocimientos/decisiones/trazabilidad-tablas-mvp.md",
-    "M  cerebro/conocimientos/desarrollo/miguel/estado.md",
-    "M  cerebro/conocimientos/desarrollo/miguel/plan-implementacion.md",
-    "A  cerebro/conocimientos/desarrollo/miguel/preparacion-supabase-rls.md",
-    "M  cerebro/conocimientos/desarrollo/miguel/prompt-claude.md",
-    "A  cerebro/conocimientos/desarrollo/miguel/revision-integracion-andres.md",
-    "M  cerebro/conocimientos/desarrollo/miguel/tareas.md",
-    "A  cerebro/diagramas/keptai-der-v5-01.png",
-    "A  cerebro/diagramas/keptai-der-v5-02.png",
-    "A  cerebro/diagramas/keptai-der-v5-03.png",
-    "A  cerebro/diagramas/keptai-der-v5.md",
-    "A  cerebro/diagramas/keptai-der-v6-01.png",
-    "A  cerebro/diagramas/keptai-der-v6-02.png",
-    "A  cerebro/diagramas/keptai-der-v6-03.png",
-    "A  cerebro/diagramas/keptai-der-v6.md",
-    "A  cerebro/diagramas/render-der-v5.py",
-    "A  cerebro/diagramas/render-der-v6.py"
+    "MM cerebro/conocimientos/desarrollo/miguel/estado.md",
+    "A  cerebro/conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md",
+    " M cerebro/conocimientos/desarrollo/miguel/plan-implementacion.md",
+    "A  cerebro/conocimientos/desarrollo/miguel/plan-mig-03-c.md",
+    "A  cerebro/conocimientos/desarrollo/miguel/plan-mig-03-d.md",
+    "A  cerebro/diagramas/keptai-der-v9-01.png",
+    "A  cerebro/diagramas/keptai-der-v9-02.png",
+    "A  cerebro/diagramas/keptai-der-v9-03.png",
+    "A  cerebro/diagramas/keptai-der-v9.md",
+    "A  cerebro/diagramas/render-der-v9.py",
+    "?? cerebro/conocimientos/desarrollo/miguel/plan-continuacion-backend-integrado.md"
   ],
   "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
   "interview_ids": [
@@ -85,8 +73,8 @@
   "files": [
     {
       "path": "conocimientos/INDICE.md",
-      "bytes": 6593,
-      "sha256": "7d575e0465a80bd7e11181cf77df1f02846737c35f4a891189468bd33b02ff08"
+      "bytes": 7352,
+      "sha256": "bd1be6dbcc2b7e989347622d12127b806f8964439f6c72120a3703809b6109c8"
     },
     {
       "path": "conocimientos/decisiones/actores-flujos-y-der-mvp.md",
@@ -95,8 +83,8 @@
     },
     {
       "path": "conocimientos/decisiones/decisiones-del-proyecto.md",
-      "bytes": 37230,
-      "sha256": "192c6d447b4d390bff0ffcc61d4127e35a0e492acbbefc70a23272da11191d4b"
+      "bytes": 38281,
+      "sha256": "df19f97078d058f62f106ec86eda30904aa3574e333c119773da96e238121fce"
     },
     {
       "path": "conocimientos/decisiones/infraestructura-desarrollo-mvp.md",
@@ -135,8 +123,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/estado.md",
-      "bytes": 29388,
-      "sha256": "d35611f2ac7512aa42e0e036b02ad2e1697f5b3ad2c1847340be22eb97758960"
+      "bytes": 84503,
+      "sha256": "69cead317565291bf6548bb3cf4fc6a00c3def823ade4a847b3f9100fc883501"
     },
     {
       "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
@@ -144,9 +132,29 @@
       "sha256": "a330836d823078e998a7a20b601a36a357e26d6166ae48e8ced668f46a897be9"
     },
     {
+      "path": "conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md",
+      "bytes": 15522,
+      "sha256": "0851179235aecc0d6c66b5d9d272b86166551f41c762a02aba2d479d7ef32724"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/plan-continuacion-backend-integrado.md",
+      "bytes": 3901,
+      "sha256": "45784eb63231703ee80f1c99a2d469ff862159e0329d76a84a2758bbbf8e9abf"
+    },
+    {
       "path": "conocimientos/desarrollo/miguel/plan-implementacion.md",
-      "bytes": 7626,
-      "sha256": "e621c5579752cdf02d33c445a28c14e916119c0b38cd9774dd352f60c4caa9d2"
+      "bytes": 8154,
+      "sha256": "dd05d95b29e6bf80a83863a82f41b9d5597cb9b717fa2c814d1e923d8bf2266d"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/plan-mig-03-c.md",
+      "bytes": 6491,
+      "sha256": "0dee647fdb1e61dc56ebd1f0b0ecb178ff4a4f4093b667a8af7d496d296baa25"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/plan-mig-03-d.md",
+      "bytes": 7930,
+      "sha256": "e6c22446276791a7eda0a69f02e9334e913ef653c6281aeb0a7ea303d042aff5"
     },
     {
       "path": "conocimientos/desarrollo/miguel/preparacion-supabase-rls.md",
@@ -284,6 +292,26 @@
       "sha256": "346552c11355f804e3b503cc7a88c2ff59d5b54646c6ff8a3ee10ca3dd7f3363"
     },
     {
+      "path": "diagramas/keptai-der-v9-01.png",
+      "bytes": 110143,
+      "sha256": "2e94668052b69efcb3e4844b088046c0ddc3e138c260f312bd3755ffa1578b52"
+    },
+    {
+      "path": "diagramas/keptai-der-v9-02.png",
+      "bytes": 116082,
+      "sha256": "363ad0621e63f237995b2ba735558205a19e7e6e4f50dbb1f9a06b85ecc72f6a"
+    },
+    {
+      "path": "diagramas/keptai-der-v9-03.png",
+      "bytes": 89256,
+      "sha256": "13164f8a01d095cd635cf1569efe381d303abe2316a0293857fc51aff32795c9"
+    },
+    {
+      "path": "diagramas/keptai-der-v9.md",
+      "bytes": 6161,
+      "sha256": "24bd9535e55ac5ff1897ddf5b2844cfb4c48156d32ea254db1ce5ab02c494004"
+    },
+    {
       "path": "diagramas/keptai-flujo-completo.excalidraw",
       "bytes": 107328,
       "sha256": "172e2b418db57c34a49ae6a800ec96c0845f987488a03e85cc25e5f05acb2e2e"
@@ -383,30 +411,30 @@
   "technical_files": [
     {
       "path": "BD/README.md",
-      "bytes": 4560,
-      "sha256": "512d2e4521409dfa5684c737560e7b8dbf9d50817060ad2e14e0cec51283290a",
-      "source_sha256": "512d2e4521409dfa5684c737560e7b8dbf9d50817060ad2e14e0cec51283290a",
+      "bytes": 6652,
+      "sha256": "793f47d2906c94e6a14270984e1908241edac3b7b565c96cb5f04505bb4e7f7e",
+      "source_sha256": "793f47d2906c94e6a14270984e1908241edac3b7b565c96cb5f04505bb4e7f7e",
       "sanitized": false
     },
     {
       "path": "BD/definicion-base-datos.md",
-      "bytes": 21605,
-      "sha256": "7f462eac4f4b7b73b9ef403bad0eb214c083a4383b2d4820dd3ecd62cfa6d235",
-      "source_sha256": "7f462eac4f4b7b73b9ef403bad0eb214c083a4383b2d4820dd3ecd62cfa6d235",
+      "bytes": 22198,
+      "sha256": "648ce176cd6c1d666312c78311e009227ea3063e4ff5957edbe14a919bd9e843",
+      "source_sha256": "648ce176cd6c1d666312c78311e009227ea3063e4ff5957edbe14a919bd9e843",
       "sanitized": false
     },
     {
       "path": "BD/diccionario-datos.md",
-      "bytes": 15628,
-      "sha256": "59c2f1b907e5d33db3bb89ab104ab4af557e22532e881dfce4fa87aaf42afe4e",
-      "source_sha256": "59c2f1b907e5d33db3bb89ab104ab4af557e22532e881dfce4fa87aaf42afe4e",
+      "bytes": 18925,
+      "sha256": "152f120c24eb0a40f9f6fdea7cac1942ba64b1d2975ca9ae4265db3e0ec5fa75",
+      "source_sha256": "152f120c24eb0a40f9f6fdea7cac1942ba64b1d2975ca9ae4265db3e0ec5fa75",
       "sanitized": false
     },
     {
       "path": "BD/local/README.md",
-      "bytes": 7998,
-      "sha256": "382ee93a5bb29429244646777cfad381d80bb6e969ee6155dbed71fdfdcbe5cf",
-      "source_sha256": "382ee93a5bb29429244646777cfad381d80bb6e969ee6155dbed71fdfdcbe5cf",
+      "bytes": 8427,
+      "sha256": "d57bea1ba9d226b54fe053c278364af35e7ac438aba1f1f1d1bfb25ea05d0d00",
+      "source_sha256": "d57bea1ba9d226b54fe053c278364af35e7ac438aba1f1f1d1bfb25ea05d0d00",
       "sanitized": false
     },
     {
@@ -459,10 +487,38 @@
       "sanitized": false
     },
     {
+      "path": "BD/migrations/V7__autorizacion_critica.sql",
+      "bytes": 11513,
+      "sha256": "99f5b1958a4ffdcd1f3d6487ec8eb2a7eac1a02162460e61829ee2d2db7ed8d0",
+      "source_sha256": "99f5b1958a4ffdcd1f3d6487ec8eb2a7eac1a02162460e61829ee2d2db7ed8d0",
+      "sanitized": false
+    },
+    {
+      "path": "BD/migrations/V8__despacho_vencimiento_cobranza.sql",
+      "bytes": 4733,
+      "sha256": "bea9b9e3ae2639e883526662762eed82c9cdeaa7fb0b071340506ad4d5e5470f",
+      "source_sha256": "bea9b9e3ae2639e883526662762eed82c9cdeaa7fb0b071340506ad4d5e5470f",
+      "sanitized": false
+    },
+    {
+      "path": "BD/migrations/V9__asignacion_costos_transferencia_interna.sql",
+      "bytes": 10758,
+      "sha256": "66be33ff54ec5ccc9522977fc0fc344655369d408e933ed22c5e186d6cfcf02e",
+      "source_sha256": "66be33ff54ec5ccc9522977fc0fc344655369d408e933ed22c5e186d6cfcf02e",
+      "sanitized": false
+    },
+    {
       "path": "BD/revision-sql-rls.md",
-      "bytes": 6856,
-      "sha256": "6139996a497494eaf0b29c6d755acee07df9ccee227fccdf5c7c1b68bf91d3ea",
-      "source_sha256": "6139996a497494eaf0b29c6d755acee07df9ccee227fccdf5c7c1b68bf91d3ea",
+      "bytes": 9943,
+      "sha256": "a707b03dd249fae85ee787003eb4cab7dfa2248a6606ad59f461c1c1a6e820e8",
+      "source_sha256": "a707b03dd249fae85ee787003eb4cab7dfa2248a6606ad59f461c1c1a6e820e8",
+      "sanitized": false
+    },
+    {
+      "path": "BD/semilla/semilla_demo.sql",
+      "bytes": 19438,
+      "sha256": "2331cab0e9f75a99651e8c9d62d440e123ebe4d4080a9ea94ccbb31d07c9f6b7",
+      "source_sha256": "2331cab0e9f75a99651e8c9d62d440e123ebe4d4080a9ea94ccbb31d07c9f6b7",
       "sanitized": false
     },
     {
@@ -474,37 +530,86 @@
     },
     {
       "path": "BD/validaciones-pre-supabase.md",
-      "bytes": 11435,
-      "sha256": "e083c7d8091a35147fbc736d76c26964831dbfaa011802524ae0525e253a9f21",
-      "source_sha256": "e083c7d8091a35147fbc736d76c26964831dbfaa011802524ae0525e253a9f21",
+      "bytes": 13120,
+      "sha256": "49e5e0dc0ef145c4123b99a3217793e7e1cd117914d3b71b144f2e1ac60e1c19",
+      "source_sha256": "49e5e0dc0ef145c4123b99a3217793e7e1cd117914d3b71b144f2e1ac60e1c19",
       "sanitized": false
     },
     {
       "path": "Backend/docs/alineacion-bd-n8n.md",
-      "bytes": 4815,
-      "sha256": "85acab094bf0490059df401be00972ce0af5403fee3630341330e838c0f0f3f2",
-      "source_sha256": "85acab094bf0490059df401be00972ce0af5403fee3630341330e838c0f0f3f2",
+      "bytes": 5163,
+      "sha256": "dfbd9229f9efedb52401b1f79bc30d0c5b43ed764cf61d9a3709fb3fcbad08ab",
+      "source_sha256": "dfbd9229f9efedb52401b1f79bc30d0c5b43ed764cf61d9a3709fb3fcbad08ab",
+      "sanitized": false
+    },
+    {
+      "path": "Backend/docs/auditoria-backend-2026-10-11.md",
+      "bytes": 30337,
+      "sha256": "089407afa2886257a6e0a16469560f64cf99f49f0891ebadbc9cef2d26020789",
+      "source_sha256": "089407afa2886257a6e0a16469560f64cf99f49f0891ebadbc9cef2d26020789",
+      "sanitized": false
+    },
+    {
+      "path": "Backend/docs/configuracion-supabase-local.md",
+      "bytes": 6425,
+      "sha256": "7be86af49fa8c298ff5ac8d6c0125f705e052070108f9a9bce94894af4d44355",
+      "source_sha256": "7be86af49fa8c298ff5ac8d6c0125f705e052070108f9a9bce94894af4d44355",
       "sanitized": false
     },
     {
       "path": "Backend/docs/contrato-api.md",
-      "bytes": 8586,
-      "sha256": "c2d45bad9a30c5c3786068faf1b128d01e0d4935a0be53b862cb0bf02e093241",
-      "source_sha256": "c2d45bad9a30c5c3786068faf1b128d01e0d4935a0be53b862cb0bf02e093241",
+      "bytes": 9223,
+      "sha256": "91e92cbcc359684ef76f10e0b5de9cc14d995bf164268e27f473d79f37adbcc1",
+      "source_sha256": "91e92cbcc359684ef76f10e0b5de9cc14d995bf164268e27f473d79f37adbcc1",
+      "sanitized": false
+    },
+    {
+      "path": "Backend/docs/diagnostico-integracion-padre-nuestro.md",
+      "bytes": 5603,
+      "sha256": "ffd6804fe0106e0b5a8cb4e2c8277328f5b0e4e3beda29dc9138fc16ea07c5c8",
+      "source_sha256": "ffd6804fe0106e0b5a8cb4e2c8277328f5b0e4e3beda29dc9138fc16ea07c5c8",
+      "sanitized": false
+    },
+    {
+      "path": "Backend/docs/integracion-n8n-isabella.md",
+      "bytes": 7977,
+      "sha256": "9571f6d64ebaa53c01bff7b9e894fa076d00b442b006bf4237b9d7309abba2b7",
+      "source_sha256": "9571f6d64ebaa53c01bff7b9e894fa076d00b442b006bf4237b9d7309abba2b7",
+      "sanitized": false
+    },
+    {
+      "path": "Backend/docs/matriz-acceso.md",
+      "bytes": 20699,
+      "sha256": "5bfa7a33417e4b675106759b3618fc8a61e56b82481fde19b76a726b774676e7",
+      "source_sha256": "5bfa7a33417e4b675106759b3618fc8a61e56b82481fde19b76a726b774676e7",
+      "sanitized": false
+    },
+    {
+      "path": "Backend/docs/motor-pagos.md",
+      "bytes": 13706,
+      "sha256": "1c607ccef55016aeb18485ec8182c7be11a3749ddfd02bca1001cffd23fd07b4",
+      "source_sha256": "1c607ccef55016aeb18485ec8182c7be11a3749ddfd02bca1001cffd23fd07b4",
       "sanitized": false
     },
     {
       "path": "Backend/docs/openapi.yaml",
-      "bytes": 209656,
-      "sha256": "e61f5d2fef4b145b202bb68b039536e6ba292330898eeb432a9d97ded5720464",
-      "source_sha256": "6dc17a7a527f35b57c48192afb4c1a2e199fa777b00b6d50c28afe9e11945dd9",
+      "bytes": 211808,
+      "sha256": "4fd4ee38bb461d4e504cf20f2d830090dc7b342055e74445f6169b16423a3c3d",
+      "source_sha256": "ce3db61d7faa63db8b4624fa134f8d8abcb21607bc209cedd22aca4a4f7cdd45",
       "sanitized": true
     },
     {
+      "path": "Backend/docs/provision-servicios-local.md",
+      "bytes": 4650,
+      "sha256": "c6addfb68a5daf52fc7f870bb2a17c41a76cb69254b54e9d95b16b0bdee5d994",
+      "source_sha256": "c6addfb68a5daf52fc7f870bb2a17c41a76cb69254b54e9d95b16b0bdee5d994",
+      "sanitized": false
+    },
+    {
       "path": "Middleware/n8n/README.md",
-      "bytes": 6790,
-      "sha256": "da90a7935caa03664964d2623463ab3d7da51490616eddecd5ab06a36b1f94b6",
-      "source_sha256": "b45cff3631ba71f87cca3ca77c97a21449c4a994246846e1e43eb5b443130851",
+      "bytes": 8429,
+      "sha256": "da9365fbd54dc37bd469f732c3f5742b211190a43f76488c288302f95c54f027",
+      "source_sha256": "cfd6410783bfa1caaeee2f673db85f498326e0ba2ec69d4b8385e03d5c746ac7",
       "sanitized": true
     },
     {
