@@ -9,6 +9,7 @@ const whenIdle: Idle = (cb) => {
 };
 
 export const loaders = {
+  pendientes: () => import("../pages/PendientesPage"),
   dashboard: () => import("../pages/DashboardPage"),
   pedidos: () => import("../pages/PedidosPage"),
   orden: () => import("../pages/OrdenDetailPage"),

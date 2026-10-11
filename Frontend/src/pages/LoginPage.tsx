@@ -33,8 +33,8 @@ export function LoginPage() {
   const from = (location.state as { from?: string } | null)?.from ?? "/";
   const [open, setOpen] = useState(Boolean((location.state as { from?: string } | null)?.from));
 
-  // Mientras la persona escribe, se descarga el dashboard: entrar es inmediato.
-  useEffect(() => prefetch(["dashboard"]), []);
+  // Mientras la persona escribe, se descarga la pantalla de inicio: entrar es inmediato.
+  useEffect(() => prefetch(["pendientes"]), []);
 
   if (person) return <Navigate to={from} replace />;
 

@@ -6,13 +6,14 @@ import { overlayVariants, softSpring } from "../motion/primitives";
 
 const DRAWER_IN = { x: "-100%" };
 const DRAWER_SHOW = { x: 0 };
-import { Sidebar, NAV } from "./Sidebar";
+import { Sidebar, NAV_BY_ROLE, sectionLabel } from "./Sidebar";
 import { ScopeSelector } from "./ScopeSelector";
 import { SearchBox } from "./SearchBox";
 import { Logo } from "./Logo";
 import { UserMenu } from "./UserMenu";
 import { useAuth } from "../../context/AuthContext";
 import { prefetch } from "../../lib/prefetch";
+import { cx } from "../../lib/format";
 
 export function AppLayout() {
   const [drawer, setDrawer] = useState(false);
@@ -23,14 +24,15 @@ export function AppLayout() {
   useEffect(() => {
     if (!person) return;
     const byRole = {
-      vendedor: ["pedidos", "orden", "clientes", "cliente", "captura", "perfil"],
-      administracion: ["pedidos", "orden", "conciliacion", "cobranza", "clientes", "cliente", "captura", "resultado", "perfil"],
-      gerencia: ["pedidos", "orden", "clientes", "cliente", "resultado", "cobranza", "perfil"],
+      vendedor: ["pendientes", "pedidos", "orden", "clientes", "cliente", "captura", "perfil"],
+      administracion: ["pendientes", "pedidos", "orden", "conciliacion", "cobranza", "clientes", "cliente", "captura", "perfil"],
+      gerencia: ["dashboard", "pedidos", "orden", "clientes", "cliente", "resultado", "perfil"],
       jefe_taller: ["taller", "perfil"],
     } as const;
     prefetch([...byRole[person.role]]);
   }, [person?.role]); // eslint-disable-line react-hooks/exhaustive-deps
-  const current = [...NAV].reverse().find((n) => (n.end ? pathname === n.to : pathname.startsWith(n.to)));
+  // Un rol con una sola pantalla (Jefe de taller) no necesita menú.
+  const hasNav = person ? NAV_BY_ROLE[person.role].length > 0 : false;
 
   useEffect(() => {
     if (!drawer) return;
@@ -40,10 +42,12 @@ export function AppLayout() {
   }, [drawer]);
 
   return (
-    <div className="min-h-[100dvh] lg:grid lg:grid-cols-[260px_1fr]">
-      <aside className="sticky top-0 hidden h-[100dvh] lg:block">
-        <Sidebar />
-      </aside>
+    <div className={cx("min-h-[100dvh]", hasNav && "lg:grid lg:grid-cols-[260px_1fr]")}>
+      {hasNav && (
+        <aside className="sticky top-0 hidden h-[100dvh] lg:block">
+          <Sidebar />
+        </aside>
+      )}
 
       <AnimatePresence>
         {drawer && (
@@ -69,22 +73,24 @@ export function AppLayout() {
         )}
       </AnimatePresence>
 
-      <div className="flex min-w-0 flex-col lg:py-3 lg:pr-3">
+      <div className={cx("flex min-w-0 flex-col lg:py-3 lg:pr-3", !hasNav && "lg:pl-3")}>
         <div className="flex min-h-[100dvh] flex-col bg-panel lg:min-h-[calc(100dvh-24px)] lg:rounded-[24px] lg:ring-1 lg:ring-line/70">
           <header className="sticky top-0 z-20 border-b border-line/80 bg-panel lg:rounded-t-[24px]">
             <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:h-[72px] lg:px-8">
-              <button
-                onClick={() => setDrawer(true)}
-                aria-label="Abrir menú"
-                className="flex size-11 items-center justify-center rounded-full ring-1 ring-line lg:hidden"
-              >
-                <List size={20} />
-              </button>
-              <Logo subtitle={false} className="lg:hidden" />
+              {hasNav && (
+                <button
+                  onClick={() => setDrawer(true)}
+                  aria-label="Abrir menú"
+                  className="flex size-11 items-center justify-center rounded-full ring-1 ring-line lg:hidden"
+                >
+                  <List size={20} />
+                </button>
+              )}
+              <Logo subtitle={false} className={hasNav ? "lg:hidden" : undefined} />
               <nav aria-label="Ruta" className="hidden items-center gap-2 text-sm lg:flex">
                 <span className="text-muted">KeptAI</span>
                 <span className="text-faint">/</span>
-                <span className="font-semibold">{pathname.startsWith("/perfil") ? "Perfil" : (current?.label ?? "Inicio")}</span>
+                <span className="font-semibold">{sectionLabel(pathname, person?.role)}</span>
               </nav>
               <div className="ml-auto flex items-center gap-3">
                 <SearchBox className="hidden w-64 md:block xl:w-80" />

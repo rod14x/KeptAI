@@ -41,7 +41,7 @@ export function CapturaPage() {
   const tab: Tab = params.get("tipo") === "orden" && capabilities.manualOrderCapture ? "orden" : "comprobante";
   return (
     <Stagger className="mx-auto flex max-w-[860px] flex-col gap-6">
-      <PageHeader title="Carga manual" subtitle="Respaldo cuando WhatsApp no trae el dato. Lo que cargues aquí pasa por la misma revisión que lo que lee la IA." actions={IS_MOCK ? <DemoBadge /> : undefined} />
+      <PageHeader title="Subir comprobante" subtitle="Respaldo cuando WhatsApp no trae el dato. Lo que cargues aquí pasa por la misma revisión que lo que lee la IA." actions={IS_MOCK ? <DemoBadge /> : undefined} />
       <motion.p variants={itemVariants} className="flex items-start gap-2 rounded-2xl bg-info-tint px-4 py-3 text-[13px] text-info">
         <Info size={18} weight="bold" className="mt-px shrink-0" />
         En la operación normal, el vendedor escribe /cerrar y n8n arma la hoja de resumen; el cliente envía su voucher y n8n lo lee.{" "}

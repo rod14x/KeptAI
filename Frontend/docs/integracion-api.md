@@ -38,11 +38,12 @@ pantallas ──> src/api/client.ts  (fachada única: capabilities, consultas y 
 | Pantalla | Lecturas |
 |---|---|
 | Login | Supabase Auth, `getMyContext` |
-| Dashboard | `listOrders`, `listReceivables`, `listCollectionAlerts`, `listDrafts?status=pending_review`. Si el rol tiene acceso: `listPayments`, `getResultsSummary`, `getCashForecast` y `listAuditEvents`. |
+| Pendientes (inicio de Vendedor y Administración) | Reutiliza las lecturas de Pedidos, Pagos y Cobranza según el rol (sin endpoint propio). "Sí, llegó al banco" llama a `registerPaymentVerification` y luego a `applyPayment`. |
+| Inicio de Gerencia y `/resumen` | `listOrders`, `listReceivables`, `listCollectionAlerts`, `listDrafts?status=pending_review`. Si el rol tiene acceso: `listPayments`, `getResultsSummary`, `getCashForecast` y `listAuditEvents`. |
 | Pedidos (tablero y lista) | `listOrders`, `listReceivables`, `listDrafts` (los borradores de WhatsApp aparecen en "Por confirmar") |
 | Detalle de orden | `getOrder`, `getCreditDecision`, `listReceivables`, `listCollectionAlerts`; para un borrador, `getDraft` (hoja = campos con su estado) |
 | Taller | `listOrders` (released/in_production, held, dispatched) |
-| Conciliación | `listPayments`, `getPayment`, `getReconciliationCandidates`, `getEvidenceDownloadLink` (imagen firmada) |
+| Pagos (`/conciliacion`) | `listPayments`, `getPayment`, `getReconciliationCandidates`, `getEvidenceDownloadLink` (imagen firmada) |
 | Cobranza | `listReceivables`, `listCollectionAlerts` |
 | Clientes y ficha | Se derivan de `listOrders` + `listReceivables`; `getCustomerStatement`; `getCreditDecision` por orden |
 | Estado de cuenta (`/clientes/:id/estado-cuenta`) | `getCustomerStatement` (autenticado; V6 no tiene enlace público) |
@@ -58,7 +59,7 @@ pantallas ──> src/api/client.ts  (fachada única: capabilities, consultas y 
 | Confirmar orden (vendedor) | Si es un borrador: `POST /drafts/{id}/confirmation`. Después: `POST /orders/{id}/credit-decision` (approved). |
 | Rechazar orden | Si es un borrador: `POST /drafts/{id}/discard`. Si es una orden: `credit-decision` con rejected. |
 | Registrar despacho | `POST /orders/{id}/dispatch` con `{dispatch_date, note}` |
-| Subir voucher (Carga manual) | `POST /evidences/files` y luego `POST /evidences/{id}/extractions` (`payment_voucher`) |
+| Subir comprobante (`/captura`) | `POST /evidences/files` y luego `POST /evidences/{id}/extractions` (`payment_voucher`) |
 | Exportar CSV | `GET /reports/orders.csv` |
 
 Todas las escrituras envían `Idempotency-Key`, salvo el `PATCH` de borradores, que es idempotente por `expected_revision`.
@@ -78,14 +79,14 @@ Las rutas `/api/v1/ordenes/*`, `/pagos/voucher` y `/mensajes/*` son de n8n (`X-A
 | `retryMessages` | Reintentar un envío fallido | Sin botón Reintentar |
 | `editPaymentFields` | Corregir un pago ya creado (solo se corrige el borrador antes de confirmar) | Campos de solo lectura |
 | `discardPayment` | Marcar duplicado o descartar un pago | Explica que el backend lo clasificó y que queda en revisión |
-| `manualOrderCapture` | Alta manual de pedido (`createTextEvidence` está fuera del MVP) | Oculta la pestaña "Pedido" de Carga manual |
+| `manualOrderCapture` | Alta manual de pedido (`createTextEvidence` está fuera del MVP) | Oculta la pestaña "Pedido" de Subir comprobante |
 | `voucherNeedsFile` | (no es una brecha) | En la API se sube la imagen; los datos los extrae la IA |
 | `settings` | Editar supuestos (factor de cobro, plazo por defecto) y precio de transferencia | Configuración solo informativa |
 | `orderItems` | Ítems, costos y vendedor en el DTO `Order` | Oculta la tarjeta Ítems; el margen sale de `/results/margins` |
 | `customerDirectory` | `GET /customers` con tipo, RUC/DNI, vendedor y línea de referencia | Clientes derivados de órdenes y cuentas por cobrar; los campos que faltan se muestran "por confirmar" |
 
 Otros huecos:
-- `Payment` no tiene marca ni `order_id` hasta aplicarse. La cola de Conciliación no se filtra por marca; el backend aísla por organización con RLS.
+- `Payment` no tiene marca ni `order_id` hasta aplicarse. La lista de Pagos no se filtra por marca; el backend aísla por organización con RLS.
 - `Order.brand` llega como texto libre y se reconoce por nombre ("Corpotex" o "Unicrack").
 - No hay margen percibido (aplicado − costo) por orden en el contrato. La vista lo muestra como "Sin dato".
 - La caja (`/results/cash-forecast`) es solo de GERENTE. Los demás roles ven "Cobrado y aplicado" en su lugar.

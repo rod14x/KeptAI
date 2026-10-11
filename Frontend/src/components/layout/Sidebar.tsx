@@ -1,30 +1,59 @@
 import { NavLink } from "react-router";
 import { motion } from "motion/react";
 import { spring } from "../motion/primitives";
-import { ArrowCounterClockwise, Bell, ChartPieSlice, Factory, Kanban, Receipt, SquaresFour, UploadSimple, UsersThree } from "../ui/icons";
+import { ArrowCounterClockwise, Bell, ChartPieSlice, Kanban, Receipt, SquaresFour, Tray, UsersThree } from "../ui/icons";
 import type { Role } from "../../api/model";
 import { Logo } from "./Logo";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { capabilities, commands } from "../../api/client";
-import { can } from "../../lib/permissions";
 import { cx } from "../../lib/format";
 
-export const NAV: Array<{ to: string; label: string; icon: typeof SquaresFour; end: boolean; show?: (r: Role) => boolean }> = [
-  { to: "/", label: "Dashboard", icon: SquaresFour, end: true, show: (r) => can(r, "ver_comercial") },
-  { to: "/pedidos", label: "Pedidos", icon: Kanban, end: false, show: (r) => can(r, "ver_comercial") },
-  { to: "/clientes", label: "Clientes", icon: UsersThree, end: false, show: (r) => can(r, "ver_comercial") },
-  { to: "/conciliacion", label: "Conciliación", icon: Receipt, end: false, show: (r) => can(r, "verificar") || can(r, "ver_pagos") },
-  { to: "/cobranza", label: "Cobranza", icon: Bell, end: false, show: (r) => can(r, "ver_cobranza") },
-  { to: "/taller", label: "Taller", icon: Factory, end: false, show: (r) => can(r, "registrar_despacho") || can(r, "ver_resultado") },
-  { to: "/captura", label: "Carga manual", icon: UploadSimple, end: false, show: (r) => can(r, "captura") },
-  { to: "/resultado", label: "Resultado", icon: ChartPieSlice, end: false, show: (r) => can(r, "ver_resultado") },
+type NavItem = { to: string; label: string; icon: typeof SquaresFour; end: boolean };
+
+const PENDIENTES: NavItem = { to: "/", label: "Pendientes", icon: Tray, end: true };
+const INICIO: NavItem = { to: "/", label: "Inicio", icon: SquaresFour, end: true };
+const PEDIDOS: NavItem = { to: "/pedidos", label: "Pedidos", icon: Kanban, end: false };
+const CLIENTES: NavItem = { to: "/clientes", label: "Clientes", icon: UsersThree, end: false };
+const PAGOS: NavItem = { to: "/conciliacion", label: "Pagos", icon: Receipt, end: false };
+const COBRANZA: NavItem = { to: "/cobranza", label: "Cobranza", icon: Bell, end: false };
+const RESULTADO: NavItem = { to: "/resultado", label: "Resultado", icon: ChartPieSlice, end: false };
+
+/**
+ * Menú corto por rol (ley de Hick): solo lo que cada rol usa a diario, máximo cuatro opciones.
+ * Las demás rutas siguen existiendo y se abren desde Pendientes o desde un botón dentro de la pantalla.
+ * El Jefe de taller tiene una sola pantalla: sin menú.
+ */
+export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
+  vendedor: [PENDIENTES, PEDIDOS, CLIENTES],
+  administracion: [PENDIENTES, PAGOS, COBRANZA, PEDIDOS],
+  gerencia: [INICIO, RESULTADO, PEDIDOS, CLIENTES],
+  jefe_taller: [],
+};
+
+const EXTRA_LABELS: Array<[string, string]> = [
+  ["/perfil", "Perfil"],
+  ["/taller", "Taller"],
+  ["/captura", "Subir comprobante"],
+  ["/resumen", "Resumen"],
+  ["/conciliacion", "Pagos"],
+  ["/cobranza", "Cobranza"],
+  ["/clientes", "Clientes"],
+  ["/pedidos", "Pedidos"],
+  ["/resultado", "Resultado"],
 ];
+
+/** Nombre de la sección actual para la ruta del encabezado. */
+export function sectionLabel(pathname: string, role: Role | undefined) {
+  const own = (role ? NAV_BY_ROLE[role] : []).find((n) => (n.end ? pathname === n.to : pathname.startsWith(n.to)));
+  if (own) return own.label;
+  return EXTRA_LABELS.find(([p]) => pathname.startsWith(p))?.[1] ?? "Inicio";
+}
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { person } = useAuth();
   const toast = useToast();
-  const items = NAV.filter((n) => !n.show || (person && n.show(person.role)));
+  const items = person ? NAV_BY_ROLE[person.role] : [];
 
   return (
     <div className="flex h-full flex-col px-4 pb-4 pt-5">
@@ -33,7 +62,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <nav aria-label="Principal" className="mt-8 flex flex-col gap-1">
-        <p className="px-3 pb-2 text-xs font-semibold text-faint">Menú</p>
         {items.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
@@ -67,16 +95,16 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="mt-auto flex flex-col gap-3">
         {capabilities.resetDemo && (
-        <button
-          onClick={async () => {
-            const r = await commands.reset();
-            toast(r.ok, r.message);
-          }}
-          className="flex h-11 items-center gap-2.5 rounded-xl px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink"
-        >
-          <ArrowCounterClockwise size={18} />
-          Reiniciar demo
-        </button>
+          <button
+            onClick={async () => {
+              const r = await commands.reset();
+              toast(r.ok, r.message);
+            }}
+            className="flex h-11 items-center gap-2.5 rounded-xl px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink"
+          >
+            <ArrowCounterClockwise size={18} />
+            Reiniciar demo
+          </button>
         )}
       </div>
     </div>

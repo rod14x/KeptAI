@@ -3,14 +3,14 @@ import { motion } from "motion/react";
 import { Stagger, itemVariants, listVariants, spring } from "../components/motion/primitives";
 import { Segmented } from "../components/ui/Segmented";
 import { Link, useSearchParams } from "react-router";
-import { CalendarBlank, Check, EnvelopeSimple, Lock, Minus, FloppyDisk, Storefront } from "../components/ui/icons";
+import { CalendarBlank, EnvelopeSimple, Lock, FloppyDisk, Storefront } from "../components/ui/icons";
 import { capabilities, commands, getProfile, type ProfileDTO } from "../api/client";
 import type { Scope, Settings } from "../api/model";
 import { useApi } from "../hooks/useApi";
 import { useMe } from "../context/AuthContext";
 import { SCOPE_LABEL, useScope } from "../context/ScopeContext";
 import { useToast } from "../context/ToastContext";
-import { ALL_PERMISSIONS, PERMISSION_LABEL, ROLE_LABEL, ROLE_SUMMARY, can } from "../lib/permissions";
+import { ROLE_LABEL, ROLE_SUMMARY, can } from "../lib/permissions";
 import { readPrefs, writePrefs, type Preferences } from "../lib/preferences";
 import { Card, EmptyState, ErrorState, Money, Skeleton } from "../components/ui/States";
 import { ActivityChip, Chip } from "../components/ui/Chip";
@@ -20,7 +20,7 @@ import { inputClass } from "../components/ui/Modal";
 import { cx, formatDate, formatDateTime, formatMoney } from "../lib/format";
 
 const TABS = [
-  { id: "datos", label: "Datos y rol" },
+  { id: "datos", label: "Mi trabajo" },
   { id: "actividad", label: "Mi actividad" },
   { id: "preferencias", label: "Preferencias" },
   { id: "configuracion", label: "Configuración" },
@@ -30,7 +30,9 @@ type TabId = (typeof TABS)[number]["id"];
 export function PerfilPage() {
   const me = useMe();
   const [params, setParams] = useSearchParams();
-  const tab = (TABS.find((t) => t.id === params.get("tab"))?.id ?? "datos") as TabId;
+  // Configuración solo aparece para quien la edita (gerencia): al resto no le sirve.
+  const tabs = TABS.filter((t) => t.id !== "configuracion" || can(me.role, "configurar"));
+  const tab = (tabs.find((t) => t.id === params.get("tab"))?.id ?? "datos") as TabId;
   const { data, loading, error, reload } = useApi(() => getProfile(me), [me.id, me.role]);
 
   return (
@@ -58,7 +60,7 @@ export function PerfilPage() {
       </Card>
 
       <motion.div variants={itemVariants} className="-mx-4 px-4 sm:mx-0 sm:px-0">
-        <Segmented kind="tab" label="Secciones del perfil" value={tab} onChange={(t) => setParams({ tab: t })} options={TABS.map((t) => ({ value: t.id, label: t.label }))} />
+        <Segmented kind="tab" label="Secciones del perfil" value={tab} onChange={(t) => setParams({ tab: t })} options={tabs.map((t) => ({ value: t.id, label: t.label }))} />
       </motion.div>
 
       {error ? (
@@ -81,22 +83,9 @@ function RoleTab({ d }: { d: ProfileDTO }) {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
       <Card className="p-5 sm:p-6">
-        <h2 className="text-section font-bold">Lo que puede hacer tu rol</h2>
-        <p className="mt-1 text-sm text-muted">{ROLE_SUMMARY[me.role]}</p>
-        <motion.ul variants={listVariants} className="mt-4 grid gap-2 sm:grid-cols-2">
-          {ALL_PERMISSIONS.map((p) => {
-            const yes = can(me.role, p);
-            return (
-              <motion.li variants={itemVariants} key={p} className={cx("flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px]", yes ? "bg-ok-tint/60 font-semibold text-ink" : "bg-panel text-muted")}>
-                <span className={cx("flex size-5 shrink-0 items-center justify-center rounded-full", yes ? "bg-ok text-white" : "bg-line text-muted")}>
-                  {yes ? <Check size={12} weight="bold" /> : <Minus size={12} weight="bold" />}
-                </span>
-                {PERMISSION_LABEL[p]}
-              </motion.li>
-            );
-          })}
-        </motion.ul>
-        <p className="mt-4 text-xs text-muted">El servidor valida cada permiso. Si algo no te corresponde, la app lo explica en lugar de ocultarlo sin aviso.</p>
+        <h2 className="text-section font-bold">Tu trabajo en KeptAI</h2>
+        <p className="mt-2 text-[15px] leading-relaxed text-ink-soft">{ROLE_SUMMARY[me.role]}</p>
+        <p className="mt-4 text-xs text-muted">Si algo no te corresponde, la app te dice quién lo hace.</p>
       </Card>
       <Card className="p-5 sm:p-6">
         <h2 className="text-section font-bold">Tu trabajo registrado</h2>
