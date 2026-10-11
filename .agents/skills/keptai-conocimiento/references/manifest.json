@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "2180c1a03d638d7fa79f1fad40fc0feddae4b758",
+  "source_head_at_generation": "0b6ac4e14489661c5d03949046ac98b7d61917fe",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -10,19 +10,8 @@
     "diagramas/keptai-roadmap-fuentes.md"
   ],
   "source_changes_at_generation": [
-    "MM cerebro/conocimientos/INDICE.md",
-    "M  cerebro/conocimientos/decisiones/decisiones-del-proyecto.md",
-    "MM cerebro/conocimientos/desarrollo/miguel/estado.md",
-    "A  cerebro/conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md",
-    " M cerebro/conocimientos/desarrollo/miguel/plan-implementacion.md",
-    "A  cerebro/conocimientos/desarrollo/miguel/plan-mig-03-c.md",
-    "A  cerebro/conocimientos/desarrollo/miguel/plan-mig-03-d.md",
-    "A  cerebro/diagramas/keptai-der-v9-01.png",
-    "A  cerebro/diagramas/keptai-der-v9-02.png",
-    "A  cerebro/diagramas/keptai-der-v9-03.png",
-    "A  cerebro/diagramas/keptai-der-v9.md",
-    "A  cerebro/diagramas/render-der-v9.py",
-    "?? cerebro/conocimientos/desarrollo/miguel/plan-continuacion-backend-integrado.md"
+    "M cerebro/conocimientos/desarrollo/miguel/estado.md",
+    " M cerebro/conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md"
   ],
   "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
   "interview_ids": [
@@ -123,8 +112,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/estado.md",
-      "bytes": 84503,
-      "sha256": "69cead317565291bf6548bb3cf4fc6a00c3def823ade4a847b3f9100fc883501"
+      "bytes": 89002,
+      "sha256": "f0d63bf19728363487530adaa7a256437aa870b7e36e3151830bc989416c2f84"
     },
     {
       "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
@@ -133,8 +122,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md",
-      "bytes": 15522,
-      "sha256": "0851179235aecc0d6c66b5d9d272b86166551f41c762a02aba2d479d7ef32724"
+      "bytes": 16421,
+      "sha256": "e20583033512fc6e62d93d442f36e0bc6b36a80e21d2555a33c01f4335b5dbd2"
     },
     {
       "path": "conocimientos/desarrollo/miguel/plan-continuacion-backend-integrado.md",
@@ -603,6 +592,13 @@
       "bytes": 4650,
       "sha256": "c6addfb68a5daf52fc7f870bb2a17c41a76cb69254b54e9d95b16b0bdee5d994",
       "source_sha256": "c6addfb68a5daf52fc7f870bb2a17c41a76cb69254b54e9d95b16b0bdee5d994",
+      "sanitized": false
+    },
+    {
+      "path": "Backend/docs/prueba-auth-real-local.md",
+      "bytes": 5274,
+      "sha256": "28930a8969f488e67921c4c5282bd43046f521a14b46cd6da0cc7f884ce8ab14",
+      "source_sha256": "28930a8969f488e67921c4c5282bd43046f521a14b46cd6da0cc7f884ce8ab14",
       "sanitized": false
     },
     {

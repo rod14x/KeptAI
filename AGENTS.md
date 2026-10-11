@@ -27,6 +27,10 @@ Estas instrucciones aplican a este repositorio KeptAI: cerebro/ conserva conocim
 
 ## Resumen vigente de Miguel
 
+- Preparación Auth real revisada (backend-partefinal): scripts/guía,106 pruebas/build OK. Export Supabase describe esquema/RLS/V9, no cuentas/filas; no concluir ausencia de Auth remoto. Falta cuenta de prueba y membresía local aprobada, no repetir env/MCP. Autenticación real aún no completada; secuencia sin-membresia→provisión→con-membresia. Detalle estado.md.
+
+- AUTH-FE-01/04 + MIG-03-E (11/10/2026) BLOQUEADAS por datos: sin cuenta de Supabase Auth, Auth user ID ni membresia aprobada (BD local V1-V7 con 0 organizaciones y 0 usuarios; no se creo ninguna cuenta). Config Supabase coherente y JWKS real alcanzable; Spring integrado arranca con la config real en una instancia propia (8081); los servidores 8080/5173 son versiones anteriores y siguen sin reiniciar. Preparados: Backend/scripts/provisionar-membresia-local.sh (dry-run, validado en PostgreSQL desechable), Frontend/e2e/auth-real.mjs (npm run e2e:real, sin simulaciones) y Backend/docs/prueba-auth-real-local.md. No se declara conexion real. Miguel debe aportar cuenta Auth (credenciales en Frontend/e2e/auth-real.local), su sub y organizacion/nombre/rol aprobados.
+
 - Integración a main autorizada11/10/2026: conserva backend215bcad y frontend/pitch vigente. Login/temas/menú mock nuevos compatibles con inicio api y módulos bloqueados, incluido/resumen. Continuación en plan-continuacion-backend-integrado.md; próxima entrega Auth real/membresía, luego D3 y MIG-04..08. Merge no significa endpoints de negocio terminados. Evidencia en estado.md.
 
 - Verificación final padre-nuestro: backend279 tests sin fallos, frontend106 tests en dos ejecuciones/build OK, Chrome api31/31 fixtures y mock36/36; skill actualizada. Integración Java terminada hasta alcance existente; no significa motor expuesto por HTTP ni Auth real.
