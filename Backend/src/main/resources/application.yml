@@ -23,3 +23,18 @@ management:
       show-components: never
       probes:
         enabled: true
+keptai:
+  security:
+    # Configuración externa de MIG-03-A. Sin valores = sin configurar; ver Backend/docs/matriz-acceso.md.
+    # JWT del panel (Supabase Auth): se configuran los tres juntos (variables de entorno, sin secretos).
+    jwt:
+      issuer-uri: ${KEPTAI_JWT_ISSUER_URI:}
+      jwk-set-uri: ${KEPTAI_JWT_JWK_SET_URI:}
+      audiences: ${KEPTAI_JWT_AUDIENCES:}
+    # Orígenes exactos del navegador, separados por coma. Vacío = sin CORS.
+    cors:
+      allowed-origins: ${KEPTAI_CORS_ALLOWED_ORIGINS:}
+    # Webhook saliente a WF3 (X-Api-Secret). Url y secreto juntos; el secreto solo por entorno.
+    webhook:
+      url: ${KEPTAI_N8N_WEBHOOK_URL:}
+      secret: ${KEPTAI_N8N_WEBHOOK_SECRET:}

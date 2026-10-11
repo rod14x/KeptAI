@@ -79,3 +79,6 @@ Usa `openapi-spec-validator` 0.8.4 (OpenAPI 3.1) y `jsonschema` 4.24.1 (formatos
 ## Base local V6 (25 tablas)
 
 Ver [BD/local/README.md](../BD/local/README.md). Ejecutar db.sh up/migrate y arrancar desde Backend/ con ./mvnw spring-boot:run -Dspring-boot.run.profiles=local. El perfil lee BD/local/.env, usa runtime y no ejecuta Flyway; dev sigue sin DB. Health/401 probados; JWT/API/motor siguen pendientes.
+
+## Seguridad: configuración y matriz (MIG-03-A, 10/10/2026)
+Matriz de acceso y decisiones pendientes: [docs/matriz-acceso.md](docs/matriz-acceso.md). Propiedades tipadas `keptai.security.*` (`config/KeptaiSecurityProperties`): JWT del panel (issuer, JWKS, audiencia), CORS por orígenes exactos y webhook saliente a WF3. Variables de ejemplo en `.env.example` (sin valores reales). El perfil `local` admite el frontend en `http://localhost:5173`. **Todavía no hay validación de JWT, API key ni endpoints de negocio**: salvo `/actuator/health/**`, todo responde 401.

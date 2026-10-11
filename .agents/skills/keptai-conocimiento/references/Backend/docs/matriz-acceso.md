@@ -1,0 +1,84 @@
+# Matriz de acceso — MIG-03-A
+
+Fecha: 10/10/2026. Rama backend-migueltarea2y3. Estado: **configuración y matriz preparadas; nada de esto está implementado como autenticación.** `SecurityConfig` sigue devolviendo 401 en todo salvo `/actuator/health/**`. Fuentes: `BD/migrations/V4` y `V7` (D-010), `BD/definicion-base-datos.md`, `BD/revision-sql-rls.md`, `contrato-api.md`, `openapi.yaml`, `alineacion-bd-n8n.md`. Las filas marcadas *propuesta* no son aprobaciones del equipo.
+
+## 1. Tres credenciales distintas (una por operación)
+
+| Mecanismo | Quién | Sentido | Cómo se valida | Estado |
+|---|---|---|---|---|
+| `Authorization: Bearer <JWT>` (`bearerAuth`) | Usuario del panel (Supabase Auth) | Entrante | Firma, issuer, audiencia y expiración con las propiedades `keptai.security.jwt.*`; `sub` → `usuario.auth_user_id` activo (`resolver_usuario`) → organización y rol de la fila, nunca del cuerpo | Propiedades listas; decodificador = MIG-03-B |
+| `X-Api-Key` (`serviceApiKey`) | n8n WF0–WF3 hacia Spring | Entrante | Hash de la clave → `resolver_servicio(hash)` (activo) → organización, instancia y alcance INGESTA o SCHEDULER | Pendiente MIG-03-D |
+| `X-Api-Secret` (`n8nWebhookSecret`) | Spring hacia webhook WF3 | **Saliente** | Spring lo envía; WF3 lo compara. Propiedades `keptai.security.webhook.*` (url + secreto por entorno) | Propiedades listas; cliente en MIG-07 |
+
+Reglas: una operación admite una sola forma; un JWT no sirve en rutas de n8n ni al revés; el navegador nunca recibe ni envía `X-Api-Key`/`X-Api-Secret` (CORS los rechaza); el secreto del webhook no se imprime ni se guarda en BD; la clave n8n solo existe en BD como hash.
+
+## 2. Actores de V7
+
+| Actor | Tipo | Identidad en el contexto transaccional |
+|---|---|---|
+| VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | Rol de usuario (`usuario.rol`) | `app.organizacion_id` + `app.usuario_id` |
+| INGESTA, SCHEDULER | Servicio (`integracion_servicio.alcance`), **no** son roles de usuario | `app.organizacion_id` + `app.servicio_id` |
+
+El contexto exige exactamente un usuario **o** un servicio activo. El código lo refleja en `security/AccessRole` (con prueba). El contrato usa `service_n8n` como etiqueta técnica; en SQL equivale a INGESTA o SCHEDULER según la ruta (sección 4).
+
+## 3. Rutas del panel (JWT) → rol → alcance según V7
+
+Roles = `x-keptai-proposed-roles` del contrato. «Alcance SQL» resume lo que V4/V7 permiten aunque la API deje pasar; la API nunca debe ser más permisiva que la base.
+
+| Operación | Ruta | Roles | Alcance / observación V7 |
+|---|---|---|---|
+| getMyContext | GET /api/v1/me | los 4 | Solo lectura de la identidad resuelta |
+| uploadEvidenceFile, listEvidences, getEvidence, getEvidenceDownloadLink | /api/v1/evidences… | VENDEDOR, ADMIN | Voucher privado; URL temporal tras validar tenant (MIG-04). `comprobante`: escribe ADMIN (o INGESTA para el alta del voucher) |
+| createTextEvidence, startExtraction, getExtractionJob | /api/v1/evidences/text, …/extractions, /extraction-jobs | VENDEDOR, ADMIN | **Fuera del MVP (D-007):** captura/extracción persistente de texto o audio. No implementar ni contar como pendiente |
+| listDrafts, getDraft, correctDraft, discardDraft | /api/v1/drafts… | VENDEDOR, ADMIN | INGESTA solo crea/actualiza borradores; las ediciones humanas son del usuario |
+| confirmDraft | POST /api/v1/drafts/{id}/confirmation | VENDEDOR, ADMIN | `hoja_resumen.revisado_por` = usuario autenticado (trigger V7). No verifica fondos ni aprueba crédito |
+| listOrders, getOrder | GET /api/v1/orders… | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | JEFE_TALLER solo ve LIBERADA, EN_PRODUCCION, DESPACHADA, CERRADA (política `orden`); el resto ve todas |
+| listPayments, getPayment | GET /api/v1/payments… | ADMIN, GERENTE | Pagos recibidos ≠ verificados ≠ aplicados |
+| getReconciliationCandidates, registerPaymentVerification, applyPayment | /api/v1/payments/{id}/… | ADMIN | Solo ADMIN escribe `pago`/`aplicacion_pago`; `verificado_por`/`aplicado_por` = usuario autenticado. Segregación registrar ≠ verificar: **no decidida** |
+| listReceivables, getReceivable, getCustomerStatement | /api/v1/receivables…, /customers/{id}/statement | VENDEDOR, ADMIN, GERENTE | `obligacion_cobro`/`aplicacion_pago` visibles a VENDEDOR, ADMIN, GERENTE y SCHEDULER; no a JEFE_TALLER ni INGESTA |
+| listCollectionAlerts | GET /api/v1/collection-alerts | VENDEDOR, ADMIN | Alertas las escribe SCHEDULER (o ADMIN) |
+| getResultsSummary, getMarginReport, getProductionCenterResults, getCashForecast, exportOrdersCsv | /api/v1/results/…, /reports/orders.csv | GERENTE | Contrato más estricto que SQL: `v_margen_orden` solo devuelve filas a VENDEDOR, ADMIN, GERENTE; caja (`apertura_caja`, `egreso_caja`) a ADMIN, GERENTE, SCHEDULER |
+| listAuditEvents | GET /api/v1/audit-events | ADMIN, GERENTE | JEFE_TALLER solo vería auditoría de orden, orden_etapa, costo_orden, despacho (no se le abre la ruta) |
+| getCreditDecision | GET /api/v1/orders/{id}/credit-decision | VENDEDOR, ADMIN, GERENTE | Lectura de `aprobacion_credito` |
+| **submitCreditDecision** | POST /api/v1/orders/{id}/credit-decision | **solo VENDEDOR** | Política V7: únicamente `actor_actual()='VENDEDOR'` inserta/actualiza; `aprobado_por` = usuario autenticado. ADMIN, GERENTE, n8n y servicios no aprueban crédito |
+| registerDispatch | POST /api/v1/orders/{id}/dispatch | ADMIN, JEFE_TALLER | `despacho.registrado_por` = usuario autenticado; el vencimiento nace del despacho |
+
+Cierre de costos (`costos_*_completos`): solo ADMIN o JEFE_TALLER lo certifican (trigger V7); aún no hay ruta propia en el contrato.
+
+## 4. Rutas de n8n (`X-Api-Key`) → servicio → alcance
+
+| Operación | Ruta | Servicio requerido | Qué permite V7 y qué no |
+|---|---|---|---|
+| n8nIngestOrder (WF1, MIG-05) | POST /api/v1/ordenes/ingesta | INGESTA | Crea orden, ítems y hoja de resumen **solo en BORRADOR**; no toca crédito, caja, obligaciones ni aplicaciones |
+| n8nReceiveVoucher (WF2, **MIG-05**) | POST /api/v1/pagos/voucher | INGESTA | `pago` solo fase RECIBIDO, sin `verificado_*`, nunca APLICADO; comprobante sin fondos verificados |
+| n8nConfirmOrder (WF0 `/ok`, MIG-06) | POST /api/v1/ordenes/confirmar | **conflicto, ver 5.3** | La confirmación fija `revisado_por` y V7 prohíbe que un servicio firme como persona |
+| n8nReportMessageStatus (callback WF3, MIG-07) | POST /api/v1/mensajes/{id}/estado | SCHEDULER (propuesta) | `envio_notificacion` solo la escriben ADMIN y SCHEDULER; INGESTA no |
+| enviarMensajeWF3 (saliente) | POST {n8nUrl}/webhook/enviar-mensaje | — | Lleva `X-Api-Secret`; el texto se genera al vuelo y no se guarda |
+
+INGESTA lee en V7: hoja_resumen, cliente, canal_whatsapp, envio_notificacion, orden, auditoría, pago/comprobante (lectura de V4). No lee caja, aplicaciones ni obligaciones. SCHEDULER lee obligaciones, aplicaciones, caja y crédito para alertas, y nunca verifica ni aplica pagos. La auditoría de servicio usa `actor='N8N'` (INGESTA) o `'SCHEDULER'`, sin `usuario_id`.
+
+## 5. Decisiones pendientes (todas son **propuestas**, ninguna aprobada)
+
+| # | Decisión | Propuesta | Dueño | Bloquea |
+|---|---|---|---|---|
+| 5.1 | Usuario con varias organizaciones: `resolver_usuario` devuelve N filas y el contrato no define la elección | Una membresía → automática; varias → 409 con la lista permitida o cabecera `X-Organization-Id` validada solo contra esas filas. El frontend actual no envía esa cabecera | Miguel | MIG-03-B (caso multi-membresía; el caso de una sola puede avanzar) |
+| 5.2 | Hash y provisión de la clave de n8n (`clave_hash` char(64) hex, única) | SHA-256 hex del valor de `X-Api-Key`; la clave aleatoria se genera fuera de Git y solo el migrador/provisionador inserta el hash; comparación sobre la fila ya hallada por hash | Miguel (SQL de provisión: Andrés) | MIG-03-D |
+| 5.3 | `n8nConfirmOrder`: el contrato dice que Spring resuelve al vendedor por `vendedorJid`, pero V7 hace fallar `revisado_por` ≠ usuario del contexto cuando el actor es servicio | Tras autenticar el servicio y resolver al vendedor, ejecutar la transacción con contexto de **ese usuario** (actor VENDEDOR), no como INGESTA; requiere confirmar que el contexto "usuario activo" es válido sin JWT | Miguel + Andrés | MIG-06 (no MIG-03-A/B) |
+| 5.4 | Una sola `apiKey` en la configuración de WF0–WF3, pero SQL separa INGESTA y SCHEDULER (`UNIQUE(org, instancia, alcance)`) | Dos claves por instancia: INGESTA para WF0–WF2 y SCHEDULER para el callback de WF3; hoy el workflow usaría la de INGESTA y V7 rechazaría la escritura | Miguel + Isabella (n8n) | MIG-03-D y MIG-07 |
+| 5.5 | Alcance del vendedor (por marca o cartera), segregación registrar ≠ verificar pago, corrección de crédito por ADMIN | Sin decidir en D-010 | Miguel/Andrés | MIG-03-D (matriz fina), MIG-07 |
+| 5.6 | Issuer, JWKS y audiencia reales del proyecto Supabase | Valores solo por entorno; sin ellos se usa un JWKS local de pruebas | Miguel (config privada) | MIG-03-E |
+| 5.7 | Origen CORS de producción | Lista exacta por entorno; local `http://localhost:5173` y `http://127.0.0.1:5173` | Miguel | Despliegue |
+
+## 6. Configuración externa (código en `config/KeptaiSecurityProperties`)
+
+| Propiedad | Variable | Regla de validación |
+|---|---|---|
+| `keptai.security.jwt.issuer-uri`, `jwk-set-uri`, `audiences` | `KEPTAI_JWT_ISSUER_URI`, `KEPTAI_JWT_JWK_SET_URI`, `KEPTAI_JWT_AUDIENCES` | Los tres juntos o ninguno; https (http solo localhost); sin credenciales en la URL; audiencias sin comodines; `clock-skew` 0–2 min |
+| `keptai.security.cors.allowed-origins` | `KEPTAI_CORS_ALLOWED_ORIGINS` | Orígenes exactos `http(s)://host[:puerto]`, sin `*` ni rutas; `http` solo localhost. Vacío = sin CORS. Perfil `local` admite el frontend en 5173 |
+| `keptai.security.cors.allowed-headers` / `-methods` | — | Por defecto Authorization, Content-Type, Idempotency-Key, Accept y GET/POST/PATCH/OPTIONS; nunca `*`, `X-Api-Key` ni `X-Api-Secret`; sin cookies (`allowCredentials=false`) |
+| `keptai.security.webhook.url`, `secret` | `KEPTAI_N8N_WEBHOOK_URL`, `KEPTAI_N8N_WEBHOOK_SECRET` | Juntos o ninguno; secreto ≥ 32 caracteres, no aparece en `toString`; https (http solo localhost) |
+
+`.env.example` documenta las variables con valores `example.invalid`. Perfiles `dev`, `test` y `prod` no abren ninguna ruta por estas propiedades. El frontend en modo `api` usa `VITE_API_BASE_URL`, `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` y envía `Authorization: Bearer` e `Idempotency-Key`, coherente con esta matriz.
+
+## 7. Qué no cubre esta entrega
+Decodificador JWT, resolución de membresías, contexto JDBC (`SET LOCAL`), filtro de `X-Api-Key`, controllers, Storage, motor financiero, cambios en V1–V7 ni Supabase remoto. Las pruebas de MIG-03-A comprueban configuración, CORS y rutas aún protegidas; **no acreditan** autenticación ni autorización reales.

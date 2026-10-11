@@ -46,6 +46,8 @@ Los cuatro roles son los de `usuario.rol`; `service_n8n` es una credencial técn
 | `n8nReceiveVoucher` | POST | `/api/v1/pagos/voucher` | `miguel_adapter_andres_engine` | MIG-07 | service_n8n | Propuesta, no implementado |
 | `n8nReportMessageStatus` | POST | `/api/v1/mensajes/{id}/estado` | `miguel_adapter_andres_engine` | MIG-07 | service_n8n | Propuesta, no implementado |
 
+Matriz ruta → identidad → rol → alcance (coherente con V7) y configuración de seguridad externa: [matriz-acceso.md](matriz-acceso.md) (MIG-03-A, propuesta sin implementación de autenticación).
+
 ## Convenciones vigentes
 
 Panel: UUID y etiquetas separadas, JSON snake_case, importes enteros en centavos PEN, dentro de ±9007199254740991. n8n: nombres españoles/camelCase que generan WF0–WF3, soles BigDecimal y conversión exacta con MoneyBridge. Más de dos decimales se rechaza; no se redondea dinero de OCR. Ausente es null, nunca cero. Fechas de negocio de Lima y timestamptz con desfase.
@@ -64,4 +66,4 @@ Los DTOs y tests validan formas y ejemplos; **no sustituyen** controllers, servi
 2. Resolver semilla de marcas/líneas y firmas reales del motor de Andrés; conciliación PARCIAL antes/después de aplicación debe acordarse con él.
 3. Credenciales fuera de Git: login JDBC miembro runtime, JWT issuer/JWKS/audiencia, claves n8n y bucket privado.
 4. Inspeccionar historial y permisos remotos Supabase antes de ejecutar V4/V5 y Storage. Si hay mensajes previos V4 aborta y exige procedimiento de revisión/purga autorizado.
-5. MIG-03: JWT real, contexto usuario/servicio por transacción, RLS con conexión reutilizada, CORS y pruebas integración. No bloquear el contrato por volver a aprobar nombres ya definidos en el SQL.
+5. MIG-03-A entregó la matriz y las propiedades de configuración; pendientes 5.1–5.7 de [matriz-acceso.md](matriz-acceso.md). MIG-03: JWT real, contexto usuario/servicio por transacción, RLS con conexión reutilizada, CORS y pruebas integración. No bloquear el contrato por volver a aprobar nombres ya definidos en el SQL.

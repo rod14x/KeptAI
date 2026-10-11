@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "71ab563ef3ef6a6f6af62db3da4aab287dba7efe",
+  "source_head_at_generation": "11718bb11f93226e364753e342f6bf668d15454a",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -111,8 +111,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/estado.md",
-      "bytes": 31885,
-      "sha256": "4079e8cb0fa63860901c2badaa95c1b1924c730ad35f392f26ea98f20c25247a"
+      "bytes": 36927,
+      "sha256": "7927541b063ea3f34e7091460c7151549360d6131e9d0ea95b6965777f70d6d7"
     },
     {
       "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
@@ -471,16 +471,23 @@
     },
     {
       "path": "Backend/docs/contrato-api.md",
-      "bytes": 8586,
-      "sha256": "c2d45bad9a30c5c3786068faf1b128d01e0d4935a0be53b862cb0bf02e093241",
-      "source_sha256": "c2d45bad9a30c5c3786068faf1b128d01e0d4935a0be53b862cb0bf02e093241",
+      "bytes": 8916,
+      "sha256": "023d3ed613bc1fbcbc6218c6d853c5fe0b4b5b11ffbeb395d58c753a033dc9dd",
+      "source_sha256": "023d3ed613bc1fbcbc6218c6d853c5fe0b4b5b11ffbeb395d58c753a033dc9dd",
+      "sanitized": false
+    },
+    {
+      "path": "Backend/docs/matriz-acceso.md",
+      "bytes": 10927,
+      "sha256": "4eec7f9a2f1b4d5bb905772fbc64222b73e3c692f5286e589ce11b7ab07fb688",
+      "source_sha256": "4eec7f9a2f1b4d5bb905772fbc64222b73e3c692f5286e589ce11b7ab07fb688",
       "sanitized": false
     },
     {
       "path": "Backend/docs/openapi.yaml",
-      "bytes": 209656,
-      "sha256": "e61f5d2fef4b145b202bb68b039536e6ba292330898eeb432a9d97ded5720464",
-      "source_sha256": "6dc17a7a527f35b57c48192afb4c1a2e199fa777b00b6d50c28afe9e11945dd9",
+      "bytes": 209668,
+      "sha256": "1c46a3212b043a99d0a6b388f829f10409b732af58f9c67a3eb459a5f00cb097",
+      "source_sha256": "003f38df85e0eec8730ab2562ad7390e5598545138a98ded572037cd3cdb6645",
       "sanitized": true
     },
     {
