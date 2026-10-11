@@ -27,6 +27,14 @@ Estas instrucciones aplican a este repositorio KeptAI: cerebro/ conserva conocim
 
 ## Resumen vigente de Miguel
 
+- Verificacion Codex 11/10/2026: ./mvnw -o verify con sg docker y JDK Linux dio182 tests, cero fallos/errores/omitidos. Fallo Docker de auditoria Claude fue de esa sesion.
+
+- Auditoria contrastada 11/10/2026: siguiente MIG-03-C segun plan-mig-03-c.md. Correccion H1: INSERT de pago/comprobante ya admite INGESTA con limites; no abrir RLS por ese supuesto. JwtMembershipIntegrationTests ya usa login runtime real; falta contexto negocio/pool/rollback. MCP personal descartado; AUTH-FE/servicios/Storage/motor siguen pendientes.
+
+- Auditoria backend 11/10/2026 (Backend/docs/auditoria-backend-2026-10-11.md, solo lectura): verify 156 tests, 0 fallos y 5 errores por Docker inaccesible (no reproducido el 182 previo); OpenAPI 38/214/25; solo /api/v1/me implementado (1/37); BD local V1-V7, 25 tablas, RLS, 0 usuarios. Remoto no verificado. MIG-00/01 completos, MIG-02/03 parciales, MIG-05/07 bloqueados, AUTH-FE-01 parcial y 02-04 pendientes. Altos: escritura financiera solo ADMIN en RLS, sin contexto JDBC ni auth n8n, WF2 sin voucher, sin motor/semilla. Siguiente: MIG-03-C.
+
+- Direccion vigente 11/10/2026: Miguel descarta MCP Supabase personal en Claude; no pedir OAuth ni Owner. Andres conserva acceso remoto. Continuar AUTH-FE-01..04 con env y pruebas locales; inspeccion remota pendiente sin inventarla. La aplicacion no requiere MCP para Auth/Storage. Esta instruccion reemplaza la autenticacion pendiente de notas anteriores.
+
 - Reanudacion: env guardados/verificados sin divulgar claves; .mcp.json unificado a Supabase solo lectura, duplicado local retirado, OAuth en Claude pendiente. AUTH-FE-01 parcial; seguir AUTH-FE-01..04. No Storage implementado ni revocacion de clave expuesta acreditados.
 
 - MIG-CONFIG-001: env locales ignorados preparados sin secretos; launcher Backend/scripts/run-local.sh importa Backend/.env y conserva JDBC local. JWKS publico EC/ES256 comprobado. Front sigue mock; Auth real/membresia y Storage pendientes. Guia Backend/docs/configuracion-supabase-local.md. No usar secret/service_role en frontend ni confiar en RLS con uploader privilegiado.

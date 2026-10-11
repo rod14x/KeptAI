@@ -39,11 +39,10 @@ Ruta generada por servidor: organizacion UUID/comprobante UUID/nombre generado. 
 Tipos reales y limite10MiB comprobados, checksum/antiduplicado, timeout, sin sobrescritura y manejo de objeto huerfano ante fallo DB. PostgreSQL y Storage no comparten transaccion atomica: definir compensacion/limpieza con estado persistente.
 Recibir/subir voucher no confirma fondos ni aplica saldo. No alterar saldos al subir.
 
-## MCP de Claude y reanudacion
-Supabase queda registrado en .mcp.json con project_ref del proyecto y read_only=true; se retiro el duplicado local de ~/.claude.json. La autenticacion OAuth de cada integrante es personal y no se comparte por Git ni se sustituye con SUPABASE_SECRET_KEY.
-Desde WSL, en este repo, reiniciar Claude, abrir /mcp, seleccionar supabase y Authenticate; autorizar con la cuenta invitada a la organizacion. Si Claude pide habilitar el MCP de proyecto, aceptar el servidor de este repo. Confirmar Connected y ejecutar inspeccion solo lectura.
-No declarar MCP conectado mientras diga Needs authentication. El siguiente paso de implementacion sigue AUTH-FE-01..04, no MIG-04.
-
+## MCP y reanudacion — direccion vigente 11/10/2026
+Miguel descarta autorizar su Claude por MCP. No solicitar OAuth ni ascenso de rol para continuar; Andres conserva acceso remoto por su MCP. La configuracion compartida .mcp.json se conserva sin autenticarla aqui, para no eliminar configuracion del equipo.
+Las APIs de la aplicacion funcionan independientemente del MCP. Continuar AUTH-FE-01..04 usando env locales, JWT/JWKS publico y PostgreSQL local. La inspeccion remota queda pendiente con evidencia de Andres; no convertirla en requisito para terminar codigo y pruebas aisladas.
+Para login real se necesita cuenta Supabase Auth y membresia local concordante. Miguel puede crear/configurar la cuenta por dashboard y usar el procedimiento SQL preparado. No copiar credenciales personales de Andres ni usar la secret key como token MCP.
 ## Siguiente entrega Claude
 Primero AUTH-FE-01..04 del plan-conexion-frontend-auth.md: configuracion, membresia y login/me. Despues MIG-03-C/D y MIG-04 segun dependencias.
 Para MIG-04 revisar contrato EvidenceDtos/OpenAPI, matriz-acceso y WF2 antes de escoger endpoint; no inventar un endpoint paralelo ni permisos.

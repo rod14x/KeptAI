@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "89a4947c9cda5cd33f08b9d33b22fc87ee315ea5",
+  "source_head_at_generation": "bea047883eb62cabc397cf1175297c75c5cb4f4f",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -10,7 +10,10 @@
     "diagramas/keptai-roadmap-fuentes.md"
   ],
   "source_changes_at_generation": [
-    "M cerebro/conocimientos/desarrollo/miguel/estado.md"
+    "M cerebro/conocimientos/INDICE.md",
+    " M cerebro/conocimientos/desarrollo/miguel/estado.md",
+    " M cerebro/conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md",
+    "?? cerebro/conocimientos/desarrollo/miguel/plan-mig-03-c.md"
   ],
   "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
   "interview_ids": [
@@ -61,8 +64,8 @@
   "files": [
     {
       "path": "conocimientos/INDICE.md",
-      "bytes": 6755,
-      "sha256": "0bea92cd86405cbe57da3cc7780aa8d9b3f33267b75224afc6660da283e449ec"
+      "bytes": 6944,
+      "sha256": "54b2c734c095cd4234d531f1ea5a1dacdcaaaaeaecb55cdb852d57a06e435900"
     },
     {
       "path": "conocimientos/decisiones/actores-flujos-y-der-mvp.md",
@@ -111,8 +114,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/estado.md",
-      "bytes": 43490,
-      "sha256": "118119953922011275d22fc1da0eeab4b237ac3921ab59ca689942b7751f87a5"
+      "bytes": 47671,
+      "sha256": "e487e6d7db0524e15846fd41a7cf1ce389f2eaf6dbb4fc37674a00574b434f9b"
     },
     {
       "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
@@ -121,13 +124,18 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md",
-      "bytes": 11209,
-      "sha256": "c7128ebb917657ab92d6c0fc6c318abd68a2e5c04c0ec6586828538691d6f7ad"
+      "bytes": 12393,
+      "sha256": "bb19966cc4223d2d44f95003d1e5746e89c82ad3d8e0ba069d3b9c866665d10c"
     },
     {
       "path": "conocimientos/desarrollo/miguel/plan-implementacion.md",
       "bytes": 7626,
       "sha256": "e621c5579752cdf02d33c445a28c14e916119c0b38cd9774dd352f60c4caa9d2"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/plan-mig-03-c.md",
+      "bytes": 6491,
+      "sha256": "0dee647fdb1e61dc56ebd1f0b0ecb178ff4a4f4093b667a8af7d496d296baa25"
     },
     {
       "path": "conocimientos/desarrollo/miguel/preparacion-supabase-rls.md",
@@ -475,10 +483,17 @@
       "sanitized": false
     },
     {
+      "path": "Backend/docs/auditoria-backend-2026-10-11.md",
+      "bytes": 26605,
+      "sha256": "be0dd3cfdf3ca748ae7ea4ff2aee5e105677423e2033f2c19b260715974bed97",
+      "source_sha256": "be0dd3cfdf3ca748ae7ea4ff2aee5e105677423e2033f2c19b260715974bed97",
+      "sanitized": false
+    },
+    {
       "path": "Backend/docs/configuracion-supabase-local.md",
-      "bytes": 6279,
-      "sha256": "426a5a36665ffb19b90cf0273cd76b2cc94b7318823485842fb908c927c66427",
-      "source_sha256": "426a5a36665ffb19b90cf0273cd76b2cc94b7318823485842fb908c927c66427",
+      "bytes": 6425,
+      "sha256": "7be86af49fa8c298ff5ac8d6c0125f705e052070108f9a9bce94894af4d44355",
+      "source_sha256": "7be86af49fa8c298ff5ac8d6c0125f705e052070108f9a9bce94894af4d44355",
       "sanitized": false
     },
     {

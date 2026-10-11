@@ -3,6 +3,12 @@ ID: MIG-FE-AUTH-001. Fecha: 10/10/2026. Solicitud de Miguel: conectar la entrega
 Rama: backend-migueltarea2y3. Base publicada: 6279f8b.
 Estado: plan de implementación; conexión real aún no acreditada. No cambia D-003 a D-010.
 
+## Actualizacion vigente — 11/10/2026
+Miguel descarta conectar su Claude al MCP de Supabase. No solicitar OAuth, cambio de rol Owner ni configuracion MCP para continuar. Andres conserva la inspeccion/administracion remota; esta instruccion reemplaza los pasos anteriores que pedian el MCP personal.
+La aplicacion usa las APIs de Supabase Auth/Storage mediante su configuracion, independientemente del MCP. Continuar AUTH-FE-01..04 con codigo, pruebas locales y endpoints publicos de Auth/JWKS. La inspeccion remota pendiente no bloquea las pruebas locales; no inventar su resultado.
+Para prueba real, Miguel configura cuenta Auth mediante dashboard y la membresia correspondiente en su PostgreSQL local con procedimiento parametrizado. No enviar mensajes a Andres automaticamente ni ejecutar cambios remotos. Si falta un dato indispensable, pedir solamente ese dato mientras se termina trabajo independiente.
+MIG-04 Storage sigue despues de MIG-03-C/D; su inspeccion de bucket/RLS se obtiene de Andres cuando sea necesaria. No adelantar uploader ni usar secret key para inspeccion privilegiada como sustituto del MCP.
+
 ## 1. Qué existe y qué falta
 Backend MIG-03-B implementa JWT con JWKS RS256/ES256, issuer/audiencia/exp/nbf/sub, resolución PostgreSQL por sub y GET /api/v1/me. Pruebas reejecutadas en esta revisión: 182 sin fallos; OpenAPI38 operaciones/214 ejemplos/25 negativos correctos. Son fixtures JWT/BD, no Supabase Auth real.
 Frontend ya contiene Supabase signInWithPassword/getSession, token provider, getMyContext y UserContext Zod. La respuesta user_id/organization_id/role coincide con CommonDtos.UserContext.
@@ -28,7 +34,7 @@ Código relevante: Frontend/src/context/AuthContext.tsx, api/contract/http.ts/en
 Backend: config/SecurityConfig, security/JwtDecoders/JdbcMembershipResolver/KeptaiAuthentication, web/MeController y config/KeptaiSecurityProperties.
 
 ## 4. AUTH-FE-01 — Configuración y cuenta de prueba
-Inspeccionar presencia de configuración sin imprimir valores privados ni leer .mcp.json. Verificar el proyecto Auth correcto, issuer/JWKS/audiencia y algoritmo actual; consultar documentación oficial vigente antes de fijar valores.
+Inspeccionar presencia de configuración sin imprimir valores privados ni leer .mcp.json. MCP personal no requerido por la actualizacion del 11/10/2026. Verificar el proyecto Auth correcto, issuer/JWKS/audiencia y algoritmo actual; consultar documentación oficial vigente antes de fijar valores.
 Frontend .env.local ignorado:
     VITE_API_MODE=api
     VITE_API_BASE_URL=http://localhost:8080
