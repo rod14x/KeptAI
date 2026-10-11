@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "e1b0ffecfcea837c46999a975dfdd101cd3ce6eb",
+  "source_head_at_generation": "6279f8bdc261b624bf96ff528a709c8d53632f69",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -10,7 +10,9 @@
     "diagramas/keptai-roadmap-fuentes.md"
   ],
   "source_changes_at_generation": [
-    "M cerebro/conocimientos/desarrollo/miguel/estado.md"
+    "M cerebro/conocimientos/INDICE.md",
+    " M cerebro/conocimientos/desarrollo/miguel/estado.md",
+    "?? cerebro/conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md"
   ],
   "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
   "interview_ids": [
@@ -61,8 +63,8 @@
   "files": [
     {
       "path": "conocimientos/INDICE.md",
-      "bytes": 6593,
-      "sha256": "7d575e0465a80bd7e11181cf77df1f02846737c35f4a891189468bd33b02ff08"
+      "bytes": 6755,
+      "sha256": "0bea92cd86405cbe57da3cc7780aa8d9b3f33267b75224afc6660da283e449ec"
     },
     {
       "path": "conocimientos/decisiones/actores-flujos-y-der-mvp.md",
@@ -111,13 +113,18 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/estado.md",
-      "bytes": 40762,
-      "sha256": "3e0dfd2b2bf9ab0b69bc902cdd7330c0747731b0ded75fd257771c569492ca94"
+      "bytes": 41458,
+      "sha256": "205cddacf0dc4564e3dbb14040c7f122697d2716e201d17733b1f565cec29a74"
     },
     {
       "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
       "bytes": 5054,
       "sha256": "a330836d823078e998a7a20b601a36a357e26d6166ae48e8ced668f46a897be9"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md",
+      "bytes": 11209,
+      "sha256": "c7128ebb917657ab92d6c0fc6c318abd68a2e5c04c0ec6586828538691d6f7ad"
     },
     {
       "path": "conocimientos/desarrollo/miguel/plan-implementacion.md",

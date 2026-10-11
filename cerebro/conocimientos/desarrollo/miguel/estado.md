@@ -205,3 +205,10 @@ Revisión de la entrega de Claude solicitada por Miguel. ./mvnw -o verify reejec
 Servicios del usuario: PostgreSQL5433 activo/healthy, Spring8080 health200 y API sin credencial401, frontend5173 HTTP200. El backend8080 conserva proceso anterior a MIG-03-A: OPTIONS permitido todavía401; requiere reinicio manual en el panel Zellij para cargar CORS. No se detuvieron los tres servicios del usuario. Instancia nueva temporal18092 usada para comprobar la configuración y detenida después de las pruebas.
 
 MIG-03-A completa dentro de su alcance: propiedades, CORS y matriz; JWT/API key/membresías/contexto JDBC/endpoints/motor pendientes. Próxima tarea MIG-03-B; las propuestas de organización múltiple, provisión servicio y conflicto confirmación n8n/autoría V7 permanecen pendientes. Skill sincronizada; publicación en backend-migueltarea2y3 autorizada por Miguel.
+
+
+## Revisión MIG-03-B y plan frontend — 10/10/2026
+
+Entrega Claude revisada y publicada como 6279f8b. Reejecución ./mvnw -o verify: 182 tests sin fallos/errores/skips; OpenAPI38/214/25 correcto. Frontend esquemas UserContext coinciden con /me; cliente Supabase/Bearer existe, pero modo activo mock y Auth real/provisión no acreditados.
+
+MIG-FE-AUTH-001 en plan-conexion-frontend-auth.md define AUTH-FE-01 a04: configuración y membresía real, estado de sesión/errores, inicio conectado sin APIs ausentes y aceptación en navegador. No implementado por esta entrega documental. No se cambiaron frontend, secretos, servidores, migraciones ni Supabase remoto. MIG-03-C/D y motor pendientes.

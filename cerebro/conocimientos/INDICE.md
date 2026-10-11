@@ -43,6 +43,8 @@ Dirección técnica vigente: D-004, Spring Boot por experiencia del equipo; MVP 
 
 ## Desarrollo de Miguel — Claude Code y OpenCode
 
+- [Conexión frontend/Auth/Spring MIG-FE-AUTH-001](desarrollo/miguel/plan-conexion-frontend-auth.md): login y /me; no endpoints financieros ni mezcla con mocks.
+
 - [Tarea general y entregables](desarrollo/miguel/tarea-general.md).
 - [Plan de implementación y delegación](desarrollo/miguel/plan-implementacion.md): etapas A–F, un escritor por archivo y gates reales.
 - [Tareas pequeñas MIG-00..08](desarrollo/miguel/tareas.md).
