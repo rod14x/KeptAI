@@ -37,6 +37,17 @@ pantallas ──> src/api/client.ts  (fachada única: capabilities, consultas y 
   - `Person.since` es `null` en modo `api` (el contrato no expone la fecha de alta); el perfil omite esa línea. Nombre visible: parte local del correo de la sesión. Marca: sin dato.
   - En modo `mock`: cuentas de demostración, sin cambios y explícitas (`VITE_API_MODE=mock`); no se mezclan con la identidad real.
 
+## 2.1 Inicio autenticado del modo `api` (AUTH-FE-03)
+
+En modo `api` solo hay un módulo conectado: el **inicio de identidad** (`/`, `src/pages/InicioPage.tsx`). Muestra únicamente el correo de la sesión de Supabase Auth y lo que devuelve `GET /api/v1/me` (`user_id`, `organization_id`, `role`), la lista de módulos del rol como «No disponible todavía» y «Cerrar sesión». No inventa nombre de empresa, marca, fechas ni cifras (el contrato no los incluye).
+
+- Disponibilidad: `src/lib/availability.ts` (`isModuleAvailable`): en `mock` todo; en `api` solo `inicio`. Los demás módulos son los que dependen de endpoints de negocio ausentes en Spring (ver `Backend/docs/matriz-acceso.md`). El bloqueo de la UI no sustituye la autorización del backend.
+- Rutas: en `api`, `/pedidos*`, `/clientes*` (incl. estado de cuenta), `/conciliacion*`, `/cobranza`, `/taller`, `/captura`, `/resultado` y `/perfil` muestran «no disponible» (`ModuloNoDisponiblePage`) también por URL directa; la pantalla de negocio no se renderiza ni se descarga, y sus hooks de datos nunca corren. Una ruta inexistente sigue siendo 404.
+- Menú: las entradas pendientes son elementos deshabilitados («Pronto»), no enlaces. En `api` no hay buscador, selector de marca/vista, «Reiniciar demo», menú de perfil ni precarga de pantallas (`AppLayout`, `UserMenu`, `LoginPage`).
+- Acceso: tras login o restauración se va siempre a `/` (no se recuerda la ruta de origen); los errores de sesión, «Reintentar» y «Cerrar sesión» siguen en la pantalla de acceso (AUTH-FE-02). La pantalla de acceso del modo `api` no muestra la vista previa ni el distintivo de demostración.
+- `mock` es explícito (`VITE_API_MODE=mock`): conserva el menú, buscador, selector y datos ficticios; no hay respaldo mock cuando falla la API.
+- Pruebas: `src/navigation.test.ts` (17; renderiza las rutas reales de `AppRoutes` con una identidad simulada y falla si se llama a la fachada de datos de negocio) y `e2e/identidad-api.mjs` (`npm run e2e:api`, 30 comprobaciones en Chrome con Vite propio en el puerto 5199 y Supabase/Spring SIMULADOS con `page.route`). Ambas son fixtures: **no prueban Supabase Auth real ni el backend real**. `npm run e2e` (mock) sigue pasando 36/36.
+
 ## 3. Pantalla → endpoints
 
 | Pantalla | Lecturas |
@@ -71,7 +82,7 @@ Las rutas `/api/v1/ordenes/*`, `/pagos/voucher` y `/mensajes/*` son de n8n (`X-A
 
 ## 4. Validación del contrato
 
-`npm test` valida cada ejemplo de respuesta del panel en `openapi.yaml` contra `src/api/contract/schemas.ts`. Hoy pasan 77 pruebas (43 de contrato y 34 de sesión con fixtures, `src/context/session.test.ts`; estas últimas no prueban Supabase Auth real). Si Miguel cambia un DTO, la prueba falla y señala el campo.
+`npm test` valida cada ejemplo de respuesta del panel en `openapi.yaml` contra `src/api/contract/schemas.ts`. Hoy pasan 106 pruebas (43 de contrato, sesión con fixtures en `session.test.ts` y `supabase-auth.test.ts`, y 17 de navegación; ninguna prueba Supabase Auth real). Si Miguel cambia un DTO, la prueba falla y señala el campo.
 
 ## 5. Brechas del contrato (lo que la UI oculta en modo `api`)
 
@@ -139,3 +150,7 @@ Cuando el backend esté listo y el mock se haya eliminado, `capabilities` queda 
 SessionController obtiene user_id, organization_id y role exclusivamente de /me. El adaptador supabase-auth.ts propaga los errores del SDK; red, 429 y 5xx no se anuncian como credenciales incorrectas. signOut usa scope: local.
 Se probaron carreras de restauración, renovación, logout diferido, cambio de usuario y nuevo login; el Bearer anterior se retira al comenzar otro login y al desmontar. El reintento inicial vuelve a restaurar Auth.
 npm test: 89 pruebas sin fallos (43 contrato + 39 sesión + 7 adaptador). npm run build: OK con Node 22.23.3 Linux. No es evidencia de Auth real ni navegador. El modo continúa mock; AUTH-FE-03 debe impedir solicitudes a APIs de negocio pendientes antes de habilitar api.
+
+### Revisión AUTH-FE-03 (11/10/2026)
+Pruebas finales: 106 tests, build OK, e2e api 31/31 con fixtures en Chrome. Se cierra automáticamente el diálogo ante fallo reintentable en api para acceder al aviso sin Escape. El e2e espera la animación y prueba el botón directamente.
+Configuración Supabase local existente/coherente y JWKS público accesible, pero el modo sigue mock y PostgreSQL local no tiene organizaciones ni usuarios. Auth real, membresía y recorrido contra Spring real siguen pendientes. No confundir claves configuradas con login o Storage operativo.

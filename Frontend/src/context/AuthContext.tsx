@@ -16,7 +16,7 @@ import { createSupabaseAuthClient } from "./supabase-auth";
 
 const KEY = "keptai-session-v2";
 
-type AuthValue = {
+export type AuthValue = {
   person: Person | null;
   /** false mientras se restaura la sesión de Supabase al abrir la app. */
   ready: boolean;
@@ -32,7 +32,7 @@ type AuthValue = {
   retry: () => void;
 };
 
-const AuthContext = createContext<AuthValue | null>(null);
+export const AuthContext = createContext<AuthValue | null>(null);
 
 function readId(): string | null {
   try {
@@ -123,14 +123,15 @@ function personFrom(identity: SessionIdentity): Person {
 }
 
 function ApiAuthProvider({ children }: { children: ReactNode }) {
-  const [controller] = useState(() => {
-    const c = new SessionController({ auth: lazyAuth, getMe: () => endpoints.getMyContext() });
-    setAccessTokenProvider(c.accessToken); // antes de cualquier llamada a /me
-    return c;
-  });
+  const [controller] = useState(() => new SessionController({ auth: lazyAuth, getMe: () => endpoints.getMyContext() }));
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
 
-  useEffect(() => controller.start(), [controller]);
+  // El proveedor del Bearer se registra en el efecto, justo antes de start(): en StrictMode el inicializador de useState
+  // se ejecuta dos veces y el segundo controlador se descarta, así que registrarlo allí dejaba el Bearer apuntando a un controlador muerto.
+  useEffect(() => {
+    setAccessTokenProvider(controller.accessToken);
+    return controller.start();
+  }, [controller]);
 
   const person = useMemo(() => (state.status === "authenticated" ? personFrom(state.identity) : null), [state]);
   const value: AuthValue = {

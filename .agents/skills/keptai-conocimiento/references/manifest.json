@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "bb30b275b4fa14dadf22664ec9a8a802b7431557",
+  "source_head_at_generation": "969e877408f6424a74c7e2de6a24454cc7ff0374",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -10,8 +10,8 @@
     "diagramas/keptai-roadmap-fuentes.md"
   ],
   "source_changes_at_generation": [
-    "M cerebro/conocimientos/desarrollo/miguel/estado.md",
-    " M cerebro/conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md"
+    "MM cerebro/conocimientos/desarrollo/miguel/estado.md",
+    "M  cerebro/conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md"
   ],
   "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
   "interview_ids": [
@@ -112,8 +112,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/estado.md",
-      "bytes": 66822,
-      "sha256": "51dc653e5933291962102fd6584633579cc8c76b8beb94d686149c3a08f8449d"
+      "bytes": 71898,
+      "sha256": "58c33f3cb97450d2bb87423c1ee7d252e967d8d1c418119762da5f8f9def00e8"
     },
     {
       "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
@@ -122,8 +122,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md",
-      "bytes": 13892,
-      "sha256": "36df206bdaa81ccd7da966c8d3808c606931b75254678f41eb032045e81102ec"
+      "bytes": 15522,
+      "sha256": "0851179235aecc0d6c66b5d9d272b86166551f41c762a02aba2d479d7ef32724"
     },
     {
       "path": "conocimientos/desarrollo/miguel/plan-implementacion.md",

@@ -27,6 +27,11 @@ Estas instrucciones aplican a este repositorio KeptAI: cerebro/ conserva conocim
 
 ## Resumen vigente de Miguel
 
+- Revisión AUTH-FE-03 (11/10/2026): 106 tests/build OK, e2e api 31/31 fixtures Chrome; diálogo ya no tapa Reintentar. Env Supabase existentes y coherentes, JWKS200, mock conservado; PostgreSQL local 0 organizaciones/0 usuarios. Falta cuenta Auth/membresía y prueba real AUTH-FE-01/04 + MIG-03-E. Preparar integración de código con Andrés solo según instrucciones de Miguel; sin fetch/merge. Detalle estado.md.
+
+
+- AUTH-FE-03 completada con fixtures (11/10/2026): en modo api el inicio (/) muestra solo correo de Auth y user_id/organization_id/role de /me; modulos de negocio y /perfil deshabilitados en el menu y bloqueados por URL directa ("no disponible", sin cargar pantallas ni hooks); sin buscador, selector de marca, precarga ni vista previa demo; login/restauracion van a /. Mock explicito intacto, sin respaldo mock ante errores. npm test 106 pruebas, npm run build OK, e2e api 30/30 (Chrome, Supabase y Spring simulados) y e2e mock 36/36; corregido Bearer ausente en StrictMode. Modo api NO activado; Supabase Auth real no probado. Siguiente: AUTH-FE-04 (cuenta Auth y membresia locales) o MIG-03-E.
+
 - Revisión final AUTH-FE-02 (11/10/2026): 89 pruebas frontend (43 contrato, 39 sesión, 7 adaptador), build OK con Node Linux. Corregidos logout local, errores SDK, cierre diferido condicionado, restauración/token/reintento y retiro de identidad durante nuevo login. Mock conservado; Auth real y navegador no probados. Siguiente solo AUTH-FE-03; AUTH-FE-01/04 y MIG-03-E pendientes. Detalle en estado.md.
 
 

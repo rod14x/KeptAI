@@ -6,13 +6,15 @@ import { overlayVariants, softSpring } from "../motion/primitives";
 
 const DRAWER_IN = { x: "-100%" };
 const DRAWER_SHOW = { x: 0 };
-import { Sidebar, NAV } from "./Sidebar";
+import { Sidebar } from "./Sidebar";
+import { NAV } from "./nav";
 import { ScopeSelector } from "./ScopeSelector";
 import { SearchBox } from "./SearchBox";
 import { Logo } from "./Logo";
 import { UserMenu } from "./UserMenu";
 import { useAuth } from "../../context/AuthContext";
 import { prefetch } from "../../lib/prefetch";
+import { IS_MOCK } from "../../config";
 
 export function AppLayout() {
   const [drawer, setDrawer] = useState(false);
@@ -21,7 +23,8 @@ export function AppLayout() {
 
   // Con la sesión abierta, precargar en segundo plano las pantallas que usa este rol.
   useEffect(() => {
-    if (!person) return;
+    // En modo api no hay módulos de negocio que precargar (no se descarga ni se ejecuta ninguno).
+    if (!person || !IS_MOCK) return;
     const byRole = {
       vendedor: ["pedidos", "orden", "clientes", "cliente", "captura", "perfil"],
       administracion: ["pedidos", "orden", "conciliacion", "cobranza", "clientes", "cliente", "captura", "resultado", "perfil"],
@@ -87,15 +90,17 @@ export function AppLayout() {
                 <span className="font-semibold">{pathname.startsWith("/perfil") ? "Perfil" : (current?.label ?? "Inicio")}</span>
               </nav>
               <div className="ml-auto flex items-center gap-3">
-                <SearchBox className="hidden w-64 md:block xl:w-80" />
-                <ScopeSelector className="hidden lg:inline-flex" />
+                {IS_MOCK && <SearchBox className="hidden w-64 md:block xl:w-80" />}
+                {IS_MOCK && <ScopeSelector className="hidden lg:inline-flex" />}
                 <UserMenu />
               </div>
             </div>
-            <div className="flex flex-col gap-2 px-4 pb-3 sm:px-6 lg:hidden">
-              <ScopeSelector className="flex w-full" stretch />
-              <SearchBox className="md:hidden" />
-            </div>
+            {IS_MOCK && (
+              <div className="flex flex-col gap-2 px-4 pb-3 sm:px-6 lg:hidden">
+                <ScopeSelector className="flex w-full" stretch />
+                <SearchBox className="md:hidden" />
+              </div>
+            )}
           </header>
           <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
             <Outlet />
