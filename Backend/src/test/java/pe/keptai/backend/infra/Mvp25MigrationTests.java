@@ -15,7 +15,7 @@ class Mvp25MigrationTests {
           .schemas("keptai").defaultSchema("keptai").locations("filesystem:../BD/migrations");
       config.target("5").load().migrate();
       var latest = Flyway.configure().dataSource(pg.getJdbcUrl(),pg.getUsername(),pg.getPassword())
-          .schemas("keptai").defaultSchema("keptai").locations("filesystem:../BD/migrations").load();
+          .schemas("keptai").defaultSchema("keptai").locations("filesystem:../BD/migrations").target("6").load(); // V7+ agregan tablas (V9)
       try (var c = DriverManager.getConnection(pg.getJdbcUrl(),pg.getUsername(),pg.getPassword())) {
         sql(c,"SET search_path=keptai,pg_catalog");
         sql(c,"INSERT INTO organizacion(id,nombre) VALUES ('10000000-0000-4000-8000-000000000001','Demo')");

@@ -70,7 +70,60 @@ Errores nuevos: un despacho repetido o una orden no liberada devuelven `INVALID_
 
 **Para MIG-07:** falta un `@Scheduled`, o un Render Cron, que llame a `evaluarCobranza` con un `ContextoFinanciero.servicio` de alcance SCHEDULER por organización, con la fecha local de Lima.
 
+## Motor de resultados y caja (AND-RESULTADOS-001)
+
+| Método | Rol | Endpoint del contrato | Qué hace |
+|---|---|---|---|
+| `MotorResultados.margen(ctx, ORDEN\|MARCA\|LINEA, tipoProduccion?, fechaCorte)` | GERENTE, ADMIN | `GET /results/margins` | Margen por pedido, marca o línea. Línea = ingreso del ítem − costos asignados a ese ítem (V9). |
+| `MotorResultados.centroProductivo(ctx, fechaCorte)` | GERENTE, ADMIN | `GET /results/production-center` | Por cada cargo interno activo calcula taller, comercial y consolidado; el cargo se elimina al consolidar. |
+| `MotorResultados.resumen(ctx, fechaCorte)` | GERENTE, ADMIN | `GET /results/summary` | Mantiene separados ventas, cobrado aplicado, saldo, costo y margen. |
+| `MotorResultados.csvPedidos(ctx, fechaCorte)` | GERENTE, ADMIN | `GET /reports/orders.csv` | Columnas exactas del contrato, centavos con signo, celda vacía para ausente, RFC 4180 y protección contra inyección de fórmulas. |
+| `MotorCaja.proyectar(ctx, fechaCorte, riesgoCobroBps)` | GERENTE, ADMIN, SCHEDULER | `GET /results/cash-forecast` | 4 semanas de lunes a domingo; los días entre el corte y el primer lunes entran en la semana 1. |
+
+**Reglas de resultados:**
+- **Cuándo un margen está completo:** requiere el costeo cerrado (`costos_reales_completos`). Si está incompleto, `costoTotal` y `margen` son null, nunca 0.
+- **Componentes faltantes:** se calculan con los componentes esperados según el tipo de producción. INTERNA espera MATERIA_PRIMA, MANO_OBRA y CIF; TERCERIZADA espera TERCERO.
+- **Margen por línea completo:** además, cada costo real debe estar asignado al 100% y todos los ítems deben tener línea.
+- **Centro productivo:**
+  - taller = cargo interno − costos reales de etapas de esa unidad;
+  - comercial = venta − cargos internos − costos no atribuidos a talleres con cargo;
+  - consolidado = venta − todos los costos reales.
+
+  Un costo sin etapa deja el resultado incompleto.
+
+**Reglas de caja:**
+- **Cobro esperado:** el saldo calculado de cada obligación; si ya venció, cae en la semana 1. Sin vencimiento va a `cobrosSinFecha`; después del horizonte, a `cobrosFueraHorizonte`.
+- **Realizado:** pagos verificados no duplicados, por `fecha_pago`.
+- **Egresos:** los previstos (vencidos en la semana 1) y los realizados, por `fecha_realizada`.
+- **Apertura:** la última con fecha ≤ corte, más el movimiento real hasta el corte.
+- **Sin apertura:** los cierres quedan null. Un saldo negativo es válido.
+- **Dinero sin asignar:** los pagos verificados aún no aplicados se reportan en `dineroSinAsignar`. No se descuentan del cobro esperado, porque solo lo aplicado lo reduce (DB-DEF-001 §6).
+- **Cargo interno:** nunca entra en caja.
+
+**Para el adapter:** `MoneyBridge.solesToCents` rechaza negativos. Margen, resultados y cierres de caja pueden ser negativos; deben mapearse al tipo de monto con signo de `CommonDtos`. Los componentes de costo usan el vocabulario SQL; equivalencias con el contrato:
+
+| SQL | Contrato |
+|---|---|
+| MATERIA_PRIMA | raw_materials |
+| MANO_OBRA | labor |
+| CIF | overhead |
+| TERCERO | outsourced |
+| LOGISTICA | logistics |
+
 ## Pruebas
+
+`MotorResultadosCajaTests` (11) cubre:
+- **QA-08:** margen −40 / 150 / 110 por pedido, marca y línea.
+- **Costos incompletos:** margen null y componentes faltantes.
+- **Línea:** sin asignación completa queda incompleta.
+- **QA-09:** taller −20, comercial −20, consolidado −40; un costo sin etapa lo deja incompleto.
+- **Invariantes V9:** el cargo solo sale de un taller interno, la transferencia es inmutable, costo e ítem deben ser de la misma orden y un costo no baja de lo ya asignado.
+- **Resumen:** 800 / 400 / 400 / 690 / 110.
+- **QA-12:** filas exactas del CSV y protección contra inyección de fórmulas.
+- **QA-10:** caja con cierres 250 / 250 / −50 / −50 y riesgo de cobro.
+- **Sin apertura:** cierres null.
+- **Sin doble conteo:** un pago verificado y luego aplicado no se cuenta dos veces.
+- **Roles.**
 
 `MotorCobranzaTests` (7) verifica:
 - despacho del taller → vencimiento y orden despachada;

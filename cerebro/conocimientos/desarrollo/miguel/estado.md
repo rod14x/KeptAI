@@ -218,3 +218,13 @@ MIG-03-A completa dentro de su alcance: propiedades, CORS y matriz; JWT/API key/
 - Verificación real: `MotorCobranzaTests` 7/7, `MotorPagosTests` 10/10, `SemillaDemoTests` 6/6, `SchemaRlsTests` 15/15. Suite completa **190 tests, 0 fallos**. Local migrado a V8 y resembrado: P-001 PAGADA (vence 20/10), P-002 MORA (vence 05/10, saldo 400). Backend local reiniciado: health UP.
 - Pendiente: aplicar V8 en Supabase (remoto en V7 con baseline); `@Scheduled`/cron que invoque `evaluarCobranza` (adapter de Miguel o job de Render); la semilla no crea `canal_whatsapp` para no programar envíos a números reales.
 - Próximo de Andrés: V9 (`asignacion_costo_item`, `transferencia_interna`), margen por marca/línea, centro productivo, caja de 4 semanas y CSV.
+
+## AND-RESULTADOS-001 — V9, margen, centro productivo, caja y CSV (11/10/2026, Andrés)
+
+- Commit `64cad6d` (V8 + cobranza) publicado en `origin/andres/motor-financiero`. V8 aplicada en Supabase por MCP con fila en `keptai.flyway_schema_history` y el checksum local (-668905718); verificados triggers, funciones y grants.
+- Entrega V9: `BD/migrations/V9__asignacion_costos_transferencia_interna.sql` (DB-DEF-001 §9). Un error mío en un trigger (variable `orden` ambigua con la columna) se corrigió en el mismo V9 antes de publicarlo. En local se reemplazaron las funciones y se ejecutó `flyway repair` del checksum (solo en el entorno local de desarrollo).
+- Entrega Java: `MotorResultados` (margen por pedido, marca y línea; centro productivo; resumen; CSV de pedidos del contrato), `MotorCaja` (4 semanas) y `ResultadosFinancieros`, registrados por autoconfiguración. La semilla agrega costos por etapa, asignaciones por ítem y cargo interno de 320, y exige V9. Docs: `motor-pagos.md` (sección de resultados y caja), BD README y diccionario V9.
+- Ajustes mínimos en pruebas de Miguel: `SchemaRlsTests` espera 9 migraciones; `Mvp25MigrationTests` fija `target("6")` porque verifica V6 (25 tablas) y V9 agrega 2.
+- Verificación real: `MotorResultadosCajaTests` 11/11. QA-08 −40/150/110 por pedido, marca y línea; QA-09 taller −20, comercial −20, consolidado −40; QA-10 caja 250/250/−50/−50, igual a `CashForecastDemo`; QA-12 CSV exacto con protección de fórmulas. Resumen 800/400/400/690/110. Suite completa **201 tests, 0 fallos**.
+- V9 aplicada en Supabase por MCP (11/10/2026) con fila Flyway checksum 1571768166; verificado: 27 tablas con RLS, 6 políticas y 8 triggers V9, 0 grants API; advisors solo INFO intencionales.
+- Pendiente: adapter HTTP (MIG-07) con montos con signo (`MoneyBridge.solesToCents` rechaza negativos); `@Scheduled` de cobranza; QA-11/13 a nivel API; métodos explícitos para que ADMIN/JEFE registren asignaciones y transferencias desde la UI (hoy solo semilla y SQL).

@@ -1,9 +1,9 @@
 -- KeptAI - Semilla ficticia reiniciable (roadmap PROP-ROADMAP-001 §6). Responsable: Andres.
 -- DATOS FICTICIOS DE DEMOSTRACION: no son registros de Corpotex. Mismos UUID/importes que Backend/docs/openapi.yaml.
--- Ejecutar como migrador/propietario sobre V8 (BD/local/db.sh seed). No es migracion Flyway.
+-- Ejecutar como migrador/propietario sobre V9 (BD/local/db.sh seed). No es migracion Flyway.
 -- Sigue el flujo real: credito -> produccion -> obligacion -> despacho (V8 fija vence_en) -> pagos -> estados recalculados.
 -- Reiniciable: borra y recrea solo las organizaciones DEMO de abajo. Aborta si esos UUID pertenecen a otra organizacion.
--- No crea comprobantes: no existe archivo en Storage (DB-DEF-001 §8). Cargo interno 320 requiere V8 (transferencia_interna).
+-- No crea comprobantes: no existe archivo en Storage (DB-DEF-001 §8). Costos por etapa/item y cargo interno 320 (V9).
 BEGIN;
 SET LOCAL search_path = keptai;
 
@@ -11,8 +11,8 @@ DO $$ BEGIN
  IF current_setting('keptai.permitir_semilla', true) IS DISTINCT FROM 'demo' THEN
   RAISE EXCEPTION 'Semilla bloqueada: ejecutar con SET keptai.permitir_semilla = ''demo'' (db.sh seed lo hace)';
  END IF;
- IF NOT EXISTS (SELECT 1 FROM keptai.flyway_schema_history WHERE version = '8' AND success) THEN
-  RAISE EXCEPTION 'La semilla requiere el esquema V8 (despacho fija vencimiento)';
+ IF NOT EXISTS (SELECT 1 FROM keptai.flyway_schema_history WHERE version = '9' AND success) THEN
+  RAISE EXCEPTION 'La semilla requiere el esquema V9 (asignacion de costos y transferencia interna)';
  END IF;
  IF EXISTS (SELECT 1 FROM keptai.organizacion
             WHERE id IN ('10000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000002')
@@ -33,6 +33,8 @@ DELETE FROM alerta_cobranza       WHERE organizacion_id IN (SELECT id FROM semil
 DELETE FROM aplicacion_pago       WHERE organizacion_id IN (SELECT id FROM semilla_org);
 DELETE FROM comprobante           WHERE organizacion_id IN (SELECT id FROM semilla_org);
 DELETE FROM pago                  WHERE organizacion_id IN (SELECT id FROM semilla_org);
+DELETE FROM asignacion_costo_item WHERE organizacion_id IN (SELECT id FROM semilla_org);
+DELETE FROM transferencia_interna WHERE organizacion_id IN (SELECT id FROM semilla_org);
 DELETE FROM costo_orden           WHERE organizacion_id IN (SELECT id FROM semilla_org);
 DELETE FROM despacho              WHERE organizacion_id IN (SELECT id FROM semilla_org);
 DELETE FROM orden_etapa           WHERE organizacion_id IN (SELECT id FROM semilla_org);
@@ -132,12 +134,24 @@ INSERT INTO despacho (id, organizacion_id, orden_id, fecha_despacho, registrado_
  ('18000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', '2026-09-05', '70000000-0000-4000-8000-000000000004', '2026-09-05 15:00-05');
 UPDATE orden SET estado = 'CERRADA' WHERE id = 'a0000000-0000-4000-8000-000000000001';
 
--- Costos reales (P-001 propio 200+80+60 = 340; P-002 tercero 350) y cierre explicito del costeo.
-INSERT INTO costo_orden (id, organizacion_id, orden_id, concepto, monto, origen, fuente, registrado_por, creado_en) VALUES
- ('19000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', 'MATERIA_PRIMA', 200.00, 'REAL', 'semilla_demo', '70000000-0000-4000-8000-000000000004', '2026-09-18 18:00-05'),
- ('19000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', 'MANO_OBRA',      80.00, 'REAL', 'semilla_demo', '70000000-0000-4000-8000-000000000004', '2026-09-18 18:00-05'),
- ('19000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', 'CIF',            60.00, 'REAL', 'semilla_demo', '70000000-0000-4000-8000-000000000004', '2026-09-18 18:00-05'),
- ('19000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', 'TERCERO',       350.00, 'REAL', 'semilla_demo', '70000000-0000-4000-8000-000000000004', '2026-09-04 18:00-05');
+-- Costos reales por etapa (P-001 taller interno 200+80+60 = 340; P-002 tercero 350), repartidos a su item.
+INSERT INTO costo_orden (id, organizacion_id, orden_id, etapa_id, concepto, monto, origen, fuente, registrado_por, creado_en) VALUES
+ ('19000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', '17000000-0000-4000-8000-000000000001', 'MATERIA_PRIMA', 200.00, 'REAL', 'semilla_demo', '70000000-0000-4000-8000-000000000004', '2026-09-18 18:00-05'),
+ ('19000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', '17000000-0000-4000-8000-000000000003', 'MANO_OBRA',      80.00, 'REAL', 'semilla_demo', '70000000-0000-4000-8000-000000000004', '2026-09-18 18:00-05'),
+ ('19000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001', '17000000-0000-4000-8000-000000000003', 'CIF',            60.00, 'REAL', 'semilla_demo', '70000000-0000-4000-8000-000000000004', '2026-09-18 18:00-05'),
+ ('19000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', '17000000-0000-4000-8000-000000000005', 'TERCERO',       350.00, 'REAL', 'semilla_demo', '70000000-0000-4000-8000-000000000004', '2026-09-04 18:00-05');
+INSERT INTO asignacion_costo_item (organizacion_id, costo_id, orden_item_id, monto, moneda, metodo, fuente, registrado_por)
+SELECT c.organizacion_id, c.id, i.id, c.monto, c.moneda, 'UNIDADES', 'semilla_demo', '70000000-0000-4000-8000-000000000004'
+  FROM costo_orden c JOIN orden_item i ON i.organizacion_id = c.organizacion_id AND i.orden_id = c.orden_id
+ WHERE c.organizacion_id = '10000000-0000-4000-8000-000000000001';
+
+-- Cargo interno ficticio del taller a P-001 (C-06): taller 320-340 = -20; comercial 300-320 = -20; consolidado -40.
+INSERT INTO transferencia_interna (id, organizacion_id, orden_id, unidad_origen_id, monto, moneda, criterio, fuente, registrado_por, creado_en) VALUES
+ ('1c000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001',
+  '13000000-0000-4000-8000-000000000001', 320.00, 'PEN', 'Precio interno ficticio de demostracion', 'semilla_demo',
+  '70000000-0000-4000-8000-000000000002', '2026-09-18 18:30-05');
+
+-- Cierre explicito del costeo despues de costos, asignaciones y cargo interno (cualquier cambio posterior lo invalida).
 UPDATE orden SET costos_reales_completos = true
  WHERE id IN ('a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002');
 
