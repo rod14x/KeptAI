@@ -76,11 +76,11 @@ function Detail({ d }: { d: OrderDetailDTO }) {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-title font-extrabold">Por cobrar - Fecha de vencimiento</h1>
-              <span className="text-xs font-semibold text-muted">({o.ref})</span>
+              <h1 className="text-title font-extrabold">Pedido {o.ref}</h1>
               <OrderStateChip estado={o.estado} />
               {o.estado === "despachada" && <FinanceChip finance={d.card.finance} daysToDue={d.card.daysToDue ?? undefined} />}
             </div>
+            {o.description && <p className="mt-1 text-sm font-semibold text-ink-soft">{o.description}</p>}
             <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted">
               {d.customer.id ? (
                 <Link to={`/clientes/${d.customer.id}`} className="font-semibold text-ink hover:underline">
@@ -243,7 +243,7 @@ function HojaCard({ d }: { d: OrderDetailDTO }) {
 }
 
 function ItemsCard({ d }: { d: OrderDetailDTO }) {
-  // El DTO Order del contrato no trae ítems: la tarjeta solo aparece cuando la fuente los tiene.
+  // Ítems de orden_item (Order.items en la API); la tarjeta solo aparece cuando la fuente los tiene.
   if (!capabilities.orderItems || d.order.items.length === 0) return null;
   return (
     <Card className="p-5 sm:p-6">
@@ -339,7 +339,7 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
             {cr && (
               <p className="tabular mt-4 rounded-xl bg-panel px-3.5 py-2.5 text-[13px] text-muted ring-1 ring-line/70">
                 Aprobado por <span className="font-semibold text-ink">{cr.by}</span> el {formatDateTime(cr.at)}.
-                {cr.avisoMoraMostrado && <span className="font-semibold text-warn"> Vio el aviso de mora y decidió dar crédito.</span>}
+                {cr.avisoMoraMostrado && <span className="font-semibold text-warn"> Vio el aviso de mora y confirmó igual.</span>}
                 {cr.nota && <> {cr.nota}</>}
               </p>
             )}
@@ -369,9 +369,11 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
         </p>
       )}
       {!d.credit.aviso && d.credit.closedCount > 0 && (
-        <p className="mt-4 flex items-start gap-2 rounded-xl bg-ok-tint px-3.5 py-2.5 text-[13px] font-medium text-ok">
+        <p className={cx("mt-4 flex items-start gap-2 rounded-xl px-3.5 py-2.5 text-[13px] font-medium", d.credit.paidOnTime === d.credit.closedCount ? "bg-ok-tint text-ok" : "bg-panel text-ink-soft ring-1 ring-line/70")}>
           <CheckCircle size={18} weight="bold" className="mt-px shrink-0" />
-          Historial al día: {d.credit.paidOnTime} de {d.credit.closedCount} pedidos pagados a tiempo.
+          {d.credit.paidOnTime === d.credit.closedCount
+            ? `Historial al día: ${d.credit.closedCount} de ${d.credit.closedCount} pedidos pagados a tiempo.`
+            : `Sin deuda vencida hoy. Pagó a tiempo ${d.credit.paidOnTime} de ${d.credit.closedCount} pedidos${d.credit.avgDaysLate != null && d.credit.avgDaysLate > 0 ? `; en promedio ${d.credit.avgDaysLate} días después del vencimiento` : ""}.`}
         </p>
       )}
 
@@ -457,13 +459,6 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
               </div>
             </motion.div>
           )}
-
-
-
-
-
-
-
         </div>
       )}
 
@@ -478,18 +473,21 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
         <p className="mt-2 text-sm text-muted">La decisión queda registrada con tu nombre y la marca de que viste este aviso.</p>
         <div className="mt-6 flex flex-col gap-2">
           <Button data-autofocus variant="primary" onClick={() => confirm(true)} className="w-full">
-            Sí, darle crédito
+            {tipo === "credito" ? "Sí, darle crédito" : tipo === "anticipo" ? "Sí, confirmar con anticipo" : "Sí, confirmar al contado"}
           </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setTipo("anticipo");
-              setMoraOpen(false);
-            }}
-            className="w-full"
-          >
-            Mejor pedir anticipo
-          </Button>
+          {tipo === "credito" && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setTipo("anticipo");
+                setCustomize(true);
+                setMoraOpen(false);
+              }}
+              className="w-full"
+            >
+              Mejor pedir anticipo
+            </Button>
+          )}
           <Button variant="ghost" onClick={() => setMoraOpen(false)} className="w-full">
             Cancelar
           </Button>
@@ -533,9 +531,9 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
 
 function DatesCard({ d }: { d: OrderDetailDTO }) {
   const o = d.order;
-  const rows: Array<{ label: string; value: string | null; icon: ReactNode; strong?: boolean; hint?: string }> = [
+  const rows: Array<{ label: string; value: string | null; icon: ReactNode; strong?: boolean; hint?: string; empty?: string }> = [
     { label: "Pedido", value: o.issuedOn, icon: <ChatCircleText size={16} weight="bold" /> },
-    { label: "Entrega solicitada", value: o.fechaEntregaSolicitada, icon: <Hourglass size={16} weight="bold" /> },
+    { label: "Entrega solicitada", value: o.fechaEntregaSolicitada, icon: <Hourglass size={16} weight="bold" />, empty: "Sin fecha" },
     { label: "Inicio de producción", value: o.inicioProduccion, icon: <Factory size={16} weight="bold" />, hint: "Cuando pasa el gatekeeper" },
     { label: "Despacho", value: o.despacho?.fecha ?? null, icon: <Truck size={16} weight="bold" />, hint: o.despacho ? `${o.despacho.acta} · ${o.despacho.by}` : "Lo registra el Jefe de taller" },
     { label: "Vencimiento", value: d.card.dueDate, icon: <WarningCircle size={16} weight="bold" />, strong: true, hint: "Despacho + plazo" },
@@ -551,7 +549,7 @@ function DatesCard({ d }: { d: OrderDetailDTO }) {
               <span className="block text-sm font-semibold">{r.label}</span>
               {r.hint && <span className="block truncate text-xs text-muted">{r.hint}</span>}
             </span>
-            <span className={cx("tabular text-sm", r.value ? (r.strong ? "font-extrabold" : "font-semibold") : "text-faint")}>{r.value ? formatDate(r.value) : "Pendiente"}</span>
+            <span className={cx("tabular text-sm", r.value ? (r.strong ? "font-extrabold" : "font-semibold") : "text-faint")}>{r.value ? formatDate(r.value) : (r.empty ?? "Pendiente")}</span>
           </motion.li>
         ))}
       </motion.ol>

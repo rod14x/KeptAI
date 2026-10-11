@@ -1,13 +1,11 @@
 import type { Role } from "../../api/model";
 import { Bell, ChartPieSlice, Factory, Kanban, Receipt, SquaresFour, UploadSimple, UsersThree } from "../ui/icons";
-import { IS_MOCK } from "../../config";
 import { can } from "../../lib/permissions";
 import type { ModuleKey } from "../../lib/availability";
 
 // Entradas del menú principal y su módulo. Separado de Sidebar para que el inicio y las pruebas no importen la fachada de datos.
 export const NAV: Array<{ to: string; label: string; icon: typeof SquaresFour; end: boolean; module: ModuleKey; show?: (r: Role) => boolean }> = [
-  // En modo api el inicio es la vista de identidad (/me) y la ven todos los roles; en mock es el Dashboard comercial.
-  { to: "/", label: IS_MOCK ? "Dashboard" : "Inicio", icon: SquaresFour, end: true, module: "inicio", show: (r) => !IS_MOCK || can(r, "ver_comercial") },
+  { to: "/", label: "Dashboard", icon: SquaresFour, end: true, module: "inicio", show: (r) => can(r, "ver_comercial") },
   { to: "/pedidos", label: "Pedidos", icon: Kanban, end: false, module: "pedidos", show: (r) => can(r, "ver_comercial") },
   { to: "/clientes", label: "Clientes", icon: UsersThree, end: false, module: "clientes", show: (r) => can(r, "ver_comercial") },
   { to: "/conciliacion", label: "Conciliación", icon: Receipt, end: false, module: "conciliacion", show: (r) => can(r, "verificar") || can(r, "ver_pagos") },

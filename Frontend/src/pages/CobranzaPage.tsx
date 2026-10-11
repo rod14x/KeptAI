@@ -201,6 +201,7 @@ function AlertCard({ a }: { a: AlertRow }) {
           />
           <Button
             icon={<CheckCircle size={16} weight="bold" />}
+            disabled={!text.trim()}
             onClick={async () => {
               const r = await commands.resolveAlert(a.id, text, me);
               toast(r.ok, r.message);
@@ -271,10 +272,15 @@ function Mensajes({ rows }: { rows: MessageRow[] }) {
                 </span>
               </div>
               <p className="tabular mt-1 text-xs text-faint">
-                {m.contacto} · {m.estado === "enviado" && m.enviadoAt ? `enviado ${formatDateTime(m.enviadoAt)}` : `programado ${formatDateTime(m.programadoPara)}`}
-                {m.orderRef && ` · ${m.orderRef}`}
-                {m.intentos > 1 && ` · ${m.intentos} intentos`}
-                {m.error && ` · ${m.error}`}
+                {[
+                  m.contacto,
+                  m.estado === "enviado" && m.enviadoAt ? `enviado ${formatDateTime(m.enviadoAt)}` : `programado ${formatDateTime(m.programadoPara)}`,
+                  m.orderRef,
+                  m.intentos > 1 && `${m.intentos} intentos`,
+                  m.error,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
             </motion.li>
           ))}

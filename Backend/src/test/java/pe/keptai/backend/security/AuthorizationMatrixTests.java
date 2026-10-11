@@ -41,9 +41,24 @@ import org.yaml.snakeyaml.constructor.SafeConstructor;
 @ActiveProfiles("test")
 class AuthorizationMatrixTests {
 
-	/** Operaciones cuya regla está cerrada por decisiones pendientes (matriz 5.3/5.4/5.5 y D-007). */
-	static final Set<String> CLOSED = Set.of("createTextEvidence", "startExtraction", "getExtractionJob", "getReconciliationCandidates",
-			"registerPaymentVerification", "applyPayment", "n8nConfirmOrder", "n8nReportMessageStatus");
+	/** Operaciones cuya regla está cerrada por decisiones pendientes (matriz 5.3/5.4 y D-007). */
+	static final Set<String> CLOSED = Set.of("createTextEvidence", "startExtraction", "getExtractionJob", "n8nConfirmOrder",
+			"n8nReportMessageStatus");
+
+	/**
+	 * INT-FE-API-001: operaciones del panel con controlador. En el perfil test no hay base de datos, así que un actor
+	 * autorizado llega al controlador y este falla cerrado: 503 al consultar datos, 400 si falta el cuerpo o un
+	 * parámetro obligatorio (se valida antes de tocar la base). Nunca 2xx sin datos reales.
+	 */
+	static final Map<String, Integer> IMPLEMENTED = Map.ofEntries(Map.entry("listOrders", 503), Map.entry("getOrder", 503),
+			Map.entry("getCreditDecision", 503), Map.entry("submitCreditDecision", 400), Map.entry("registerDispatch", 400),
+			Map.entry("listPayments", 503), Map.entry("getPayment", 503), Map.entry("getReconciliationCandidates", 503),
+			Map.entry("registerPaymentVerification", 400), Map.entry("applyPayment", 400), Map.entry("listReceivables", 503),
+			Map.entry("getReceivable", 503), Map.entry("listCollectionAlerts", 503), Map.entry("getCustomerStatement", 503),
+			Map.entry("getResultsSummary", 503), Map.entry("getMarginReport", 400), Map.entry("getProductionCenterResults", 503),
+			Map.entry("getCashForecast", 503), Map.entry("exportOrdersCsv", 503), Map.entry("listAuditEvents", 503),
+			Map.entry("resolveCollectionAlert", 400), Map.entry("markPaymentDuplicate", 503),
+			Map.entry("listNotifications", 503));
 
 	/** Servicios que el contrato permite en cada operación abierta de n8n. */
 	static final Map<String, AccessRole> SERVICE_SCOPE = Map.of("n8nIngestOrder", AccessRole.INGESTA, "n8nReceiveVoucher", AccessRole.INGESTA);
@@ -97,7 +112,7 @@ class AuthorizationMatrixTests {
 	@Test
 	void everyOperationIsAuthorizedOnlyForItsDeclaredActors() throws Exception {
 		List<Op> ops = operations();
-		assertThat(ops).hasSize(37);
+		assertThat(ops).hasSize(40);
 		int checks = 0;
 		for (Op op : ops) {
 			String path = concrete(op.path());
@@ -106,17 +121,18 @@ class AuthorizationMatrixTests {
 			// Sin credencial: siempre 401.
 			assertThat(statusOf(op.method(), path, null)).as(op.id() + " anónimo").isEqualTo(401);
 			for (AccessRole role : AccessRole.userRoles()) {
-				int expected = !serviceOp && !closed && op.roles().contains(role.name()) ? (op.id().equals("getMyContext") ? 200 : 404) : 403;
+				int expected = !serviceOp && !closed && op.roles().contains(role.name())
+						? (op.id().equals("getMyContext") ? 200 : IMPLEMENTED.getOrDefault(op.id(), 404)) : 403;
 				assertThat(statusOf(op.method(), path, user(role))).as(op.id() + " como " + role).isEqualTo(expected);
 				checks++;
 			}
 			for (AccessRole scope : List.of(AccessRole.INGESTA, AccessRole.SCHEDULER)) {
-				int expected = serviceOp && !closed && SERVICE_SCOPE.get(op.id()) == scope ? (op.id().equals("n8nIngestOrder") ? 400 : 404) : 403;
+				int expected = serviceOp && !closed && SERVICE_SCOPE.get(op.id()) == scope ? 400 : 403; // ingesta y voucher: autorizadas e implementadas (cuerpo vacío = 400)
 				assertThat(statusOf(op.method(), path, service(scope))).as(op.id() + " como servicio " + scope).isEqualTo(expected);
 				checks++;
 			}
 		}
-		assertThat(checks).isEqualTo(37 * 6);
+		assertThat(checks).isEqualTo(40 * 6);
 	}
 
 	@Test
@@ -124,8 +140,13 @@ class AuthorizationMatrixTests {
 		MvcResult denied = mvc.perform(request(HttpMethod.GET, "/api/v1/results/summary").with(authentication(user(AccessRole.VENDEDOR)))).andExpect(status().isForbidden())
 			.andExpect(jsonPath("$.code").value("FORBIDDEN")).andExpect(jsonPath("$.request_id").isNotEmpty()).andReturn();
 		assertThat(denied.getResponse().getHeader("X-Request-Id")).isNotBlank();
-		mvc.perform(request(HttpMethod.GET, "/api/v1/results/summary").with(authentication(user(AccessRole.GERENTE)))).andExpect(status().isNotFound())
+		// Ruta autorizada sin controlador (borradores, MIG-06): 404, nunca éxito.
+		mvc.perform(request(HttpMethod.GET, "/api/v1/drafts").with(authentication(user(AccessRole.ADMIN)))).andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.code").value("NOT_FOUND")).andExpect(jsonPath("$.request_id").isNotEmpty());
+		// Ruta implementada sin base de datos: falla cerrado con 503, sin datos ficticios.
+		mvc.perform(request(HttpMethod.GET, "/api/v1/results/summary").with(authentication(user(AccessRole.GERENTE))))
+			.andExpect(status().isServiceUnavailable()).andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE"))
+			.andExpect(jsonPath("$.request_id").isNotEmpty());
 	}
 
 	@Test
@@ -205,7 +226,8 @@ class AuthorizationMatrixTests {
 		// INGESTA y SCHEDULER no son intercambiables; ninguno sirve de usuario "vendedor".
 		assertThat(statusOf("POST", "/api/v1/ordenes/ingesta", service(AccessRole.SCHEDULER))).isEqualTo(403);
 		assertThat(statusOf("POST", "/api/v1/orders/" + UUID.randomUUID() + "/credit-decision", user(AccessRole.ADMIN))).isEqualTo(403);
-		assertThat(statusOf("POST", "/api/v1/orders/" + UUID.randomUUID() + "/credit-decision", user(AccessRole.VENDEDOR))).isEqualTo(404);
+		// El vendedor sí llega al controlador (sin cuerpo: 400).
+		assertThat(statusOf("POST", "/api/v1/orders/" + UUID.randomUUID() + "/credit-decision", user(AccessRole.VENDEDOR))).isEqualTo(400);
 		// El webhook saliente de n8n no es una ruta de Spring.
 		assertThat(statusOf("POST", "/webhook/enviar-mensaje", user(AccessRole.ADMIN))).isEqualTo(403);
 	}

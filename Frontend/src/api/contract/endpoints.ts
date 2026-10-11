@@ -4,7 +4,8 @@ import * as S from "./schemas";
 
 // Un método por operationId del panel en Backend/docs/openapi.yaml (MIG-02).
 // Las rutas /api/v1/ordenes/*, /pagos/voucher y /mensajes/* son de n8n (X-Api-Key) y no se llaman desde el navegador.
-// Estado del backend: "Propuesta, no implementado" (contrato-api.md); en modo api fallarán hasta que Spring las exponga.
+// Estado del backend en contrato-api.md: las operaciones del panel de INT-FE-API-001/002 están implementadas en Spring;
+// evidencias, extracción y borradores (MIG-04/05/06) siguen sin endpoint en Spring y hoy responden 404.
 
 type Paging = { limit?: number; cursor?: string | null };
 const pg = (x?: Paging) => ({ limit: x?.limit ?? 100, cursor: x?.cursor ?? undefined });
@@ -51,12 +52,19 @@ export const endpoints = {
   getReconciliationCandidates: (id: string) => getJson(S.ReconciliationResult, `/api/v1/payments/${id}/reconciliation`),
   registerPaymentVerification: (id: string, body: S.RegisterVerificationRequest) => sendJson(S.Payment, "POST", `/api/v1/payments/${id}/verifications`, body),
   applyPayment: (id: string, body: S.ApplyPaymentRequest) => sendJson(S.PaymentApplicationResult, "POST", `/api/v1/payments/${id}/applications`, body),
+  /** INT-FE-API-002: MotorPagos.marcarDuplicado; sin cuerpo. */
+  markPaymentDuplicate: (id: string) => sendJson(S.Payment, "POST", `/api/v1/payments/${id}/duplicate`, undefined),
 
   /* Cobranza */
   listReceivables: (q?: Paging & { customer_id?: string; due_bucket?: z.infer<typeof S.DueBucket> }) =>
     getJson(S.ReceivablePage, "/api/v1/receivables", { ...pg(q), customer_id: q?.customer_id, due_bucket: q?.due_bucket }),
   getReceivable: (id: string) => getJson(S.Receivable, `/api/v1/receivables/${id}`),
   listCollectionAlerts: (q?: Paging & { status?: "open" | "resolved" | "cancelled" }) => getJson(S.CollectionAlertPage, "/api/v1/collection-alerts", { ...pg(q), status: q?.status }),
+  /** INT-FE-API-002: cierre manual de una alerta por Administración. */
+  resolveCollectionAlert: (id: string, body: S.ResolveAlertRequest) => sendJson(S.CollectionAlert, "POST", `/api/v1/collection-alerts/${id}/resolution`, body),
+  /** INT-FE-API-002: bitácora de envíos de WF3 (envio_notificacion, sin texto). */
+  listNotifications: (q?: Paging & { order_id?: string; customer_id?: string }) =>
+    getJson(S.NotificationPage, "/api/v1/notifications", { ...pg(q), order_id: q?.order_id, customer_id: q?.customer_id }),
   getCustomerStatement: (customerId: string) => getJson(S.CustomerStatement, `/api/v1/customers/${customerId}/statement`),
 
   /* Resultados y reportes (GERENTE) */
@@ -77,6 +85,9 @@ export const all = {
   payments: (q?: Parameters<typeof endpoints.listPayments>[0]) => getAll((cursor) => endpoints.listPayments({ ...q, cursor })),
   receivables: (q?: Parameters<typeof endpoints.listReceivables>[0]) => getAll((cursor) => endpoints.listReceivables({ ...q, cursor })),
   alerts: (q?: Parameters<typeof endpoints.listCollectionAlerts>[0]) => getAll((cursor) => endpoints.listCollectionAlerts({ ...q, cursor })),
+  notifications: (q?: Parameters<typeof endpoints.listNotifications>[0]) => getAll((cursor) => endpoints.listNotifications({ ...q, cursor })),
   drafts: (q?: Parameters<typeof endpoints.listDrafts>[0]) => getAll((cursor) => endpoints.listDrafts({ ...q, cursor })),
+  /** Filas de margen de todas las páginas (los totales del motor quedan fuera). */
+  margins: (q: Parameters<typeof endpoints.getMarginReport>[0]) => getAll((cursor) => endpoints.getMarginReport({ ...q, cursor })),
   audit: (q?: Parameters<typeof endpoints.listAuditEvents>[0]) => getAll((cursor) => endpoints.listAuditEvents({ ...q, cursor }), 200),
 };

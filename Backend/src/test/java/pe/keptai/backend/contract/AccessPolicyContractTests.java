@@ -43,8 +43,9 @@ class AccessPolicyContractTests {
 	@Test
 	void everyIncomingContractOperationHasExactlyOneRuleAndNoRuleIsInvented() {
 		List<Op> ops = contractOperations();
-		assertThat(ops).hasSize(37);
-		assertThat(AccessPolicy.RULES).hasSize(37);
+		// 37 de MIG-02 + 3 de INT-FE-API-002 (resolución de alertas, marca de duplicado y bitácora de envíos).
+		assertThat(ops).hasSize(40);
+		assertThat(AccessPolicy.RULES).hasSize(40);
 		for (Op op : ops) {
 			List<Rule> found = AccessPolicy.RULES.stream().filter(r -> r.operationId().equals(op.id())).toList();
 			assertThat(found).as(op.id()).hasSize(1);
@@ -88,7 +89,7 @@ class AccessPolicyContractTests {
 	void closedRulesCarryTheirPendingReasonAndAreDocumentedInTheMatrix() throws IOException {
 		List<Rule> closed = AccessPolicy.RULES.stream().filter(r -> !r.open()).toList();
 		assertThat(closed).extracting(Rule::operationId).containsExactlyInAnyOrder("createTextEvidence", "startExtraction", "getExtractionJob",
-			"getReconciliationCandidates", "registerPaymentVerification", "applyPayment", "n8nConfirmOrder", "n8nReportMessageStatus");
+			"n8nConfirmOrder", "n8nReportMessageStatus");
 		assertThat(closed).allSatisfy(r -> {
 			assertThat(r.closedReason()).isNotBlank();
 			assertThat(r.actors()).isEmpty();

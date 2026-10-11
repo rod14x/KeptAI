@@ -32,7 +32,10 @@ export type ApiErrorT = z.infer<typeof ApiError>;
 
 /* ---------- Identidad ---------- */
 export const UserRole = z.enum(["VENDEDOR", "ADMIN", "GERENTE", "JEFE_TALLER"]);
-export const UserContext = z.object({ user_id: Uuid, organization_id: Uuid, role: UserRole }).strict();
+// INT-FE-API-002: los campos opcionales nuevos se omiten cuando son nulos (NON_NULL en Spring); por eso son nullish.
+export const UserContext = z
+  .object({ user_id: Uuid, organization_id: Uuid, role: UserRole, name: z.string().nullish(), organization_name: z.string().nullish() })
+  .strict();
 export type UserContextT = z.infer<typeof UserContext>;
 
 /* ---------- Evidencias y extracción ---------- */
@@ -122,7 +125,16 @@ export const ConfirmDraftResponse = z
 export const OrderStatus = z.enum(["draft", "pending_approval", "held", "released", "in_production", "dispatched", "closed", "cancelled"]);
 export const ReceivableStatus = z.enum(["pending", "partially_paid", "paid", "overdue", "voided"]);
 export const PaymentCondition = z.enum(["cash", "advance", "credit"]);
-export const CustomerRef = z.object({ id: Uuid, name: z.string() }).strict();
+export const PersonRef = z.object({ id: Uuid, name: z.string() }).strict();
+export type PersonRefT = z.infer<typeof PersonRef>;
+export const CustomerType = z.enum(["school", "company", "person"]);
+export const CustomerRef = z
+  .object({ id: Uuid, name: z.string(), type: CustomerType.nullish(), tax_id: z.string().nullish(), credit_limit: NonNegativeMoney.nullish() })
+  .strict();
+export type CustomerRefT = z.infer<typeof CustomerRef>;
+export const OrderItem = z
+  .object({ description: z.string(), quantity: z.number().int(), unit_price: NonNegativeMoney, product_line: z.string().nullable(), detail: z.string().nullable() })
+  .strict();
 export const Order = z
   .object({
     id: Uuid,
@@ -145,6 +157,9 @@ export const Order = z
     source_evidence_id: Uuid.nullable(),
     data_origin: DataOrigin,
     created_at: IsoDateTime,
+    seller: PersonRef.nullish(),
+    items: z.array(OrderItem).optional(),
+    dispatched_by: PersonRef.nullish(),
   })
   .strict();
 export type OrderT = z.infer<typeof Order>;
@@ -156,7 +171,25 @@ export const ReconciliationStatus = z.enum(["pending", "applied", "partial", "du
 export const PaymentChannel = z.enum(["yape", "plin", "bank_transfer", "deposit", "cash", "other"]);
 export const VerificationMethod = z.enum(["simulated_demo", "manual_confirmation"]);
 export const PaymentVerification = z
-  .object({ method: VerificationMethod, is_simulated: z.boolean(), verified_by_user_id: Uuid, verified_at: IsoDateTime, note: z.string().nullable() })
+  .object({
+    method: VerificationMethod,
+    is_simulated: z.boolean(),
+    verified_by_user_id: Uuid,
+    verified_at: IsoDateTime,
+    note: z.string().nullable(),
+    verified_by_name: z.string().nullish(),
+  })
+  .strict();
+export const PaymentAllocation = z
+  .object({
+    application_id: Uuid,
+    receivable_id: Uuid,
+    order_id: Uuid,
+    order_code: z.string(),
+    amount: PositiveMoney,
+    applied_at: IsoDateTime,
+    applied_by: PersonRef.nullish(),
+  })
   .strict();
 export const Payment = z
   .object({
@@ -178,6 +211,7 @@ export const Payment = z
     model_reported_confidence_permille: z.number().int().nullable(),
     data_origin: DataOrigin,
     created_at: IsoDateTime,
+    applications: z.array(PaymentAllocation).optional(),
   })
   .strict();
 export type PaymentT = z.infer<typeof Payment>;
@@ -205,6 +239,17 @@ export const ReconciliationResult = z
 export type ReconciliationResultT = z.infer<typeof ReconciliationResult>;
 
 export const DueBucket = z.enum(["awaiting_dispatch", "not_due", "due_today", "overdue"]);
+export const ReceivableApplication = z
+  .object({
+    application_id: Uuid,
+    payment_id: Uuid,
+    payment_code: z.string().nullable(),
+    channel: PaymentChannel,
+    amount: PositiveMoney,
+    applied_at: IsoDateTime,
+    applied_by: PersonRef.nullish(),
+  })
+  .strict();
 export const Receivable = z
   .object({
     id: Uuid,
@@ -220,6 +265,7 @@ export const Receivable = z
     due_bucket: DueBucket,
     days_overdue: z.number().int(),
     status: ReceivableStatus,
+    applications: z.array(ReceivableApplication).optional(),
   })
   .strict();
 export type ReceivableT = z.infer<typeof Receivable>;
@@ -242,6 +288,8 @@ export const CollectionAlert = z
     resolution: z.enum(["payment_applied", "manual"]).nullable(),
     created_at: IsoDateTime,
     closed_at: IsoDateTime.nullable(),
+    responsible_name: z.string().nullish(),
+    resolution_note: z.string().nullish(),
   })
   .strict();
 export type CollectionAlertT = z.infer<typeof CollectionAlert>;
@@ -258,6 +306,7 @@ export const CreditAuthorization = z
     advance_pct_bps: z.number().int().nullable(),
     reason: z.string().nullable(),
     decided_at: IsoDateTime.nullable(),
+    responsible_name: z.string().nullish(),
   })
   .strict();
 export type CreditAuthorizationT = z.infer<typeof CreditAuthorization>;
@@ -310,6 +359,7 @@ export const MarginRow = z
     cost_status: z.enum(["complete", "incomplete"]),
     missing_cost_components: z.array(CostComponent),
     orders_count: z.number().int(),
+    perceived_margin: Money.nullish(),
   })
   .strict();
 export type MarginRowT = z.infer<typeof MarginRow>;
@@ -375,10 +425,38 @@ export const AuditEvent = z
     entity_id: Uuid,
     request_id: z.string().nullable(),
     changes: z.array(z.object({ field: z.string(), old_value: z.string().nullable(), new_value: z.string().nullable() }).strict()),
+    actor_name: z.string().nullish(),
   })
   .strict();
 export type AuditEventT = z.infer<typeof AuditEvent>;
 export const AuditEventPage = page(AuditEvent);
+
+/* ---------- Envíos de cobranza (WF3, solo metadatos; D-007) ---------- */
+export const NotificationType = z.enum([
+  "collection_preventive",
+  "collection_due",
+  "early_arrears",
+  "repurchase",
+  "account_statement",
+  "payment_confirmation",
+  "seller_summary",
+]);
+export const Notification = z
+  .object({
+    id: Uuid,
+    customer: CustomerRef.nullable(),
+    order_id: Uuid.nullable(),
+    order_code: z.string().nullable(),
+    type: NotificationType,
+    status: z.enum(["pending", "sent", "error", "cancelled"]),
+    scheduled_for: IsoDateTime,
+    attempts: z.number().int(),
+    sent_at: IsoDateTime.nullable(),
+    last_error: z.string().nullable(),
+  })
+  .strict();
+export type NotificationT = z.infer<typeof Notification>;
+export const NotificationPage = page(Notification);
 
 /* ---------- Cuerpos de petición ---------- */
 export type CorrectDraftRequest = {
@@ -396,6 +474,7 @@ export type CreditDecisionRequest = {
 export type ApplyPaymentRequest = { receivable_id: string; amount: z.infer<typeof PositiveMoney> };
 export type RegisterVerificationRequest = { method: "simulated_demo" | "manual_confirmation"; note?: string | null };
 export type DispatchRequest = { dispatch_date: string; note?: string | null };
+export type ResolveAlertRequest = { note: string };
 
 /** Esquema por nombre del componente OpenAPI, para validar ejemplos del YAML. */
 export const SCHEMAS_BY_NAME: Record<string, z.ZodTypeAny> = {
@@ -417,6 +496,8 @@ export const SCHEMAS_BY_NAME: Record<string, z.ZodTypeAny> = {
   PaymentApplicationResult,
   CollectionAlert,
   CollectionAlertPage,
+  Notification,
+  NotificationPage,
   CreditAuthorization,
   CustomerStatement,
   ResultsSummary,

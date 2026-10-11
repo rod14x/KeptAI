@@ -2,22 +2,21 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { popVariants, spring } from "../motion/primitives";
-import { CaretDown, ClockCounterClockwise, GearSix, SignOut, SlidersHorizontal, UserCircle } from "../ui/icons";
+import { CaretDown, ClockCounterClockwise, GearSix, IdentificationCard, SignOut, SlidersHorizontal, UserCircle } from "../ui/icons";
 import { Avatar } from "../ui/Avatar";
 import { useAuth } from "../../context/AuthContext";
 import { can, ROLE_LABEL } from "../../lib/permissions";
 import { cx } from "../../lib/format";
 import { IS_MOCK } from "../../config";
 
-// En modo api el perfil y sus pestañas consultan módulos de negocio pendientes: el menú solo ofrece la identidad (inicio).
-const ITEMS = IS_MOCK
-  ? [
-      { to: "/perfil", label: "Mi perfil", icon: UserCircle },
-      { to: "/perfil?tab=actividad", label: "Mi actividad", icon: ClockCounterClockwise },
-      { to: "/perfil?tab=preferencias", label: "Preferencias", icon: SlidersHorizontal },
-      { to: "/perfil?tab=configuracion", label: "Configuración", icon: GearSix },
-    ]
-  : [{ to: "/", label: "Mi identidad", icon: UserCircle }];
+// En modo api se agrega "Mi sesión": la identidad que el servidor resolvió con GET /api/v1/me.
+const ITEMS = [
+  { to: "/perfil", label: "Mi perfil", icon: UserCircle },
+  { to: "/perfil?tab=actividad", label: "Mi actividad", icon: ClockCounterClockwise },
+  { to: "/perfil?tab=preferencias", label: "Preferencias", icon: SlidersHorizontal },
+  { to: "/perfil?tab=configuracion", label: "Configuración", icon: GearSix },
+  ...(IS_MOCK ? [] : [{ to: "/sesion", label: "Mi sesión", icon: IdentificationCard }]),
+];
 
 export function UserMenu() {
   const { person, signOut } = useAuth();
@@ -93,14 +92,14 @@ export function UserMenu() {
           style={{ transformOrigin: "top right" }}
           aria-label="Cuenta"
           onKeyDown={onMenuKey}
-          className="absolute right-0 top-[calc(100%+8px)] z-40 w-72 overflow-hidden rounded-xl bg-card p-1.5 shadow-[var(--shadow-lift)] ring-1 ring-line"
+          className="absolute right-0 top-[calc(100%+8px)] z-40 w-72 overflow-hidden rounded-md bg-card p-1.5 shadow-[var(--shadow-lift)] ring-1 ring-line"
         >
           <div className="flex items-center gap-3 px-3 pb-3 pt-2.5">
             <Avatar name={person.name} size="lg" />
             <div className="min-w-0">
               <p className="truncate text-sm font-bold">{person.name}</p>
               <p className="truncate text-xs text-muted">{person.email}</p>
-              <span className="mt-1 inline-flex rounded-md bg-violet-tint px-2 py-0.5 text-[11px] font-semibold text-violet-ink">{ROLE_LABEL[person.role]}</span>
+              <span className="mt-1 inline-flex rounded-sm bg-violet-tint px-2 py-0.5 text-[11px] font-semibold text-violet-ink">{ROLE_LABEL[person.role]}</span>
             </div>
           </div>
           <div className="my-1 h-px bg-line-soft" />

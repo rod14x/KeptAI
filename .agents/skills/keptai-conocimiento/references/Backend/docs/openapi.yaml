@@ -1606,34 +1606,20 @@ paths:
       - Integracion n8n
       operationId: n8nIngestOrder
       summary: '[n8n WF1] Recibir la hoja de resumen y el transcript de un chat cerrado con /cerrar.'
-      description: 'IMPLEMENTADO SOLO COMO RECEPCION: devuelve 200 VALIDADO_SIN_PERSISTIR tras validar JSON e instancia del servicio. No guarda cuerpo, no crea orden, no ejecuta IA y no encola trabajo. Los JID no se resuelven contra usuarios en esta etapa. La respuesta 201, idempotencia y procesamiento descritos a continuacion son objetivos pendientes de MIG-05.
+      description: 'IMPLEMENTADO (MIG-05, alcance de la ingesta de WF1). Con `X-Api-Key` de un servicio INGESTA activo valida el JSON (un objeto por solicitud, nunca el array de items de n8n) y, en una sola transaccion con contexto de servicio, crea una orden `BORRADOR` y su hoja de resumen `BORRADOR` v1 a partir de los datos ESTRUCTURADOS de `extraccion`, mas el canal (metadatos instancia/JID) y la auditoria. Responde 201. El CLIENTE se resuelve por el contacto REGISTRADO cuyo JID canonico (`<digitos>@s.whatsapp.net`, coincidencia exacta) es `chatId`: orden y canal quedan con ese cliente, y el resumen usa la razon social y el contacto de la base (el nombre del chat o de la IA no los cambia). Contacto inexistente, inactivo, de otra organizacion o JID no admitido (grupo, `@lid`, con dispositivo `:n`) = 422 `CONTACT_NOT_REGISTERED` generico (no revela cual caso ni repite el JID) sin crear nada; un canal ya vinculado a otro cliente = 422 `CHANNEL_CLIENT_CONFLICT`. NO guarda `transcript`, `hojaResumenMd` ni el crudo del modelo (D-007): el resumen guardado se construye en el servidor desde la proyeccion estructurada. No asigna marca ni vendedor (avisos `MARCA_SIN_ASIGNAR` y `VENDEDOR_SIN_RESOLVER`: el vendedor sigue PENDIENTE y `vendedorJid` no es identidad; aviso informativo `CLIENTE_ASOCIADO_POR_CONTACTO`, y `CLIENTE_DECLARADO_DISTINTO` si la IA nombro otro cliente), no confirma, no aprueba credito y no habilita produccion; `vendedorJid` no autentica a nadie. Los datos que no caben en el modelo no se inventan: una condicion de pago incompleta queda sin registrar (avisos) y los items solo se crean si todos traen cantidad y precio.
 
-        Ruta EXACTA que llama el nodo `Enviar pedido al backend` de `WF1_cierre_venta.json`. Cuerpo y nombres
-        tal como los arma el nodo `Parsear y hoja resumen`
 
-        (camelCase y español; el JSON de `extraccion` sigue el prompt del nodo `Preparar LLM`). Los importes llegan en SOLES
-        decimales (JSON number, máximo 2 decimales) y el
+        La organizacion y la instancia autenticas salen de PostgreSQL por la clave: `instancia` del JSON debe coincidir (403 si no) y ningun campo del cuerpo concede acceso. Errores: 400 (JSON invalido, array, campos desconocidos, `extraccion` incompleta segun el esquema), 401 (clave ausente, invalida, revocada, repetida o junto a otra credencial), 403 (alcance o instancia incorrectos), 409 `IDEMPOTENCY_CONFLICT`, 413 (cuerpo mayor que `keptai.n8n.ingesta.max-body-bytes`, 524288 bytes por defecto), 415 (no `application/json`), 422 (`CONTACT_NOT_REGISTERED`, `CHANNEL_CLIENT_CONFLICT`, `AMOUNT_INCONSISTENT`: anticipo mayor que el total), 503 (credencial o base no disponibles).
 
-        servidor los convierte de forma exacta a `numeric(18,2)`/centavos (sin float, sin truncar; más de 2 decimales = 400).
-        La IA (n8n) propone: la orden nace en `BORRADOR`, la hoja en `BORRADOR`, y exige `/ok` (ver `n8nConfirmOrder`).
 
-        `confianza` es el valor declarado por el modelo: informativo; no autoriza nada. `chatId`, `vendedorJid` e `instancia`
-        son afirmaciones del llamador que el servidor VERIFICA contra la organización de la credencial
+        Idempotencia: clave `instancia:chatId:generadoEn` (instante UTC) y hash SHA-256 de los datos funcionales estructurados (instancia, chatId, vendedorJid, generadoEn y la extraccion sin `crudo` ni texto de error), guardados en `solicitud_idempotente` (operacion `ORDEN_INGESTA`) junto con la respuesta estructurada, nunca el cuerpo. El mismo contenido repite la respuesta 201 con `Idempotency-Replayed: true`; otro contenido con esa clave = 409; dos solicitudes simultaneas no crean dos pedidos. En un reintento n8n debe conservar `generadoEn`, `chatId`, `instancia`, `vendedorJid` y la extraccion.
 
-        y los usuarios activos de esa organización; `403` si no coinciden. Ningún campo del cuerpo (ni el texto del transcript)
-        concede crédito, fondos ni permisos.
-
-        Idempotencia: clave derivada por el servidor `instancia + chatId + generadoEn` y hash del cuerpo (`solicitud_idempotente`,
-        operación `ORDEN_INGESTA`); el mismo cuerpo repite la respuesta con `Idempotency-Replayed: true`, otro cuerpo con
-        esa clave = 409.
-
-        Brecha de BD: una extracción incompleta (cliente, total o condición de pago nulos) no cabe hoy en `orden` (NOT NULL);
-        ver docs/alineacion-bd-n8n.md.
+        Ruta EXACTA del nodo `Enviar pedido al backend` de WF1. Los importes llegan en SOLES decimales (JSON number, maximo 2 decimales) y se convierten de forma exacta (sin float, sin truncar). `confianza` es informativa y no autoriza nada.
 
         '
       x-keptai-owner: miguel
       x-keptai-status: proposed
-      x-keptai-reception-status: implemented
+      x-keptai-implementation: implemented
       x-keptai-task: MIG-05
       x-keptai-proposed-roles:
       - service_n8n
@@ -1657,32 +1643,8 @@ paths:
               parseFailure:
                 $ref: '#/components/examples/N8nIngestaParseFailure'
       responses:
-        '200':
-          description: JSON validado sin persistencia ni procesamiento; no se ha creado una orden.
-          headers:
-            X-Request-Id:
-              $ref: '#/components/headers/XRequestId'
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: false
-                required: [estado, persistido, procesado, request_id]
-                properties:
-                  estado:
-                    type: string
-                    enum: [VALIDADO_SIN_PERSISTIR]
-                  persistido:
-                    type: boolean
-                    enum: [false]
-                  procesado:
-                    type: boolean
-                    enum: [false]
-                  request_id:
-                    type: string
-                    format: uuid
         '201':
-          description: Borrador creado (o repetido de forma idempotente con `Idempotency-Replayed`).
+          description: 'Borrador creado (o repetido de forma idempotente con `Idempotency-Replayed: true`). No confirma ni libera nada.'
           headers:
             X-Request-Id:
               $ref: '#/components/headers/XRequestId'
@@ -1705,13 +1667,19 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /api/v1/ordenes/confirmar:
     post:
       tags:
       - Integracion n8n
       operationId: n8nConfirmOrder
       summary: '[n8n WF0] El vendedor confirma la hoja de resumen con /ok ORD-123.'
-      description: 'Ruta EXACTA del nodo `Confirmar pedido en backend` de `WF0_router_evolution.json`. Cuerpo: `ref`, `instancia`,
+      description: 'ESTADO ACTUAL: CERRADA por decision pendiente (autoria por `vendedorJid`, MIG-06): 403 para cualquier servicio y sin controlador. Lo que sigue es el comportamiento PREVISTO. Ruta EXACTA del nodo `Confirmar pedido en backend` de `WF0_router_evolution.json`. Cuerpo: `ref`, `instancia`,
         `chatId`, `vendedorJid`, `mensajeId` (id del mensaje `/ok`, clave de idempotencia
 
         `ORDEN_CONFIRMAR`). Solo confirma (la hoja pasa a `CONFIRMADA` con `revisado_por`): NO verifica fondos, NO aprueba
@@ -1779,30 +1747,22 @@ paths:
       - Integracion n8n
       operationId: n8nReceiveVoucher
       summary: '[n8n WF2] Registrar un comprobante leído por IA como pago RECIBIDO.'
-      description: 'Ruta EXACTA del nodo `Enviar pago al backend` de `WF2_voucher_pago.json`. El OCR/visión del modelo NO
-        confirma fondos ni aplica nada: el pago nace con `fase=RECIBIDO`, importe aplicado 0 y el saldo no cambia;
+      description: 'IMPLEMENTADO (MIG-04/05, alcance del voucher de WF2). Con `X-Api-Key` INGESTA registra un pago en fase `RECIBIDO` con su comprobante PRIVADO: valida el JSON, decodifica `imagen_base64` de forma estricta (Base64 puro, sin `data:`), valida el archivo por su contenido (JPEG/PNG decodificables con ImageIO, hasta 25 millones de pixeles; PDF analizable en modo estricto con PDFBox, con paginas y sin cifrado), calcula el SHA-256 de los bytes, lo sube al bucket privado `keptai-vouchers` con una ruta generada por el servidor y crea `pago` + `comprobante` en una transaccion con contexto de servicio. La lectura de la IA NO verifica fondos, NO aplica el pago, NO modifica saldos y NO es una aplicacion. El cliente sale del contacto REGISTRADO cuyo JID canonico es `clienteJid` (coincidencia exacta; `chatId` debe coincidir cuando tambien es un JID de contacto, si no 422 `CONTACT_JID_MISMATCH`); contacto inexistente, inactivo o JID no admitido = 422 `CONTACT_NOT_REGISTERED` generico, sin subir archivo ni crear nada. El pago queda ASOCIADO POR CONTEXTO (`pago.orden_contexto_id`, no `aplicacion_pago`) al ULTIMO pedido no cancelado de ese contacto (mismo cliente, instancia y canal; por `creado_en` descendente) y `ordenRef` lo devuelve; el `ordenRef` o la fecha que mande el cliente se ignoran. Sin pedido elegible (o empate exacto entre los mas recientes: aviso `ORDEN_AMBIGUA`, no se elige al azar) el pago queda `SIN_ORDEN` con `ordenRef` null; `DUPLICADO` prevalece sobre `SIN_ORDEN`. La asociacion queda congelada en la respuesta idempotente: un pedido posterior no reasigna un replay. `pushName` es un dato no confiable: no se guarda ni identifica a nadie. Un monto `3.5` se registra exactamente como `3.50` PEN.
 
-        Administración lo verifica después en el panel (`pago.verificado_por`). Importes en soles decimales (máx. 2 decimales)
-        convertidos de forma exacta; `moneda` distinta de `PEN` = 422 `CURRENCY_NOT_SUPPORTED`
 
-        (el MVP no mezcla monedas). `fecha` es fecha de negocio (America/Lima) y `hora` HH:MM local; `recibidoEn` lleva desfase.
+        Obligatorios para registrar: `mensajeId` (id ORIGINAL y estable del mensaje de Evolution; null o vacio = 400; no se genera uno nuevo por reintento ni se sustituye por `recibidoEn`), `chatId` y `clienteJid` (JID con formato del contrato), `extraccion.moneda` (solo `PEN`; otra = 422 `CURRENCY_NOT_SUPPORTED`), `monto > 0` y `fecha` (faltan = 422 `VOUCHER_INCOMPLETE`: no se inventan) e `imagen_base64`. `tipo` ausente se registra como medio `OTRO`. `es_voucher=false` (o `error_parseo`) = 200 `IGNORADO_NO_VOUCHER` sin guardar archivo, pago ni clave. Errores del archivo: 400 `IMAGE_REQUIRED` / `IMAGE_INVALID_BASE64` (prefijo, caracteres invalidos, longitud no multiplo de 4 o truncada), 413 (cuerpo mayor que Base64 de `keptai.n8n.voucher.max-file-bytes` mas metadatos, o archivo decodificado mayor), 422 `IMAGE_UNSUPPORTED_TYPE` (no es un JPEG, PNG o PDF completo, aunque la extension o el MIME digan otra cosa). 422 `CONTACT_NOT_REGISTERED` / `CONTACT_JID_MISMATCH` / `CHANNEL_CLIENT_CONFLICT`, 503 `STORAGE_UNAVAILABLE` (reintentar) y 502 `STORAGE_REJECTED`. Nunca se descargan URLs aportadas por el cliente.
 
-        Duplicado = misma organización + `codigo_operacion` + monto + fecha (índice `ix_pago_duplicado`; la búsqueda es por
-        organización, nunca global): lo marca el servidor (`estado_conciliacion=DUPLICADO`, sin aplicar) y abre `alerta_cobranza`
-        `PAGO_EN_REVISION`.
 
-        `es_voucher=false` (o `error_parseo`) = 200 `IGNORADO_NO_VOUCHER` sin crear pago. `estadoConciliacion` en esta respuesta
-        nunca es `APLICADO` (el README de n8n lo sugería; contradice `fase=RECIBIDO` y el trigger de BD).
+        Idempotencia: `mensajeId` es la clave (operacion `PAGO_VOUCHER`, tambien `pago.idempotency_key` y `comprobante.provider_message_id`). La identidad funcional incluye instancia, chatId, clienteJid, mensajeId, recibidoEn, tipo, banco, monto, moneda, fecha, hora, codigo_operacion y el SHA-256 de los bytes del archivo (no remitente, destinatario ni confianza). Mismo contenido = misma respuesta 201 con `Idempotency-Replayed: true`; otro contenido o archivo con ese `mensajeId` = 409. Un `mensajeId` distinto con la misma referencia de operacion, monto y fecha NO es un reintento: se registra como posible duplicado financiero (`estadoConciliacion=DUPLICADO`, `duplicadoDePagoId`) sin verificarlo ni aplicarlo y para revision de Administracion.
 
-        Idempotencia: `mensajeId` = `pago.idempotency_key` (UNIQUE por organización) y operación `PAGO_VOUCHER`; mismo cuerpo
-        = misma respuesta; otro cuerpo con ese `mensajeId` = 409.
 
-        Brecha: WF2 no envía la imagen, y `comprobante.archivo_storage_path`/`archivo_hash` son NOT NULL (ver docs/alineacion-bd-n8n.md).
+        Si falla la subida o la base, la transaccion se revierte y el objeto subido en ese intento se elimina antes de liberar la clave (nunca uno ya referenciado por un comprobante confirmado). Ruta EXACTA del nodo `Enviar pago al backend` de WF2. Importes en soles decimales (maximo 2 decimales).
 
         '
       x-keptai-owner: miguel_adapter_andres_engine
       x-keptai-status: proposed
-      x-keptai-task: MIG-07
+      x-keptai-implementation: implemented
+      x-keptai-task: MIG-04-05
       x-keptai-proposed-roles:
       - service_n8n
       x-keptai-idempotency:
@@ -1865,13 +1825,25 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '502':
+          description: El almacenamiento privado rechazó el archivo (`STORAGE_REJECTED`); no se creó ningún pago.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /api/v1/mensajes/{id}/estado:
     post:
       tags:
       - Integracion n8n
       operationId: n8nReportMessageStatus
       summary: '[n8n WF3] Callback con el resultado de un envío de WhatsApp.'
-      description: 'Ruta EXACTA del nodo `Callback estado al backend` de `WF3_enviar_mensaje.json`: `POST /api/v1/mensajes/{mensajeId}/estado`
+      description: 'ESTADO ACTUAL: CERRADA (403 para cualquier servicio): el alcance SCHEDULER del callback solo esta propuesto y no hay controlador. Lo que sigue es el comportamiento PREVISTO. Ruta EXACTA del nodo `Callback estado al backend` de `WF3_enviar_mensaje.json`: `POST /api/v1/mensajes/{mensajeId}/estado`
         con el cuerpo del nodo `Estado de envío` / `Estado inválido`.
 
         `{id}` es el UUID de `envio_notificacion.id` y `mensajeId` del cuerpo debe coincidir (400 `ID_MISMATCH`); WF3 solo llama
@@ -2139,6 +2111,18 @@ components:
           examples:
             tooLarge:
               $ref: '#/components/examples/ErrorPayloadTooLarge'
+    ServiceUnavailable:
+      description: La credencial, la base o el almacenamiento no estan disponibles por ahora; se puede reintentar. Codigos `SERVICE_UNAVAILABLE` o `STORAGE_UNAVAILABLE`.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          examples:
+            unavailable:
+              $ref: '#/components/examples/ErrorServiceUnavailable'
     UnsupportedMediaType:
       description: Tipo de archivo no permitido. Código `UNSUPPORTED_MEDIA_TYPE`.
       headers:
@@ -5016,6 +5000,17 @@ components:
           format: date-time
         extraccion:
           $ref: '#/components/schemas/N8nVoucherExtraccion'
+        imagen_base64:
+          type: string
+          pattern: ^[A-Za-z0-9+/]+={0,2}$
+          maxLength: 13981016
+          description: 'Archivo ORIGINAL del voucher en Base64 PURO (alfabeto estándar, longitud múltiplo de 4, sin saltos de línea
+            y SIN prefijo `data:`), dentro del JSON (`application/json`; no multipart). Obligatorio cuando `extraccion.es_voucher`
+            es `true` y no hay `error_parseo`; si el voucher es ilegible no hace falta. El servidor decodifica de forma estricta,
+            acepta solo JPEG, PNG o PDF completos por su contenido real (no por extensión ni MIME), calcula el SHA-256 de los
+            bytes decodificados y sube el archivo al bucket privado con una ruta que él genera. Límite del archivo: 10485760 bytes
+            (el del bucket `keptai-vouchers`; configurable `keptai.n8n.voucher.max-file-bytes`); el Base64 de ese archivo ocupa
+            13981016 caracteres como máximo. Nunca se persiste ni se registra el Base64.'
     N8nPagoVoucherResponse:
       type: object
       additionalProperties: false
@@ -5065,7 +5060,7 @@ components:
           - string
           - 'null'
           pattern: ^[A-Z]{1,5}-[0-9]{1,9}$
-          description: Orden candidata si el motor la encontró.
+          description: 'Referencia (`ORD-n`) del ÚLTIMO pedido no cancelado del contacto (mismo cliente y canal), elegida por el servidor al registrar el voucher por primera vez y congelada en la respuesta idempotente. Es contexto, no aplicación: no reduce saldos. `null` cuando el contacto no tiene pedido elegible (`SIN_ORDEN`) o hay un empate exacto entre los más recientes (`ORDEN_AMBIGUA`). Nunca se toma del cuerpo.'
         alertaId:
           oneOf:
           - $ref: '#/components/schemas/Uuid'
@@ -5077,6 +5072,12 @@ components:
         saldoModificado:
           type: boolean
           const: false
+        avisos:
+          type: array
+          maxItems: 20
+          description: 'Avisos informativos, p. ej. `SIN_ORDEN` (el contacto aún no tiene un pedido elegible) u `ORDEN_AMBIGUA`. Ausente en respuestas anteriores a V10.'
+          items:
+            $ref: '#/components/schemas/N8nAviso'
       allOf:
       - if:
           properties:
@@ -6463,6 +6464,11 @@ components:
         code: PAYLOAD_TOO_LARGE
         message: El archivo supera el tamano permitido
         request_id: 5d1c3a4e-0000-4000-8000-000000000008
+    ErrorServiceUnavailable:
+      value:
+        code: SERVICE_UNAVAILABLE
+        message: Servicio no disponible
+        request_id: 5d1c3a4e-0000-4000-8000-000000000009
     ErrorUnsupportedMedia:
       value:
         code: UNSUPPORTED_MEDIA_TYPE
@@ -6544,33 +6550,34 @@ components:
         confirmadoPorUsuarioId: a0000000-0000-4000-8000-000000000001
         creditoPendiente: true
     N8nVoucherYape:
-      summary: Ejemplo ficticio de integración, no ejecución acreditada.
+      summary: 'Ejemplo ficticio COMPLETO y reproducible (PNG sintético de 86 bytes); no ejecución acreditada. Generado por Backend/scripts/generar-ejemplo-voucher.py.'
       value:
-        instancia: ventas-01
+        instancia: isabel
         chatId: 51XXXXXXXXX@s.whatsapp.net
         clienteJid: 51XXXXXXXXX@s.whatsapp.net
-        mensajeId: DEMO-MSG-001
+        mensajeId: 3EB0C767D0A5C7F2A9B1
         pushName: Cliente ficticio
-        recibidoEn: '2026-10-10T12:00:00Z'
+        recibidoEn: '2026-10-11T15:04:05Z'
         extraccion:
           es_voucher: true
           tipo: YAPE
           banco: null
-          monto: 100
+          monto: 3.5
           moneda: PEN
-          fecha: '2026-10-10'
-          hora: '10:00'
-          codigo_operacion: DEMO-001
+          fecha: '2026-10-11'
+          hora: '10:04'
+          codigo_operacion: DEMO-000001
           remitente: null
           destinatario: null
-          confianza: 0.8
+          confianza: 0.9
+        imagen_base64: iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAHUlEQVR42mNgiPqPQCJR/+GIQSPqPxwx2ET9hyMAP1IXcWid5YsAAAAASUVORK5CYII=
     N8nVoucherNotVoucher:
-      summary: Ejemplo ficticio de integración, no ejecución acreditada.
+      summary: 'Ejemplo ficticio de integración, no ejecución acreditada. Sin imagen_base64 porque la imagen no es un voucher.'
       value:
-        instancia: ventas-01
+        instancia: isabel
         chatId: 51XXXXXXXXX@s.whatsapp.net
         clienteJid: 51XXXXXXXXX@s.whatsapp.net
-        mensajeId: DEMO-MSG-001
+        mensajeId: 3EB0C767D0A5C7F2A9B2
         pushName: Cliente ficticio
         recibidoEn: '2026-10-10T12:00:00Z'
         extraccion:
@@ -6584,10 +6591,11 @@ components:
         fase: RECIBIDO
         estadoConciliacion: PENDIENTE
         duplicadoDePagoId: null
-        ordenRef: null
+        ordenRef: ORD-1
         alertaId: null
         fondosVerificados: false
         saldoModificado: false
+        avisos: []
     N8nVoucherDuplicate:
       summary: Ejemplo ficticio de integración, no ejecución acreditada.
       value:
@@ -6596,10 +6604,11 @@ components:
         fase: RECIBIDO
         estadoConciliacion: DUPLICADO
         duplicadoDePagoId: a0000000-0000-4000-8000-000000000002
-        ordenRef: null
+        ordenRef: ORD-1
         alertaId: null
         fondosVerificados: false
         saldoModificado: false
+        avisos: []
     N8nVoucherIgnored:
       summary: Ejemplo ficticio de integración, no ejecución acreditada.
       value:

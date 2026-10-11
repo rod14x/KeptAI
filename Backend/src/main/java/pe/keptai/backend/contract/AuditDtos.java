@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.AssertTrue;
 import pe.keptai.backend.contract.ContractEnums.AuditActor;
@@ -35,7 +36,8 @@ public final class AuditDtos {
 			@JsonProperty("entity_type") @NotNull @Pattern(regexp = "[a-z][a-z0-9_]*") @Size(max = 60) String entityType,
 			@JsonProperty("entity_id") @NotNull UUID entityId,
 			@JsonProperty("request_id") String requestId,
-			@JsonProperty("changes") @NotNull @Size(max = 50) List<@Valid AuditChange> changes) {
+			@JsonProperty("changes") @NotNull @Size(max = 50) List<@Valid AuditChange> changes,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("actor_name") @Size(max = 200) String actorName) {
 
 		/** evento_auditoria.usuario_id es nulo cuando actua el sistema (n8n, scheduler); un usuario siempre se identifica. */
 		@JsonIgnore

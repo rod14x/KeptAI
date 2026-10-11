@@ -95,7 +95,7 @@ describe("restauración y identidad", () => {
     const s = state();
     expect(s.status).toBe("authenticated");
     if (s.status !== "authenticated") return;
-    expect(s.identity).toEqual({ userId: USER, organizationId: ORG, role: "VENDEDOR", email: "rosa@example.test" });
+    expect(s.identity).toEqual({ userId: USER, organizationId: ORG, role: "VENDEDOR", email: "rosa@example.test", name: null, organizationName: null });
     expect(s.identity.userId).not.toBe(SUB);
     controller.stop();
   });
@@ -221,7 +221,7 @@ describe("errores de /me", () => {
     ["red caída (TypeError de fetch)", new TypeError("Failed to fetch"), "unavailable"],
     ["respuesta inválida (Zod)", (() => { try { UserContext.parse({ user_id: USER }); } catch (e) { return e; } })(), "invalid-response"],
     ["rol desconocido (strict)", (() => { try { UserContext.parse({ user_id: USER, organization_id: ORG, role: "ROOT" }); } catch (e) { return e; } })(), "invalid-response"],
-    ["campo extra (strict)", (() => { try { UserContext.parse({ ...me(), name: "x" }); } catch (e) { return e; } })(), "invalid-response"],
+    ["campo extra (strict)", (() => { try { UserContext.parse({ ...me(), email: "x@ejemplo.invalid" }); } catch (e) { return e; } })(), "invalid-response"],
     ["JSON ilegible", new SyntaxError("Unexpected token <"), "invalid-response"],
     ["HTTP 400 inesperado", http(400), "invalid-response"],
   ];
@@ -405,7 +405,7 @@ describe("logout, desmontaje y respuestas tardías", () => {
     await flush();
     const s = controller.getSnapshot();
     expect(s.status).toBe("authenticated");
-    if (s.status === "authenticated") expect(s.identity).toEqual({ userId: USER_B, organizationId: ORG_B, role: "GERENTE", email: "luis@example.test" });
+    if (s.status === "authenticated") expect(s.identity).toEqual({ userId: USER_B, organizationId: ORG_B, role: "GERENTE", email: "luis@example.test", name: null, organizationName: null });
     expect(auth.f.signOutCalls).toBe(0);
     controller.stop();
   });

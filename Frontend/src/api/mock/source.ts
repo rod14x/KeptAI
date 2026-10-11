@@ -338,6 +338,7 @@ export const mockSource: DataSource = {
     resolveAlerts: true,
     retryMessages: true,
     editPaymentFields: true,
+    markDuplicate: true,
     discardPayment: true,
     manualOrderCapture: true,
     voucherNeedsFile: false,
@@ -492,6 +493,9 @@ export const mockSource: DataSource = {
         appliedBy: s.applications.find((a) => a.evidenceId === ev.id)?.by ?? null,
         match: matchFor(s, ev),
         duplicateOfId: duplicateOf(s, ev)?.id ?? null,
+        duplicateOfRef: duplicateOf(s, ev)?.ref ?? null,
+        // En la demo, marcar un duplicado lo cierra (descartado); uno detectado sigue recibido.
+        duplicateMarked: false,
         order: order
           ? {
               id: order.id,
@@ -763,6 +767,8 @@ export const mockSource: DataSource = {
             marginCents: bo.reduce((x, o) => x + orderMargin(o), 0),
             perceivedCents: bo.reduce((x, o) => x + (perceivedMargin(s, o) ?? 0), 0),
             collectedCents: bo.reduce((x, o) => x + appliedCents(s, o.id), 0),
+            orders: bo.length,
+            withoutCost: orders.filter((o) => o.brand === b && !costKnown(o)).length,
           };
         }),
         byLine: lines.map((line) => {

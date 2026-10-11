@@ -122,7 +122,10 @@ class JwtMembershipIntegrationTests {
 			.andExpect(jsonPath("$.user_id").value(USER_SINGLE))
 			.andExpect(jsonPath("$.organization_id").value(ORG_A))
 			.andExpect(jsonPath("$.role").value("VENDEDOR"))
-			.andExpect(jsonPath("$.length()").value(3));
+			// INT-FE-API-002: nombre y organización visibles; ningún otro dato (correo, sub, credenciales).
+			.andExpect(jsonPath("$.name").isString())
+			.andExpect(jsonPath("$.organization_name").isString())
+			.andExpect(jsonPath("$.length()").value(5));
 	}
 
 	@Test

@@ -83,8 +83,9 @@ export function ResultadoPage() {
 }
 
 function BrandSummary({ d }: { d: ResultsDTO }) {
-  // Si alguna marca tiene costeo incompleto, el margen conjunto tampoco existe (v_margen_orden).
+  // Solo suman los pedidos con costeo cerrado (v_margen_orden); los que siguen en curso se indican aparte.
   const total = d.byBrand.some((b) => b.marginCents == null) ? null : d.byBrand.reduce((s, b) => s + (b.marginCents ?? 0), 0);
+  const pending = d.byBrand.reduce((s, b) => s + b.withoutCost, 0);
   const max = Math.max(...d.byBrand.map((b) => Math.abs(b.marginCents ?? 0)), 1);
   return (
     <Card className="p-5 sm:p-6">
@@ -104,12 +105,20 @@ function BrandSummary({ d }: { d: ResultsDTO }) {
               <Meter value={Math.max(pct, 3) / 100} tone={neg ? "bad" : "ok"} label={`Margen ${b.brand}`} thick track={false} />
               <span className="tabular w-28 text-right text-sm">
                 <span className={cx("font-bold", neg && "text-bad")}>{formatMoney(b.marginCents)}</span>
-                <span className="block text-xs text-muted">de {formatMoney(b.saleCents)} vendidos</span>
+                <span className="block text-xs text-muted">
+                  de {formatMoney(b.saleCents)} en {b.orders} {b.orders === 1 ? "pedido" : "pedidos"}
+                </span>
               </span>
             </li>
           );
         })}
       </ul>
+      {pending > 0 && (
+        <p className="mt-4 flex items-start gap-2 text-[13px] text-muted">
+          <Info size={16} weight="bold" className="mt-px shrink-0" />
+          {pending} {pending === 1 ? "pedido confirmado sigue" : "pedidos confirmados siguen"} sin costeo cerrado y no suman al margen hasta cerrar sus costos reales.
+        </p>
+      )}
       <details className="quiet-disclosure mt-5"><summary>Ver margen por línea</summary>
       <motion.ul variants={listVariants} className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {d.byLine.map((l) => {

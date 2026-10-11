@@ -38,10 +38,34 @@ case "$command_name" in
    compose exec -T postgres sh -c 'psql -X -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
   echo "Semilla demo cargada."
   ;;
+ seed-escenarios)
+  [[ -f "$task_env" ]] || { echo "Primero: ./BD/local/db.sh up && ./BD/local/db.sh migrate && ./BD/local/db.sh seed"; exit 1; }
+  # Pedidos y vouchers pendientes para recorrer el panel conectado (opcional, despues de seed).
+  { printf "%s\n" "SET keptai.permitir_semilla = 'demo';"; cat "$task_dir/../semilla/semilla_escenarios.sql"; } | \
+   compose exec -T postgres sh -c 'psql -X -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+  echo "Escenarios demo cargados."
+  ;;
+ link-auth)
+  # Vincula el sub de una cuenta real de Supabase Auth a un usuario DEMO (membresia local). VENDEDOR es Rosa (Corpotex);
+  # VENDEDOR2 es Luis (Unicrack, solo con seed-escenarios).
+  cuenta="${2:-}"; sub="${3:-}"
+  case "$cuenta" in
+   VENDEDOR) usuario=70000000-0000-4000-8000-000000000001 ;;
+   ADMIN) usuario=70000000-0000-4000-8000-000000000002 ;;
+   GERENTE) usuario=70000000-0000-4000-8000-000000000003 ;;
+   JEFE_TALLER) usuario=70000000-0000-4000-8000-000000000004 ;;
+   VENDEDOR2) usuario=70000000-0000-4000-8000-000000000005 ;;
+   *) echo "Uso: ./BD/local/db.sh link-auth {VENDEDOR|VENDEDOR2|ADMIN|GERENTE|JEFE_TALLER} <uuid-de-Auth>"; exit 1 ;;
+  esac
+  [[ "$sub" =~ ^[0-9a-fA-F-]{36}$ ]] || { echo "El segundo argumento debe ser el UUID (sub) del usuario en Supabase Auth"; exit 1; }
+  # Una cuenta = un usuario: si el sub ya estaba en otro usuario, ese vuelve a su marcador de la semilla (71...).
+  printf "%s
+" "BEGIN;"    "UPDATE keptai.usuario SET auth_user_id = ('71' || substr(id::text, 3))::uuid WHERE organizacion_id = '10000000-0000-4000-8000-000000000001' AND auth_user_id = '$sub' AND id <> '$usuario';"    "UPDATE keptai.usuario SET auth_user_id = '$sub' WHERE organizacion_id = '10000000-0000-4000-8000-000000000001' AND id = '$usuario' RETURNING nombre, rol;"    "COMMIT;" |    compose exec -T postgres sh -c 'psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+  ;;
  status) compose ps; compose run --rm flyway info ;;
  validate) compose run --rm flyway validate ;;
  psql) compose exec postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB"' ;;
  app-psql) compose exec postgres sh -c 'PGPASSWORD="$KEPTAI_RUNTIME_PASSWORD" psql -X -h 127.0.0.1 -U "$KEPTAI_RUNTIME_USER" -d "$POSTGRES_DB"' ;;
  down) compose down ;; # conserva volumen/datos
- *) echo "Uso: ./BD/local/db.sh {init|up|migrate|seed|status|validate|psql|app-psql|down}";;
+ *) echo "Uso: ./BD/local/db.sh {init|up|migrate|seed|seed-escenarios|link-auth|status|validate|psql|app-psql|down}";;
 esac

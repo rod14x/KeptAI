@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "2180c1a03d638d7fa79f1fad40fc0feddae4b758",
+  "source_head_at_generation": "311ef0d9452970e69b45c3444f026834cfb73af3",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -10,19 +10,12 @@
     "diagramas/keptai-roadmap-fuentes.md"
   ],
   "source_changes_at_generation": [
-    "MM cerebro/conocimientos/INDICE.md",
-    "M  cerebro/conocimientos/decisiones/decisiones-del-proyecto.md",
-    "MM cerebro/conocimientos/desarrollo/miguel/estado.md",
-    "A  cerebro/conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md",
-    " M cerebro/conocimientos/desarrollo/miguel/plan-implementacion.md",
-    "A  cerebro/conocimientos/desarrollo/miguel/plan-mig-03-c.md",
-    "A  cerebro/conocimientos/desarrollo/miguel/plan-mig-03-d.md",
-    "A  cerebro/diagramas/keptai-der-v9-01.png",
-    "A  cerebro/diagramas/keptai-der-v9-02.png",
-    "A  cerebro/diagramas/keptai-der-v9-03.png",
-    "A  cerebro/diagramas/keptai-der-v9.md",
-    "A  cerebro/diagramas/render-der-v9.py",
-    "?? cerebro/conocimientos/desarrollo/miguel/plan-continuacion-backend-integrado.md"
+    "M cerebro/conocimientos/decisiones/actores-flujos-y-der-mvp.md",
+    " M cerebro/conocimientos/decisiones/decisiones-del-proyecto.md",
+    " M cerebro/conocimientos/decisiones/trazabilidad-tablas-mvp.md",
+    " M cerebro/conocimientos/desarrollo/miguel/estado.md",
+    " M cerebro/conocimientos/desarrollo/miguel/plan-continuacion-backend-integrado.md",
+    "?? cerebro/diagramas/keptai-der-v10.md"
   ],
   "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
   "interview_ids": [
@@ -78,13 +71,13 @@
     },
     {
       "path": "conocimientos/decisiones/actores-flujos-y-der-mvp.md",
-      "bytes": 21095,
-      "sha256": "3d98284297e0798a2844164ee6c6edb7e4288a5d59d9b987687071af3233e4e1"
+      "bytes": 21833,
+      "sha256": "c3e268138e8b06fc74990b79e89c5a5c467b8cd48983002c2628f0d93fa343d7"
     },
     {
       "path": "conocimientos/decisiones/decisiones-del-proyecto.md",
-      "bytes": 38281,
-      "sha256": "df19f97078d058f62f106ec86eda30904aa3574e333c119773da96e238121fce"
+      "bytes": 39847,
+      "sha256": "63e2476fa26128094b8e7cc6706626122ded662967b0fed8e2f13423b23d4db6"
     },
     {
       "path": "conocimientos/decisiones/infraestructura-desarrollo-mvp.md",
@@ -118,13 +111,13 @@
     },
     {
       "path": "conocimientos/decisiones/trazabilidad-tablas-mvp.md",
-      "bytes": 19146,
-      "sha256": "40de383840e250a158efe8de21d25c0e3748435d509e3b9f682b245de823535a"
+      "bytes": 19442,
+      "sha256": "2fab2253ba3f47516fd59e5bd528922de097326680da93abfd3ac9798b74e5da"
     },
     {
       "path": "conocimientos/desarrollo/miguel/estado.md",
-      "bytes": 84503,
-      "sha256": "69cead317565291bf6548bb3cf4fc6a00c3def823ade4a847b3f9100fc883501"
+      "bytes": 117395,
+      "sha256": "59596556cc5cadc3af57b12344135639ff533ed85c414084123642b31aa57c04"
     },
     {
       "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
@@ -133,13 +126,13 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md",
-      "bytes": 15522,
-      "sha256": "0851179235aecc0d6c66b5d9d272b86166551f41c762a02aba2d479d7ef32724"
+      "bytes": 17142,
+      "sha256": "249dd4c34694bb3ee366bed7a28eca01081c19cfab28b4e93016fa7c91be91f2"
     },
     {
       "path": "conocimientos/desarrollo/miguel/plan-continuacion-backend-integrado.md",
-      "bytes": 3901,
-      "sha256": "45784eb63231703ee80f1c99a2d469ff862159e0329d76a84a2758bbbf8e9abf"
+      "bytes": 5788,
+      "sha256": "77e72a614bba0cf5e975ea078daacc50398a09c295f55a964765f5e6aa96eda5"
     },
     {
       "path": "conocimientos/desarrollo/miguel/plan-implementacion.md",
@@ -153,8 +146,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/plan-mig-03-d.md",
-      "bytes": 7930,
-      "sha256": "e6c22446276791a7eda0a69f02e9334e913ef653c6281aeb0a7ea303d042aff5"
+      "bytes": 8220,
+      "sha256": "da990e3e945c555fa6a4aacd3773a3a78476ac00d0eeb7d20922df587b4efddc"
     },
     {
       "path": "conocimientos/desarrollo/miguel/preparacion-supabase-rls.md",
@@ -165,6 +158,11 @@
       "path": "conocimientos/desarrollo/miguel/prompt-claude.md",
       "bytes": 3036,
       "sha256": "8bb5f1bd1a1340fc6cacdbbc6848901e7acfb28413440c812b2ee976cf2520a1"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/prompt-contacto-pedido-voucher.md",
+      "bytes": 7788,
+      "sha256": "58b476986d0b07cb479863a5ef153fa0249abe0e099ced9cc5d27d28610b4230"
     },
     {
       "path": "conocimientos/desarrollo/miguel/revision-integracion-andres.md",
@@ -250,6 +248,11 @@
       "path": "diagramas/keptai-base-datos-spring-v1-3.png",
       "bytes": 448812,
       "sha256": "7376b5c79c5b08ca548bb140d83b95cc330c1b334eba0226ceea8c1bea010cee"
+    },
+    {
+      "path": "diagramas/keptai-der-v10.md",
+      "bytes": 1226,
+      "sha256": "703d7d2c9f9fb7d05a47a5bbfb1fc2742fc6fe0411ef0e462425beddaf6dc6aa"
     },
     {
       "path": "diagramas/keptai-der-v5-01.png",
@@ -411,23 +414,23 @@
   "technical_files": [
     {
       "path": "BD/README.md",
-      "bytes": 6652,
-      "sha256": "793f47d2906c94e6a14270984e1908241edac3b7b565c96cb5f04505bb4e7f7e",
-      "source_sha256": "793f47d2906c94e6a14270984e1908241edac3b7b565c96cb5f04505bb4e7f7e",
+      "bytes": 7200,
+      "sha256": "7a03984f6a90704c807407ba9f4db8b700607eeb169e983850571d8d1b469e42",
+      "source_sha256": "7a03984f6a90704c807407ba9f4db8b700607eeb169e983850571d8d1b469e42",
       "sanitized": false
     },
     {
       "path": "BD/definicion-base-datos.md",
-      "bytes": 22198,
-      "sha256": "648ce176cd6c1d666312c78311e009227ea3063e4ff5957edbe14a919bd9e843",
-      "source_sha256": "648ce176cd6c1d666312c78311e009227ea3063e4ff5957edbe14a919bd9e843",
+      "bytes": 23980,
+      "sha256": "f87d18993aefaaf79b4281cbb837ad8954bf32ba5e5a9e239cf57090ada42efe",
+      "source_sha256": "f87d18993aefaaf79b4281cbb837ad8954bf32ba5e5a9e239cf57090ada42efe",
       "sanitized": false
     },
     {
       "path": "BD/diccionario-datos.md",
-      "bytes": 18925,
-      "sha256": "152f120c24eb0a40f9f6fdea7cac1942ba64b1d2975ca9ae4265db3e0ec5fa75",
-      "source_sha256": "152f120c24eb0a40f9f6fdea7cac1942ba64b1d2975ca9ae4265db3e0ec5fa75",
+      "bytes": 19700,
+      "sha256": "3ec35ae36d4ab054d1a9edd00ad43ae790bbd0caf368a45d885ee0bb5b866577",
+      "source_sha256": "3ec35ae36d4ab054d1a9edd00ad43ae790bbd0caf368a45d885ee0bb5b866577",
       "sanitized": false
     },
     {
@@ -442,6 +445,13 @@
       "bytes": 768,
       "sha256": "01f4c6b9586a9cbf6fbd1a7d540f9d7864287297d082e85b2f055fe680326e9e",
       "source_sha256": "01f4c6b9586a9cbf6fbd1a7d540f9d7864287297d082e85b2f055fe680326e9e",
+      "sanitized": false
+    },
+    {
+      "path": "BD/migrations/V10__contacto_whatsapp.sql",
+      "bytes": 6452,
+      "sha256": "cfb6af1161cd7bcdbe10eabdb2780a20b59cdb2c852bb290f513b427641a5d8b",
+      "source_sha256": "cfb6af1161cd7bcdbe10eabdb2780a20b59cdb2c852bb290f513b427641a5d8b",
       "sanitized": false
     },
     {
@@ -537,9 +547,9 @@
     },
     {
       "path": "Backend/docs/alineacion-bd-n8n.md",
-      "bytes": 5163,
-      "sha256": "dfbd9229f9efedb52401b1f79bc30d0c5b43ed764cf61d9a3709fb3fcbad08ab",
-      "source_sha256": "dfbd9229f9efedb52401b1f79bc30d0c5b43ed764cf61d9a3709fb3fcbad08ab",
+      "bytes": 6074,
+      "sha256": "6cff1723f01155822ca5e2b9c364e669c29f3a9bb1d8bbfc1bb2c643988d2b76",
+      "source_sha256": "6cff1723f01155822ca5e2b9c364e669c29f3a9bb1d8bbfc1bb2c643988d2b76",
       "sanitized": false
     },
     {
@@ -558,9 +568,16 @@
     },
     {
       "path": "Backend/docs/contrato-api.md",
-      "bytes": 9223,
-      "sha256": "91e92cbcc359684ef76f10e0b5de9cc14d995bf164268e27f473d79f37adbcc1",
-      "source_sha256": "91e92cbcc359684ef76f10e0b5de9cc14d995bf164268e27f473d79f37adbcc1",
+      "bytes": 9655,
+      "sha256": "383a0150cbbb782c1ef385d016594cf1fa779e28870b15e591a8362f0f2a429b",
+      "source_sha256": "383a0150cbbb782c1ef385d016594cf1fa779e28870b15e591a8362f0f2a429b",
+      "sanitized": false
+    },
+    {
+      "path": "Backend/docs/despliegue-n8n.md",
+      "bytes": 7401,
+      "sha256": "8e7824c5270ec354eb5df6e175d914df3060867a1ad1a6240a82c0ee444763f1",
+      "source_sha256": "8e7824c5270ec354eb5df6e175d914df3060867a1ad1a6240a82c0ee444763f1",
       "sanitized": false
     },
     {
@@ -572,16 +589,16 @@
     },
     {
       "path": "Backend/docs/integracion-n8n-isabella.md",
-      "bytes": 7977,
-      "sha256": "9571f6d64ebaa53c01bff7b9e894fa076d00b442b006bf4237b9d7309abba2b7",
-      "source_sha256": "9571f6d64ebaa53c01bff7b9e894fa076d00b442b006bf4237b9d7309abba2b7",
-      "sanitized": false
+      "bytes": 26410,
+      "sha256": "8a9f259a9257de2ea25f43859d50e3b59116643a11098e39212d039b75400bb5",
+      "source_sha256": "4b0469fe2bff37c23bdf2602673463781d6a62f99155be9e9c9166bf783e7a79",
+      "sanitized": true
     },
     {
       "path": "Backend/docs/matriz-acceso.md",
-      "bytes": 20699,
-      "sha256": "5bfa7a33417e4b675106759b3618fc8a61e56b82481fde19b76a726b774676e7",
-      "source_sha256": "5bfa7a33417e4b675106759b3618fc8a61e56b82481fde19b76a726b774676e7",
+      "bytes": 24061,
+      "sha256": "b68beb9d2d87a480aed51de552c7fc72443fe60bf754229471474ed0cef5eeb2",
+      "source_sha256": "b68beb9d2d87a480aed51de552c7fc72443fe60bf754229471474ed0cef5eeb2",
       "sanitized": false
     },
     {
@@ -593,23 +610,30 @@
     },
     {
       "path": "Backend/docs/openapi.yaml",
-      "bytes": 211808,
-      "sha256": "4fd4ee38bb461d4e504cf20f2d830090dc7b342055e74445f6169b16423a3c3d",
-      "source_sha256": "ce3db61d7faa63db8b4624fa134f8d8abcb21607bc209cedd22aca4a4f7cdd45",
+      "bytes": 218584,
+      "sha256": "9c22ef0a62a76db0c119ec560c9e96d83e7913c177d351fd54af382f267eeb79",
+      "source_sha256": "4ef6dbe2e6460b6bceacc8f7580959a0e87838bab12dae0cdb4bfc6687edfdc1",
       "sanitized": true
     },
     {
       "path": "Backend/docs/provision-servicios-local.md",
-      "bytes": 4650,
-      "sha256": "c6addfb68a5daf52fc7f870bb2a17c41a76cb69254b54e9d95b16b0bdee5d994",
-      "source_sha256": "c6addfb68a5daf52fc7f870bb2a17c41a76cb69254b54e9d95b16b0bdee5d994",
+      "bytes": 10078,
+      "sha256": "5b34c4ea14bc3c278ab0eb92c8d6b5d1a25ccf188ae05d47e5a12e239edbb97b",
+      "source_sha256": "9399ca213ef1a33cc161bb63bf15da8f9033a8fc874ef8dc51e525598d01dfbc",
+      "sanitized": true
+    },
+    {
+      "path": "Backend/docs/prueba-auth-real-local.md",
+      "bytes": 7484,
+      "sha256": "458f0694fab77541ac8ddcee993a4f58a132800a6ec903c3c4c52d23c9088be4",
+      "source_sha256": "458f0694fab77541ac8ddcee993a4f58a132800a6ec903c3c4c52d23c9088be4",
       "sanitized": false
     },
     {
       "path": "Middleware/n8n/README.md",
-      "bytes": 8429,
-      "sha256": "da9365fbd54dc37bd469f732c3f5742b211190a43f76488c288302f95c54f027",
-      "source_sha256": "cfd6410783bfa1caaeee2f673db85f498326e0ba2ec69d4b8385e03d5c746ac7",
+      "bytes": 8222,
+      "sha256": "8e8b9ea5f86b94806fdb4e4e515abd3f399fba1e2c3f1d59aeb1439274e984e6",
+      "source_sha256": "3960ba3b8d5e7b3268df26ae6c185231227c76ccf793eb44252510e41933f5d7",
       "sanitized": true
     },
     {

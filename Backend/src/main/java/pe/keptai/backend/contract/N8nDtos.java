@@ -106,7 +106,9 @@ public record N8nPagoVoucherRequest(
 @JsonProperty("mensajeId") @NotNull @Pattern(regexp="^[A-Za-z0-9_.-]+$") @Size(min=4, max=128) String mensajeId,
 @JsonProperty("pushName") @Size(min=0, max=200) String pushName,
 @JsonProperty("recibidoEn") @NotNull java.time.OffsetDateTime recibidoEn,
-@JsonProperty("extraccion") @NotNull @Valid N8nVoucherExtraccion extraccion
+@JsonProperty("extraccion") @NotNull @Valid N8nVoucherExtraccion extraccion,
+/** Archivo original en Base64 puro (sin prefijo data:), requerido cuando es_voucher=true y no hay error_parseo; solo lo valida el servicio. */
+@JsonProperty("imagen_base64") String imagen_base64
 ) {}
 public record N8nPagoVoucherResponse(
 @JsonProperty("resultado") @NotNull @Pattern(regexp="REGISTRADO|IGNORADO_NO_VOUCHER") String resultado,
@@ -117,7 +119,9 @@ public record N8nPagoVoucherResponse(
 @JsonProperty("ordenRef") @Pattern(regexp="^[A-Z]{1,5}-[0-9]{1,9}$") String ordenRef,
 @JsonProperty("alertaId")  java.util.UUID alertaId,
 @JsonProperty("fondosVerificados") @NotNull Boolean fondosVerificados,
-@JsonProperty("saldoModificado") @NotNull Boolean saldoModificado
+@JsonProperty("saldoModificado") @NotNull Boolean saldoModificado,
+/** Avisos informativos (p. ej. SIN_ORDEN, ORDEN_AMBIGUA); ausente en respuestas anteriores a V10. */
+@JsonProperty("avisos") @Size(max=20) java.util.List<@Valid N8nAviso> avisos
 ) {}
 public record N8nMensajeEstadoRequest(
 @JsonProperty("mensajeId") @NotNull java.util.UUID mensajeId,

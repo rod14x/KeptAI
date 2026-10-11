@@ -9,7 +9,6 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { capabilities, commands } from "../../api/client";
 import { isModuleAvailable } from "../../lib/availability";
-import { NAV } from "./nav";
 import { cx } from "../../lib/format";
 import { ROLE_LABEL } from "../../lib/permissions";
 import { IS_MOCK } from "../../config";
@@ -50,7 +49,7 @@ const EXTRA_LABELS: Array<[string, string]> = [
 
 /** Nombre de la sección actual para la ruta del encabezado. */
 export function sectionLabel(pathname: string, role: Role | undefined) {
-  const own = (IS_MOCK ? (role ? NAV_BY_ROLE[role] : []) : NAV).find((n) => (n.end ? pathname === n.to : pathname.startsWith(n.to)));
+  const own = (role ? NAV_BY_ROLE[role] : []).find((n) => (n.end ? pathname === n.to : pathname.startsWith(n.to)));
   if (own) return own.label;
   return EXTRA_LABELS.find(([p]) => pathname.startsWith(p))?.[1] ?? "Inicio";
 }
@@ -58,7 +57,7 @@ export function sectionLabel(pathname: string, role: Role | undefined) {
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { person } = useAuth();
   const toast = useToast();
-  const items = person ? (IS_MOCK ? NAV_BY_ROLE[person.role] : NAV.filter((n) => !n.show || n.show(person.role))) : [];
+  const items = person ? NAV_BY_ROLE[person.role] : [];
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
   // Bugfix: Ajuste de threshold y rootMargin del IntersectionObserver para evitar
@@ -120,7 +119,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             <span
               key={to}
               aria-disabled="true"
-              title="Aún no disponible: depende de endpoints del backend pendientes"
+              title="Aún no disponible: depende de un endpoint del backend pendiente"
               className="flex h-11 cursor-not-allowed items-center gap-3 rounded-xl px-3 text-sm font-semibold text-faint"
             >
               <Icon size={20} />
