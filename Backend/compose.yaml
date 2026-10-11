@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    pull_policy: build
     restart: unless-stopped
     ports:
       - "127.0.0.1:${BACKEND_HTTP_PORT:-8080}:8080"
