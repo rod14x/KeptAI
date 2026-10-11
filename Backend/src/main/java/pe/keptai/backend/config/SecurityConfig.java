@@ -17,7 +17,9 @@ import org.springframework.security.oauth2.server.resource.web.DefaultBearerToke
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
+import pe.keptai.backend.security.ApiKeyAuthenticationFilter;
 import pe.keptai.backend.security.AuthInfrastructureFailureFilter;
+import pe.keptai.backend.security.ServiceResolver;
 import pe.keptai.backend.security.JwtDecoders;
 import pe.keptai.backend.security.KeptaiAuthentication;
 import pe.keptai.backend.security.KeptaiJwtConverter;
@@ -50,8 +52,8 @@ public class SecurityConfig {
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http,
 			@Qualifier("corsConfigurationSource") CorsConfigurationSource cors,
-			JwtDecoder jwtDecoder, MembershipResolver membershipResolver) throws Exception {
-		AuthorizationManager<RequestAuthorizationContext> deny = (auth, ctx) -> new AuthorizationDecision(false);
+			JwtDecoder jwtDecoder, MembershipResolver membershipResolver, ServiceResolver serviceResolver,
+			AuthorizationManager<RequestAuthorizationContext> serviceRoutes) throws Exception {
 		AuthorizationManager<RequestAuthorizationContext> panel = (auth, ctx) -> new AuthorizationDecision(
 				auth.get() instanceof KeptaiAuthentication k && k.access() == KeptaiAuthentication.Access.SINGLE);
 		http
@@ -63,7 +65,7 @@ public class SecurityConfig {
 			.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(a -> a
 				.requestMatchers("/actuator/health/**").permitAll()
-				.requestMatchers(SERVICE_PATHS).access(deny)
+				.requestMatchers(SERVICE_PATHS).access(serviceRoutes)
 				.requestMatchers("/api/v1/**").access(panel)
 				.anyRequest().denyAll())
 			.oauth2ResourceServer(o -> o
@@ -72,10 +74,24 @@ public class SecurityConfig {
 				.authenticationEntryPoint(this::unauthenticated)
 				.accessDeniedHandler(this::denied))
 			.addFilterBefore(new AuthInfrastructureFailureFilter(), BearerTokenAuthenticationFilter.class)
+			.addFilterAfter(new ApiKeyAuthenticationFilter(serviceResolver, SecurityConfig::isServicePath, this::unauthenticated), AuthInfrastructureFailureFilter.class)
 			.exceptionHandling(e -> e
 				.authenticationEntryPoint(this::unauthenticated)
 				.accessDeniedHandler(this::denied));
 		return http.build();
+	}
+
+	/**
+	 * Autorización de las rutas de servicio. D1 autentica al servicio pero mantiene cerradas todas las rutas de
+	 * negocio (siempre denegado, 403 para un servicio válido); los permisos por método/ruta son D2.
+	 */
+	@Bean
+	AuthorizationManager<RequestAuthorizationContext> serviceRouteAuthorization() {
+		return (auth, ctx) -> new AuthorizationDecision(false);
+	}
+
+	private static boolean isServicePath(HttpServletRequest req) {
+		return Arrays.stream(SERVICE_PATHS).anyMatch(p -> PathPatternRequestMatcher.withDefaults().matcher(p).matches(req));
 	}
 
 	/** Decodificador configurado desde keptai.security.jwt.*; sin configurar rechaza todo token (401). */
@@ -97,7 +113,7 @@ public class SecurityConfig {
 
 	private void denied(HttpServletRequest req, HttpServletResponse res, AccessDeniedException ex) throws IOException {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-		boolean servicePath = Arrays.stream(SERVICE_PATHS).anyMatch(p -> PathPatternRequestMatcher.withDefaults().matcher(p).matches(req));
+		boolean servicePath = isServicePath(req);
 		if (!servicePath && auth instanceof KeptaiAuthentication k && k.access() == KeptaiAuthentication.Access.MULTIPLE) {
 			// Selección de organización no definida (propuesta en matriz-acceso.md 5.1): no se elige ninguna ni se listan.
 			write(res, 409, ApiError.of("ORGANIZATION_SELECTION_REQUIRED", "Se requiere seleccionar organización; aún no soportado"));

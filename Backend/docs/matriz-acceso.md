@@ -1,13 +1,13 @@
 # Matriz de acceso — MIG-03-A
 
-Fecha: 10/10/2026. Rama backend-migueltarea2y3. Estado: matriz y configuración (MIG-03-A) más **validación de JWT y `GET /api/v1/me` (MIG-03-B, probados con JWKS de prueba y PostgreSQL real; Auth real pendiente)**. Sin JWT configurado todo responde 401 salvo `/actuator/health/**`. **Contexto JDBC transaccional de usuario (MIG-03-C, §6.2) implementado y probado con PostgreSQL desechable.** Siguen sin implementar: `X-Api-Key` (MIG-03-D) y los demás endpoints. Fuentes: `BD/migrations/V4` y `V7` (D-010), `BD/definicion-base-datos.md`, `BD/revision-sql-rls.md`, `contrato-api.md`, `openapi.yaml`, `alineacion-bd-n8n.md`. Las filas marcadas *propuesta* no son aprobaciones del equipo.
+Fecha: 10/10/2026. Rama backend-migueltarea2y3. Estado: matriz y configuración (MIG-03-A) más **validación de JWT y `GET /api/v1/me` (MIG-03-B, probados con JWKS de prueba y PostgreSQL real; Auth real pendiente)**. Sin JWT configurado todo responde 401 salvo `/actuator/health/**`. **Contexto JDBC transaccional de usuario (MIG-03-C, §6.2) implementado y probado con PostgreSQL desechable.** **`X-Api-Key` y contexto de servicio (MIG-03-D1, §6.3) implementados y probados; rutas de servicio y permisos por ruta/rol (D2) siguen cerrados.** Siguen sin implementar los demás endpoints. Fuentes: `BD/migrations/V4` y `V7` (D-010), `BD/definicion-base-datos.md`, `BD/revision-sql-rls.md`, `contrato-api.md`, `openapi.yaml`, `alineacion-bd-n8n.md`. Las filas marcadas *propuesta* no son aprobaciones del equipo.
 
 ## 1. Tres credenciales distintas (una por operación)
 
 | Mecanismo | Quién | Sentido | Cómo se valida | Estado |
 |---|---|---|---|---|
 | `Authorization: Bearer <JWT>` (`bearerAuth`) | Usuario del panel (Supabase Auth) | Entrante | Firma, issuer, audiencia y expiración con las propiedades `keptai.security.jwt.*`; `sub` → `usuario.auth_user_id` activo (`resolver_usuario`) → organización y rol de la fila, nunca del cuerpo | Decodificador y resolución de membresía implementados en MIG-03-B (RS256/ES256, issuer, audiencia, exp, nbf, `sub` UUID); Auth real sin integrar |
-| `X-Api-Key` (`serviceApiKey`) | n8n WF0–WF3 hacia Spring | Entrante | Hash de la clave → `resolver_servicio(hash)` (activo) → organización, instancia y alcance INGESTA o SCHEDULER | Pendiente MIG-03-D |
+| `X-Api-Key` (`serviceApiKey`) | n8n WF0–WF3 hacia Spring | Entrante | Hash de la clave → `resolver_servicio(hash)` (activo) → organización, instancia y alcance INGESTA o SCHEDULER | D1 (§6.3): SHA-256 → `resolver_servicio` → principal de servicio; rutas de negocio aún cerradas (D2) |
 | `X-Api-Secret` (`n8nWebhookSecret`) | Spring hacia webhook WF3 | **Saliente** | Spring lo envía; WF3 lo compara. Propiedades `keptai.security.webhook.*` (url + secreto por entorno) | Propiedades listas; cliente en MIG-07 |
 
 Reglas: una operación admite una sola forma; un JWT no sirve en rutas de n8n ni al revés; el navegador nunca recibe ni envía `X-Api-Key`/`X-Api-Secret` (CORS los rechaza); el secreto del webhook no se imprime ni se guarda en BD; la clave n8n solo existe en BD como hash.
@@ -97,5 +97,12 @@ Paquete `pe.keptai.backend.tenancy`. **Frontera única:** `TenantTransaction.exe
 - Uso futuro: los servicios de negocio llaman a `tenant.execute(() -> repositorio…)`; no usar conexiones directas del pool, REQUIRES_NEW ni SET de sesión.
 - Alcance: solo usuarios del panel. Contexto de servicio (`app.servicio_id`, INGESTA/SCHEDULER) queda para MIG-03-D.
 
+## 6.3 MIG-03-D1 — autenticación de servicios por X-Api-Key
+Elección técnica (no regla empresarial aprobada): clave aleatoria ≥256 bits, SHA-256 hex de la clave exacta (UTF-8) como `clave_hash`; guía en [provision-servicios-local.md](provision-servicios-local.md).
+- `ApiKeyAuthenticationFilter` (tras el filtro de infraestructura, antes del Bearer) actúa solo en `SERVICE_PATHS`. Resuelve con `JdbcServiceResolver` → `keptai_private.resolver_servicio(hash)` (sin SELECT directo) y crea `ServiceAuthentication`, un principal **distinto** de `KeptaiAuthentication` (sin clave, hash ni identificadores en `toString`).
+- Rechazo uniforme `401 UNAUTHORIZED` (sin distinguir inexistente, revocada, mal formada o ambigua) para: clave ausente en ruta de servicio, formato fuera de 32–128 ASCII visibles, cabecera repetida, `Authorization` o `access_token` simultáneos, clave en ruta del panel (incluida `/me`) y fila ambigua. Base caída → 503. Nunca hay respaldo JWT/clave; un JWT sigue dando 403 en rutas de servicio.
+- Organización, instancia y alcance salen de la fila; los valores enviados por el cliente se ignoran. `serviceRouteAuthorization` (bean) mantiene **todas** las rutas de servicio denegadas (403 a un servicio válido) hasta D2.
+- `TenantContext` aplica org + servicio con usuario vacío (o org + usuario con servicio vacío): exactamente un actor, inmutable en la transacción; usuario↔servicio y entre servicios se rechazan. El alcance lo decide `actor_actual()`.
+
 ## 7. Qué no cubre esta entrega
-Contexto de servicio y filtro de `X-Api-Key` (MIG-03-D), controllers distintos de `/me`, Storage, motor financiero, cambios en V1–V7 ni Supabase remoto. Las pruebas usan un JWKS local de prueba y PostgreSQL de Testcontainers: **no acreditan** integración con Supabase Auth real.
+Permisos por método/ruta y errores de seguridad en MVC (MIG-03-D2), webhooks y workflows n8n (D3), controllers distintos de `/me`, Storage, motor financiero, cambios en V1–V7 ni Supabase remoto. Las pruebas usan un JWKS local de prueba y PostgreSQL de Testcontainers: **no acreditan** integración con Supabase Auth real.

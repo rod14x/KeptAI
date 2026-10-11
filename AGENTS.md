@@ -27,6 +27,10 @@ Estas instrucciones aplican a este repositorio KeptAI: cerebro/ conserva conocim
 
 ## Resumen vigente de Miguel
 
+- Revision D1 11/10/2026: servicio autenticado por hash/lookup, contexto org+servicio exclusivo; usuarioJWT conservado. Correcciones access_token interpretado, generador fuera de repo y rotacion de hash segun UNIQUE. Verificacion final Codex:207 tests,0 fallos/errores/omitidos,BUILD SUCCESS con JDK21 Linux y sg docker; log /tmp/keptai-mig03d1-fixed.log. Un test de regresion adicional a los206 originales. Siguiente MIG-03-D2; rutas negocio, webhooks reales, Auth/Storage/motor pendientes.
+
+- MIG-03-D1 completada (11/10/2026): X-Api-Key SHA-256 -> keptai_private.resolver_servicio -> ServiceAuthentication (principal separado del usuario) y contexto org+servicio (usuario vacio) en la misma transaccion; 401 uniforme, 503 sin base, JWT/clave y credenciales ambiguas rechazadas, rutas de servicio siguen cerradas (403). 14 tests nuevos con PostgreSQL desechable y login runtime; verify via sg docker: 206 tests, 0 fallos. Guia de provision local sin claves ni ejecucion (Backend/docs/provision-servicios-local.md). Pendiente: D2 permisos por ruta/rol, D3 webhooks n8n, Auth real, AUTH-FE-01..04.
+
 - Revision Codex MIG-03-C 11/10/2026:192 tests verify sin fallos/errores/omitidos; contexto usuario/REQUIRED revisado. Servicios8080/5173 responden200 y5433 accesible, sin reinicio. Siguiente solo D1 de plan-mig-03-d.md: API key/principal/contexto servicio; despues D2 rutas y D3 webhooks. Auth real, frontend, Storage y motor pendientes. No afirmar soporte REQUIRES_NEW ni VAL-03 completa.
 
 - MIG-03-C completada (11/10/2026): tenancy/TenantTransaction+TenantContext fijan app.organizacion_id y app.usuario_id (fila usuario, no sub) con set_config(...,true) en la misma transaccion/conexion; servicio_id vacio; solo usuario SINGLE, resolver_usuario sigue como bootstrap. 10 tests PostgreSQL desechable con login runtime y pool=1 (aislamiento, commit/rollback, transaccion unida); verify via sg docker: 192 tests, 0 fallos. Sin V1-V7/RLS/frontend/servicios/Storage/motor. Pendiente: MIG-03-D (servicios y roles por ruta), Auth real, AUTH-FE-01..04.

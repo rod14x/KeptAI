@@ -15,15 +15,17 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import pe.keptai.backend.security.KeptaiAuthentication;
 import pe.keptai.backend.security.Membership;
+import pe.keptai.backend.security.ServiceAuthentication;
+import pe.keptai.backend.security.ServiceIdentity;
 
 /**
  * Aplica el contexto V4 ({@code app.organizacion_id}, {@code app.usuario_id}, {@code app.servicio_id})
  * con {@code set_config(..., true)} (equivalente a SET LOCAL) sobre la conexión vinculada a la transacción
  * Spring en curso. No abre conexiones propias ni transacciones: se usa desde {@link TenantTransaction}.
  *
- * <p>La identidad procede solo de {@link KeptaiAuthentication} con acceso SINGLE; nunca del cliente. El rol no
- * se fija: PostgreSQL lo consulta en {@code keptai.usuario} (actor_actual). {@code app.servicio_id} se limpia
- * siempre para impedir un contexto mixto. El bootstrap {@code resolver_usuario(sub)} es anterior a este
+ * <p>La identidad procede solo de {@link KeptaiAuthentication} con acceso SINGLE (organización + usuario, servicio
+ * vacío) o de {@link ServiceAuthentication} (organización + servicio, usuario vacío); nunca del cliente. El rol o
+ * alcance no se fija: PostgreSQL lo consulta (actor_actual). El actor que no corresponde se limpia siempre. El bootstrap {@code resolver_usuario(sub)} es anterior a este
  * contexto y no pasa por aquí.
  */
 @Component
@@ -31,7 +33,7 @@ public class TenantContext {
 
 	private static final Object APPLIED = new Object();
 
-	private static final String SQL = "SELECT set_config('app.organizacion_id', ?, true), set_config('app.usuario_id', ?, true), set_config('app.servicio_id', '', true)";
+	private static final String SQL = "SELECT set_config('app.organizacion_id', ?, true), set_config('app.usuario_id', ?, true), set_config('app.servicio_id', ?, true)";
 
 	private final ObjectProvider<DataSource> dataSource;
 
@@ -39,11 +41,21 @@ public class TenantContext {
 		this.dataSource = dataSource;
 	}
 
-	/** Identidad de la petición actual; falla cerrado si no hay un usuario del panel con membresía única. */
+	/**
+	 * Identidad de la petición actual: usuario del panel con membresía única o servicio autenticado por API key;
+	 * cualquier otra cosa (anónimo, NONE, MULTIPLE) falla cerrado.
+	 */
 	public TenantIdentity currentIdentity() {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		if (auth instanceof ServiceAuthentication s && s.isAuthenticated()) {
+			ServiceIdentity i = s.identity();
+			if (i.servicioId() == null || i.organizacionId() == null || i.alcance() == null || !i.alcance().isService()) {
+				throw new TenantContextException("Servicio no válido");
+			}
+			return TenantIdentity.of(i);
+		}
 		if (!(auth instanceof KeptaiAuthentication k) || !k.isAuthenticated() || k.access() != KeptaiAuthentication.Access.SINGLE) {
-			throw new TenantContextException("Sin usuario del panel con una única membresía");
+			throw new TenantContextException("Sin usuario del panel con una única membresía ni servicio autenticado");
 		}
 		Membership m = k.membership();
 		if (m.usuarioId() == null || m.organizacionId() == null || m.rol() == null || m.rol().isService()) {
@@ -79,7 +91,9 @@ public class TenantContext {
 			}
 			try (PreparedStatement ps = c.prepareStatement(SQL)) {
 				ps.setString(1, wanted.organizacionId().toString());
-				ps.setString(2, wanted.usuarioId().toString());
+				// El actor ajeno se limpia siempre: nunca contexto mixto usuario+servicio.
+				ps.setString(2, wanted.usuarioId() == null ? "" : wanted.usuarioId().toString());
+				ps.setString(3, wanted.servicioId() == null ? "" : wanted.servicioId().toString());
 				ps.execute();
 			}
 		}

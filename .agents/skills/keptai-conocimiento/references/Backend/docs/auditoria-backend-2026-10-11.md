@@ -178,3 +178,10 @@ Esta seccion corrige conclusiones del informe inicial sin borrar sus resultados 
 - La suite fallida original sigue siendo evidencia de la sesion Claude, sin invalidar automaticamente ejecuciones anteriores. Revision independiente ejecutada con JDK21 Linux, ./mvnw -o verify mediante sg docker: 182 tests, 0 fallos/errores/omitidos, BUILD SUCCESS. Log local /tmp/keptai-auditoria-review-20261011.log. Pruebas PostgreSQL en contenedores desechables, sin cambios en base activa.
 - El siguiente bloque es MIG-03-C con usuario de panel y transaccion/conexion Spring; servicios requieren identidad autenticada MIG-03-D, aun ausente. Bootstrap resolver_usuario precede al contexto y es la excepcion deliberada.
 Plan ejecutable: cerebro/conocimientos/desarrollo/miguel/plan-mig-03-c.md.
+
+## 12. Actualizacion tras MIG-03-C y MIG-03-D1 — 11/10/2026
+El estado inicial del informe es historico: ahora hay contexto transaccional de usuario y servicio. MIG-03-C verificada por Codex con192 tests; D1 original206 tests. Verificacion final Codex:207 tests,0 fallos/errores/omitidos,BUILD SUCCESS con JDK21 Linux y sg docker; log /tmp/keptai-mig03d1-fixed.log. Un test de regresion adicional a los206 originales.
+H2 deja de describir ausencia de contexto: ahora TenantTransaction y TenantContext aplican contexto local bajo REQUIRED, con runtime real, dos empresas y pool/rollback probados. No acredita suspensiones/REQUIRES_NEW ni Auth remoto.
+H3: X-Api-Key/bootstrap y principal de servicio implementados por D1. Autorizacion por metodo/ruta y webhooks WF0-WF2 siguen pendientes D2/D3. Ningun controller de negocio n8n se habilito.
+H1/H7 mantienen precisiones de§11. El resto de requisitos/limitaciones del informe no se cierra por estas entregas; Auth frontend, uploader, transportevoucher, idempotencia/motor y validaciones D-009 siguen pendientes.
+Correcciones de revision D1: credenciales simultaneas como parametro servlet rechazadas; guia de rotacion compatible con UNIQUE(org,instancia,alcance), generador mantiene secreto fuera de repo desde otro cwd. No cambios en migraciones/BD activa/Supabase/servidores.

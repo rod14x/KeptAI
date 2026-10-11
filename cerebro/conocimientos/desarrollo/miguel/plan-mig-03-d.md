@@ -1,6 +1,6 @@
 # MIG-03-D — Autenticacion de servicios y autorizacion
 ID: MIG-03-D-PLAN-001. Fecha: 11/10/2026. Responsable: Miguel/Claude.
-Estado: plan; comenzar solo D1. MIG-03-C usuario de panel entregado; no se declara MIG-03 completo.
+Estado: D1 revisada con207 tests sin fallos/errores/omitidos. Siguiente D2 tras publicacion D1. MIG-03-C usuario de panel entregado; no se declara MIG-03 completo.
 
 ## Fuentes
 AGENTS.md, estado vigente, matriz-acceso.md, V4/V7, OpenAPI/contrato y workflows WF0-WF3. Auditoria con precisiones §11.

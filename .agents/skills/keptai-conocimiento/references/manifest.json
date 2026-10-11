@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "8865518232e40237b299646314a05d483ac546d1",
+  "source_head_at_generation": "402c3ec8a39aa22388a547ebe0ef599c85986618",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -10,9 +10,8 @@
     "diagramas/keptai-roadmap-fuentes.md"
   ],
   "source_changes_at_generation": [
-    "M cerebro/conocimientos/INDICE.md",
-    " M cerebro/conocimientos/desarrollo/miguel/estado.md",
-    "?? cerebro/conocimientos/desarrollo/miguel/plan-mig-03-d.md"
+    "M cerebro/conocimientos/desarrollo/miguel/estado.md",
+    " M cerebro/conocimientos/desarrollo/miguel/plan-mig-03-d.md"
   ],
   "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
   "interview_ids": [
@@ -113,8 +112,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/estado.md",
-      "bytes": 51899,
-      "sha256": "40c149a6032bd57ea8cefe2865aee7981b863dfd1de5ce3881b8e3eeffedbd04"
+      "bytes": 56687,
+      "sha256": "d443ac126953abac9790f8089fa587024594029bef9a05a4833f1e5d524ac51b"
     },
     {
       "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
@@ -138,8 +137,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/plan-mig-03-d.md",
-      "bytes": 7140,
-      "sha256": "850707b46b8a4cb89427b9419170edae26da67dfc334095f482a1262a32de489"
+      "bytes": 7204,
+      "sha256": "8a65a9858b3ae347d6753e8c80cb2fb8fd470585836049b35c7922a52522bd36"
     },
     {
       "path": "conocimientos/desarrollo/miguel/preparacion-supabase-rls.md",
@@ -488,9 +487,9 @@
     },
     {
       "path": "Backend/docs/auditoria-backend-2026-10-11.md",
-      "bytes": 26605,
-      "sha256": "be0dd3cfdf3ca748ae7ea4ff2aee5e105677423e2033f2c19b260715974bed97",
-      "source_sha256": "be0dd3cfdf3ca748ae7ea4ff2aee5e105677423e2033f2c19b260715974bed97",
+      "bytes": 27932,
+      "sha256": "df36ef73aca4cb7d681eb1a56dbfc01ee0e7ae134e7bf55e74949f166db35b20",
+      "source_sha256": "df36ef73aca4cb7d681eb1a56dbfc01ee0e7ae134e7bf55e74949f166db35b20",
       "sanitized": false
     },
     {
@@ -509,9 +508,9 @@
     },
     {
       "path": "Backend/docs/matriz-acceso.md",
-      "bytes": 14539,
-      "sha256": "55a801e779ab13689f8dc125e3fcdb9d20b7e47ae8da26ab75ee8109e4c6ad1f",
-      "source_sha256": "55a801e779ab13689f8dc125e3fcdb9d20b7e47ae8da26ab75ee8109e4c6ad1f",
+      "bytes": 16288,
+      "sha256": "43294b64c004657042da215578cbf97068eb7abe6cdfb1f553587ee3ee944ee1",
+      "source_sha256": "43294b64c004657042da215578cbf97068eb7abe6cdfb1f553587ee3ee944ee1",
       "sanitized": false
     },
     {
@@ -520,6 +519,13 @@
       "sha256": "a1e7751a0d1a29f4864719e9f11d0db9e657e8ddb7df6c9c0df81dcecaec50c1",
       "source_sha256": "e7fe77ba87ba8bbd09977b8284a4f4f716f1db321bd82ee54a026a94b161cea9",
       "sanitized": true
+    },
+    {
+      "path": "Backend/docs/provision-servicios-local.md",
+      "bytes": 4650,
+      "sha256": "c6addfb68a5daf52fc7f870bb2a17c41a76cb69254b54e9d95b16b0bdee5d994",
+      "source_sha256": "c6addfb68a5daf52fc7f870bb2a17c41a76cb69254b54e9d95b16b0bdee5d994",
+      "sanitized": false
     },
     {
       "path": "Middleware/n8n/README.md",
