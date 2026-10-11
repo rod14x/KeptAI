@@ -24,7 +24,7 @@ const SIZES = {
   md: "h-10 px-4 py-2 text-sm",
   default: "h-10 px-4 py-2 text-sm",
   lg: "h-11 px-8 text-base",
-  icon: "size-10 p-0 text-sm",
+  icon: "size-10 p-0 text-sm pointer-coarse:min-w-11",
 } as const;
 
 const TAP = { scale: 0.97 };
@@ -48,7 +48,8 @@ export function Button({
       whileTap={off ? undefined : TAP}
       transition={spring}
       className={cx(
-        "inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-md font-semibold transition-colors duration-150 disabled:pointer-events-none",
+        // Pantallas táctiles: mínimo 44 px de alto (y de ancho en botones de ícono).
+        "inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-md font-semibold transition-colors duration-150 disabled:pointer-events-none pointer-coarse:min-h-11",
         SIZES[size],
         VARIANTS[variant],
         className,
