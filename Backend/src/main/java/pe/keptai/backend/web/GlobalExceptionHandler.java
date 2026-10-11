@@ -36,6 +36,26 @@ public class GlobalExceptionHandler {
 		return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiError.of("FORBIDDEN", "Acceso denegado"));
 	}
 
+	/** Reglas del panel (INT-FE-API-001): código y mensaje de producto, sin SQL ni datos de otra organización. */
+	@ExceptionHandler(pe.keptai.backend.panel.PanelException.class)
+	ResponseEntity<ApiError> handlePanel(pe.keptai.backend.panel.PanelException ex) {
+		return ResponseEntity.status(ex.status()).body(ApiError.of(ex.code(), ex.getMessage()));
+	}
+
+	/** Rechazos del motor financiero: el código ya es el del contrato (MotorFinancieroException.Codigo). */
+	@ExceptionHandler(pe.keptai.backend.finanzas.MotorFinancieroException.class)
+	ResponseEntity<ApiError> handleMotor(pe.keptai.backend.finanzas.MotorFinancieroException ex) {
+		HttpStatus status = pe.keptai.backend.panel.PanelErrors.status(ex.codigo());
+		String message = status == HttpStatus.FORBIDDEN ? "Operación no autorizada para tu rol" : ex.getMessage();
+		return ResponseEntity.status(status).body(ApiError.of(ex.codigo().name(), message));
+	}
+
+	@ExceptionHandler(pe.keptai.backend.tenancy.TenantContextException.class)
+	ResponseEntity<ApiError> handleTenant(pe.keptai.backend.tenancy.TenantContextException ex) {
+		log.error("Contexto de organización no aplicable: {}", ex.getClass().getSimpleName());
+		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ApiError.of("SERVICE_UNAVAILABLE", "Servicio no disponible"));
+	}
+
 	@ExceptionHandler(org.springframework.security.authentication.AuthenticationServiceException.class)
 	ResponseEntity<ApiError> handleAuthInfrastructure(org.springframework.security.authentication.AuthenticationServiceException ex) {
 		log.error("Fallo de infraestructura de autenticación: {}", ex.getClass().getSimpleName());

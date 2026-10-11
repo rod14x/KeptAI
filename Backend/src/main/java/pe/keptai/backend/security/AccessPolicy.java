@@ -42,8 +42,6 @@ public final class AccessPolicy {
 
 	private static final String D007 = "Fuera del MVP (D-007): no se persiste captura de texto ni extracción; no implementar";
 
-	private static final String SEGREGACION = "Segregación registrar/verificar/aplicar pago sin decidir (matriz 5.5) y motor financiero de Andrés pendiente";
-
 	private static final String CONFIRMAR = "Confirmación por vendedorJid sin acuerdo (matriz 5.3, MIG-06): un servicio no firma como vendedor";
 
 	private static final String CALLBACK = "Alcance SCHEDULER del callback WF3 solo propuesto (matriz 5.4); credencial separada pendiente (D3)";
@@ -66,9 +64,11 @@ public final class AccessPolicy {
 		panel("getOrder", HttpMethod.GET, "/api/v1/orders/{order_id}", VENDEDOR, ADMIN, GERENTE, JEFE_TALLER),
 		panel("listPayments", HttpMethod.GET, "/api/v1/payments", ADMIN, GERENTE),
 		panel("getPayment", HttpMethod.GET, "/api/v1/payments/{payment_id}", ADMIN, GERENTE),
-		closedPanel("getReconciliationCandidates", HttpMethod.GET, "/api/v1/payments/{payment_id}/reconciliation", SEGREGACION),
-		closedPanel("registerPaymentVerification", HttpMethod.POST, "/api/v1/payments/{payment_id}/verifications", SEGREGACION),
-		closedPanel("applyPayment", HttpMethod.POST, "/api/v1/payments/{payment_id}/applications", SEGREGACION),
+		// INT-FE-API-001: abiertas a ADMIN, el único escritor que fija MotorPagos (Andrés) y V4. La segregación
+		// registrar ≠ verificar ≠ aplicar sigue sin decidir (matriz 5.5): hoy ADMIN puede hacer las tres.
+		panel("getReconciliationCandidates", HttpMethod.GET, "/api/v1/payments/{payment_id}/reconciliation", ADMIN),
+		panel("registerPaymentVerification", HttpMethod.POST, "/api/v1/payments/{payment_id}/verifications", ADMIN),
+		panel("applyPayment", HttpMethod.POST, "/api/v1/payments/{payment_id}/applications", ADMIN),
 		panel("listReceivables", HttpMethod.GET, "/api/v1/receivables", VENDEDOR, ADMIN, GERENTE),
 		panel("getReceivable", HttpMethod.GET, "/api/v1/receivables/{receivable_id}", VENDEDOR, ADMIN, GERENTE),
 		panel("listCollectionAlerts", HttpMethod.GET, "/api/v1/collection-alerts", VENDEDOR, ADMIN),

@@ -54,7 +54,7 @@ class SchemaRlsTests {
  }
  static String application(String id,String amount){return "INSERT INTO aplicacion_pago(id,organizacion_id,pago_id,obligacion_id,monto_aplicado,aplicado_por) VALUES ('"+id+"','"+A+"','"+PA+"','"+RA+"',"+amount+",'"+UA+"')";}
  @Test void migrationsAndPrivacy()throws Exception{try(Connection c=owner()){
-  assertThat(scalar(c,"SELECT count(*) FROM keptai.flyway_schema_history WHERE success AND version IS NOT NULL")).isEqualTo("9");
+  assertThat(scalar(c,"SELECT count(*) FROM keptai.flyway_schema_history WHERE success AND version IS NOT NULL")).isEqualTo("10");
   assertThat(scalar(c,"SELECT count(*) FROM information_schema.tables WHERE table_schema='keptai' AND table_name IN ('mensaje','mensaje_saliente','contacto','nota_cliente')")).isEqualTo("0");
   assertThat(scalar(c,"SELECT count(*) FROM information_schema.columns WHERE table_schema='keptai' AND column_name IN ('contenido_texto','texto','mensaje_id')")).isEqualTo("0");
   assertThat(scalar(c,"SELECT count(*) FROM pg_tables WHERE schemaname='keptai' AND tablename<>'flyway_schema_history' AND NOT rowsecurity")).isEqualTo("0");
