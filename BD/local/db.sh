@@ -31,10 +31,17 @@ case "$command_name" in
   { printf "%s\n" "SELECT set_config('keptai.local_runtime_user', :'runtime_user', false);"; cat "$task_dir/provisionar-runtime.sql"; } | \
    compose exec -T postgres sh -c 'psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v runtime_user="$KEPTAI_RUNTIME_USER" -v runtime_password="$KEPTAI_RUNTIME_PASSWORD"'
   ;;
+ seed)
+  [[ -f "$task_env" ]] || { echo "Primero: ./BD/local/db.sh up && ./BD/local/db.sh migrate"; exit 1; }
+  # Semilla ficticia reiniciable (solo organizaciones DEMO); requiere V7.
+  { printf "%s\n" "SET keptai.permitir_semilla = 'demo';"; cat "$task_dir/../semilla/semilla_demo.sql"; } | \
+   compose exec -T postgres sh -c 'psql -X -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+  echo "Semilla demo cargada."
+  ;;
  status) compose ps; compose run --rm flyway info ;;
  validate) compose run --rm flyway validate ;;
  psql) compose exec postgres sh -c 'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB"' ;;
  app-psql) compose exec postgres sh -c 'PGPASSWORD="$KEPTAI_RUNTIME_PASSWORD" psql -X -h 127.0.0.1 -U "$KEPTAI_RUNTIME_USER" -d "$POSTGRES_DB"' ;;
  down) compose down ;; # conserva volumen/datos
- *) echo "Uso: ./BD/local/db.sh {init|up|migrate|status|validate|psql|app-psql|down}";;
+ *) echo "Uso: ./BD/local/db.sh {init|up|migrate|seed|status|validate|psql|app-psql|down}";;
 esac

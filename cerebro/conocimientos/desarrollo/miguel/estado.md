@@ -192,3 +192,20 @@ Revisión de la entrega de Claude solicitada por Miguel. ./mvnw -o verify reejec
 Servicios del usuario: PostgreSQL5433 activo/healthy, Spring8080 health200 y API sin credencial401, frontend5173 HTTP200. El backend8080 conserva proceso anterior a MIG-03-A: OPTIONS permitido todavía401; requiere reinicio manual en el panel Zellij para cargar CORS. No se detuvieron los tres servicios del usuario. Instancia nueva temporal18092 usada para comprobar la configuración y detenida después de las pruebas.
 
 MIG-03-A completa dentro de su alcance: propiedades, CORS y matriz; JWT/API key/membresías/contexto JDBC/endpoints/motor pendientes. Próxima tarea MIG-03-B; las propuestas de organización múltiple, provisión servicio y conflicto confirmación n8n/autoría V7 permanecen pendientes. Skill sincronizada; publicación en backend-migueltarea2y3 autorizada por Miguel.
+
+## AND-SEED-001 — Semilla demo reiniciable (11/10/2026, Andrés)
+
+- Roadmap §6 / checkpoint B1 de Andrés. Rama `andres/motor-financiero` desde `e1b0ffe`; sin tocar archivos de Miguel.
+- Entrega: `BD/semilla/semilla_demo.sql`, comando `./BD/local/db.sh seed` y prueba `Backend/src/test/java/pe/keptai/backend/finanzas/SemillaDemoTests.java`. Usa los UUID e importes de `openapi.yaml`, coherente con `SeedCoherenceTests`. Datos ficticios: dos organizaciones DEMO, 4 roles, P-001/P-002, aprobaciones de crédito, etapas, despachos, obligaciones, costos reales cerrados, V-001/V-002 aplicados, V-003 duplicado, alertas, apertura y egresos de caja.
+- Verificación real en local (V7): saldo P-001 0 y P-002 400; cobrado 400; margen −40/150, conjunto 110; mora 400; V-003 sin aplicación; la org A no ve la B; el taller ve solo P-001/P-002. Recarga reiniciable (restaura cambios y elimina extras), guarda sin permiso y guarda ante organización no DEMO. `SemillaDemoTests`: 6/6.
+- Brechas: no hay comprobantes (no existen archivos en Storage); el cargo interno 320 requiere V8 `transferencia_interna`; los pagos no tienen columna para `display_code` (V-00x). No cargada en Supabase remoto.
+- Próximo: AND-MOTOR-001, servicio Spring de verificar/aplicar/anular/duplicado (QA-03..06).
+
+## AND-MOTOR-001 — Motor de pagos (11/10/2026, Andrés)
+
+- Roadmap §2 (Andrés): verificación y aplicación de pagos, duplicados, saldos y alertas. Rama `andres/motor-financiero`.
+- Entrega: paquete `pe.keptai.backend.finanzas` con `MotorPagos`, `ContextoFinanciero`, `MotorFinancieroException`, `ResultadosPago` y `MotorFinancieroAutoConfiguration` (registrada en `META-INF/spring/...AutoConfiguration.imports`; solo existe con `JdbcTemplate`). Guía de integración para MIG-07: `Backend/docs/motor-pagos.md`. No se editaron archivos de Miguel.
+- Operaciones: verificar (simulado y rotulado), detectar y marcar duplicado (con alerta PAGO_EN_REVISION), aplicar (transacción única con bloqueos pago→obligación, recálculo de estados, resolución de alertas, cancelación de envíos y auditoría), anular con motivo, saldo y estado. Códigos de error iguales a los propuestos en `openapi.yaml`.
+- Verificación real: `MotorPagosTests` 10/10 con PostgreSQL 17, V1→V7, semilla y login runtime miembro de `keptai_runtime`. Cubre QA-03/04/06, parcial, duplicado, anulación y re-aplicación, roles y aislamiento, reversión ante fallo de auditoría (se comprobó la causa raíz) y concurrencia (mismo pago y dos pagos contra una obligación). `MotorFinancieroAutoConfigurationTests` 2/2. Suite completa: **183 tests, 0 fallos**. Backend local reiniciado con perfil local: health UP.
+- Pendiente: idempotencia HTTP y DTOs (adapter MIG-05/07); `display_code` de pagos sin columna; QA-05 completo (huérfano y diferencia de monto en la clasificación de candidatos) cuando se exponga la conciliación; reapertura de alertas tras una anulación (scheduler).
+- Próximo de Andrés: despacho → vencimiento y alertas de mora; luego V8 (asignación por ítem y transferencia interna), margen por marca/línea, centro productivo, caja de 4 semanas y CSV.
