@@ -37,7 +37,7 @@ export function PerfilPage() {
 
   return (
     <Stagger className="mx-auto flex max-w-[1100px] flex-col gap-6">
-      <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:p-6">
+      <div className="flex flex-col gap-4 border-b border-line pb-6 sm:flex-row sm:items-center">
         <Avatar name={me.name} size="lg" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -57,7 +57,7 @@ export function PerfilPage() {
             </span>
           </p>
         </div>
-      </Card>
+      </div>
 
       <motion.div variants={itemVariants} className="-mx-4 px-4 sm:mx-0 sm:px-0">
         <Segmented kind="tab" label="Secciones del perfil" value={tab} onChange={(t) => setParams({ tab: t })} options={tabs.map((t) => ({ value: t.id, label: t.label }))} />
@@ -188,7 +188,7 @@ function PreferencesTab() {
         ) : (
           <div className="mt-2 flex flex-wrap gap-2">
             {(["consolidado", "corpotex", "unicrack"] as Scope[]).map((s) => (
-              <label key={s} className={cx("flex h-11 cursor-pointer items-center gap-2 rounded-full px-4 text-sm font-semibold ring-1 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-violet", prefs.defaultScope === s ? "bg-ink text-white ring-ink" : "bg-card ring-line hover:bg-panel")}>
+              <label key={s} className={cx("flex h-11 cursor-pointer items-center gap-2 rounded-lg px-4 text-sm font-semibold ring-1 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-violet", prefs.defaultScope === s ? "bg-action text-inverse ring-action" : "bg-card ring-line hover:bg-panel")}>
                 <input type="radio" name="scope" className="sr-only" checked={prefs.defaultScope === s} onChange={() => setPrefs({ ...prefs, defaultScope: s })} />
                 {SCOPE_LABEL[s]}
               </label>

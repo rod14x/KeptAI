@@ -63,6 +63,7 @@ export function ClienteDetailPage() {
 function Detail({ d }: { d: CustomerDetailDTO }) {
   const c = d.customer;
   const snap = d.snapshot;
+  const [tab, setTab] = useState("pedidos");
   return (
     <Stagger className="mx-auto flex max-w-[1320px] flex-col gap-6">
       <MotionLink to="/clientes" variants={itemVariants} {...press} className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-full pr-3 text-sm font-semibold text-muted transition-colors hover:text-ink">
@@ -71,7 +72,7 @@ function Detail({ d }: { d: CustomerDetailDTO }) {
 
       <Card className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center">
         <div className="flex min-w-0 flex-1 items-center gap-4">
-          <span className="hidden size-16 shrink-0 items-center justify-center rounded-[20px] bg-violet-tint text-xl font-extrabold text-violet-ink sm:flex">
+          <span className="hidden size-14 shrink-0 items-center justify-center rounded-lg bg-violet-tint text-xl font-semibold text-violet-ink sm:flex">
             {c.name
               .split(/\s+/)
               .slice(0, 2)
@@ -110,7 +111,7 @@ function Detail({ d }: { d: CustomerDetailDTO }) {
       </Card>
 
       {snap.aviso && (
-        <motion.p variants={itemVariants} className="flex items-start gap-2.5 rounded-2xl bg-warn-tint px-4 py-3 text-sm font-medium text-warn ring-1 ring-[#f0dfb5]">
+        <motion.p variants={itemVariants} className="flex items-start gap-2.5 rounded-lg bg-warn-tint px-4 py-3 text-sm font-medium text-warn">
           <WarningCircle size={18} weight="bold" className="mt-px shrink-0" />
           <span>
             {snap.aviso} <span className="font-normal text-ink-soft">La mora no bloquea: el vendedor ve este aviso al confirmar una orden y decide.</span>
@@ -118,7 +119,7 @@ function Detail({ d }: { d: CustomerDetailDTO }) {
         </motion.p>
       )}
 
-      <motion.section variants={listVariants} aria-label="Crédito" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <motion.section variants={listVariants} aria-label="Crédito" className="metric-strip grid md:grid-cols-2 lg:grid-cols-4">
         <CreditStat
           label="Línea de referencia"
           value={<Money cents={c.creditLimitCents} />}
@@ -144,14 +145,14 @@ function Detail({ d }: { d: CustomerDetailDTO }) {
         />
       </motion.section>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <Segmented kind="tab" label="Detalle del cliente" value={tab} onChange={setTab} options={[{ value: "pedidos", label: "Pedidos" }, { value: "pagos", label: "Pagos" }, { value: "historial", label: "Historial" }]} />
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-6">
-          <OrdersCard d={d} />
-          <TimelineCard items={d.timeline} cutDate={d.cutDate} />
+          {tab === "pedidos" && <OrdersCard d={d} />}
+          {tab === "pagos" && <PaymentsCard d={d} />}
+          {tab === "historial" && <><TimelineCard items={d.timeline} cutDate={d.cutDate} /><DecisionsCard d={d} /></>}
         </div>
         <div className="flex min-w-0 flex-col gap-6">
-          <DecisionsCard d={d} />
-          <PaymentsCard d={d} />
           <StatementCard d={d} />
         </div>
       </div>
@@ -161,7 +162,7 @@ function Detail({ d }: { d: CustomerDetailDTO }) {
 
 function CreditStat({ label, value, hint, bad, bar }: { label: string; value: ReactNode; hint: string; bad?: boolean; bar?: number }) {
   return (
-    <motion.div variants={itemVariants} className="rounded-[18px] bg-card p-4 ring-1 ring-line/70">
+    <motion.div variants={itemVariants}>
       <p className="text-[13px] font-semibold text-muted">{label}</p>
       <p className={cx("tabular mt-1 text-xl font-extrabold tracking-tight", bad && "text-bad")}>{value}</p>
       {bar !== undefined && (

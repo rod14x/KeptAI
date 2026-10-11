@@ -31,7 +31,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               animate={TOAST_SHOW}
               exit={TOAST_OUT}
               transition={spring}
-              className="pointer-events-auto flex max-w-md items-start gap-2.5 rounded-2xl bg-ink px-4 py-3 text-sm text-white shadow-[var(--shadow-lift)]"
+              className="pointer-events-auto flex max-w-md items-start gap-2.5 rounded-lg bg-navy px-4 py-3 text-sm text-white shadow-[var(--shadow-lift)]"
             >
               {t.ok ? <CheckCircle size={18} weight="fill" className="mt-px shrink-0 text-[#7fd6a9]" /> : <WarningCircle size={18} weight="fill" className="mt-px shrink-0 text-[#f2a39b]" />}
               <span>{t.message}</span>

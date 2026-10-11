@@ -2,8 +2,8 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import type { WeekPoint } from "../../api/client";
 import { cx, formatMoney } from "../../lib/format";
 
-const IN = "#2e9e6b";
-const OUT = "#8466dd";
+const IN = "var(--color-series-in)";
+const OUT = "var(--color-series-out)";
 const Y_AXIS_WIDTH = 64;
 
 type Row = WeekPoint & { in: number; out: number };
@@ -50,18 +50,18 @@ export function CashFlowChart({ weeks, compact = false }: { weeks: WeekPoint[]; 
       <div className={cx("w-full", compact ? "h-[190px]" : "h-[240px]")} role="img" aria-label="Cobros esperados y obligaciones por semana. El saldo de cada semana figura debajo.">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barGap={4} barCategoryGap="30%">
-            <CartesianGrid vertical={false} stroke="#efede9" />
-            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "#5f5f67", fontSize: 12, fontWeight: 600 }} />
+            <CartesianGrid vertical={false} stroke="var(--color-line-soft)" />
+            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "var(--color-muted)", fontSize: 12, fontWeight: 600 }} />
             <YAxis
               axisLine={false}
               tickLine={false}
               width={Y_AXIS_WIDTH}
-              tick={{ fill: "#8a8a92", fontSize: 11 }}
+              tick={{ fill: "var(--color-faint)", fontSize: 11 }}
               tickFormatter={(v: number) => formatMoney(v * 100, { short: true })}
             />
-            <Tooltip content={<TooltipBox />} cursor={{ fill: "rgb(124 92 219 / 0.06)", radius: 12 }} />
-            <Bar dataKey="in" name="Cobros esperados" fill={IN} radius={[10, 10, 10, 10]} maxBarSize={30} />
-            <Bar dataKey="out" name="Obligaciones fijas" fill={OUT} radius={[10, 10, 10, 10]} maxBarSize={30} />
+            <Tooltip content={<TooltipBox />} cursor={{ fill: "var(--color-panel)", radius: 4 }} />
+            <Bar dataKey="in" name="Cobros esperados" fill={IN} radius={[3, 3, 0, 0]} maxBarSize={32} />
+            <Bar dataKey="out" name="Obligaciones fijas" fill={OUT} radius={[3, 3, 0, 0]} maxBarSize={32} />
           </BarChart>
         </ResponsiveContainer>
       </div>

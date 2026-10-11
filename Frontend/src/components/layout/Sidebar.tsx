@@ -8,6 +8,8 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { capabilities, commands } from "../../api/client";
 import { cx } from "../../lib/format";
+import { ROLE_LABEL } from "../../lib/permissions";
+import { IS_MOCK } from "../../config";
 
 type NavItem = { to: string; label: string; icon: typeof SquaresFour; end: boolean };
 
@@ -56,12 +58,16 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const items = person ? NAV_BY_ROLE[person.role] : [];
 
   return (
-    <div className="flex h-full flex-col px-4 pb-4 pt-5">
+    <div className="flex h-full flex-col px-4 pb-5 pt-7">
       <div className="px-2">
-        <Logo />
+        <Logo subtitle={false} />
       </div>
 
-      <nav aria-label="Principal" className="mt-8 flex flex-col gap-1">
+      <div className="mx-2 mb-5 mt-10 border-b border-line pb-4">
+        <p className="text-sm font-semibold">Espacio de trabajo</p>
+        <p className="mt-1 text-xs text-muted">{person && ROLE_LABEL[person.role]}</p>
+      </div>
+      <nav aria-label="Principal" className="flex flex-col gap-1.5">
         {items.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
@@ -70,8 +76,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             onClick={onNavigate}
             className={({ isActive }) =>
               cx(
-                "relative flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors duration-200",
-                isActive ? "text-ink" : "text-muted hover:bg-line-soft hover:text-ink",
+                "relative flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-150",
+                isActive ? "text-violet-ink" : "text-muted hover:bg-panel hover:text-ink",
               )
             }
           >
@@ -82,10 +88,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                     layoutId={onNavigate ? "nav-active-drawer" : "nav-active"}
                     transition={spring}
                     aria-hidden="true"
-                    className="absolute inset-0 rounded-xl bg-card shadow-[0_1px_3px_rgb(23_23_26/0.08)] ring-1 ring-line/70"
+                    className="absolute inset-0 rounded-lg bg-violet-tint"
                   />
                 )}
-                <Icon size={20} weight={isActive ? "fill" : "regular"} className={cx("relative z-10", isActive && "text-violet")} />
+                <Icon size={20} weight={isActive ? "duotone" : "regular"} className="relative z-10" />
                 <span className="relative z-10">{label}</span>
               </>
             )}
@@ -94,6 +100,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="mt-auto flex flex-col gap-3">
+        <div className="mx-2 border-t border-line pt-4">
+          <p className="text-xs font-semibold text-muted">{IS_MOCK ? "Entorno de demostración" : "KeptAI · Cobros y caja"}</p>
+          <p className="mt-1 text-xs leading-relaxed text-faint">{IS_MOCK ? "Los datos son ficticios." : "Cada pago, con su evidencia."}</p>
+        </div>
         {capabilities.resetDemo && (
           <button
             onClick={async () => {

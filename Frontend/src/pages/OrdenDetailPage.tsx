@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { motion } from "motion/react";
-import { Link, useParams } from "react-router";
+import { Link, useParams, useSearchParams } from "react-router";
 import { ArrowLeft, ArrowRight, CaretDown, ChatCircleText, Check, CheckCircle, Factory, Hourglass, Info, LockOpen, Prohibit, Robot, Truck, UploadSimple, WarningCircle } from "../components/ui/icons";
 import { capabilities, commands, getOrder, MESSAGE_LABEL, PLAZO_MAX, PLAZO_MIN, type OrderDetailDTO, type PaymentTerms } from "../api/client";
 import { useApi } from "../hooks/useApi";
@@ -62,6 +62,8 @@ function lifecycleIndex(d: OrderDetailDTO) {
 
 function Detail({ d }: { d: OrderDetailDTO }) {
   const o = d.order;
+  const [params, setParams] = useSearchParams();
+  const tab = params.get("tab") === "pagos" ? "pagos" : params.get("tab") === "mensajes" ? "mensajes" : "pedido";
   const idx = lifecycleIndex(d);
   const pending = o.estado === "pendiente_aprobacion";
   return (
@@ -137,21 +139,20 @@ function Detail({ d }: { d: OrderDetailDTO }) {
         <NextStep d={d} />
       </Card>
 
-      {/* Con la orden por confirmar, la decisión va justo después de la hoja: es lo único que hay que hacer. */}
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+      <Segmented kind="tab" label="Detalle del pedido" value={tab} onChange={(value) => setParams(value === "pedido" ? {} : { tab: value })} options={[{ value: "pedido", label: "Pedido y condiciones" }, { value: "pagos", label: "Pagos y fechas" }, { value: "mensajes", label: "Seguimiento" }]} />
+      {tab === "pedido" && <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-6">
           <HojaCard d={d} />
           {pending && <ConditionCard d={d} />}
           <ItemsCard d={d} />
-          <MessagesCard d={d} />
         </div>
         <div className="flex min-w-0 flex-col gap-6">
           {!pending && <ConditionCard d={d} />}
           <DatesCard d={d} />
-          <PaymentsCard d={d} />
-          <MarginCard d={d} />
         </div>
-      </div>
+      </div>}
+      {tab === "pagos" && <div className="grid items-start gap-6 xl:grid-cols-2"><div className="flex min-w-0 flex-col gap-6"><PaymentsCard d={d} /><MarginCard d={d} /></div><DatesCard d={d} /></div>}
+      {tab === "mensajes" && <MessagesCard d={d} />}
     </Stagger>
   );
 }
@@ -197,7 +198,7 @@ function HojaCard({ d }: { d: OrderDetailDTO }) {
           <p className="flex items-center gap-1.5 text-xs font-semibold text-muted">
             {h.origen === "whatsapp" ? (
               <>
-                <Robot size={14} weight="bold" /> Extraída por la IA desde WhatsApp (n8n WF1, /cerrar)
+                <Robot size={14} weight="bold" /> Datos extraídos de WhatsApp
               </>
             ) : (
               <>

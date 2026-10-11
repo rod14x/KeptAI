@@ -17,7 +17,7 @@ const TONE_CLASS: Record<Tone, string> = {
 
 export function Chip({ tone, icon, children, className }: { tone: Tone; icon?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <span className={cx("inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold leading-none", TONE_CLASS[tone], className)}>
+    <span className={cx("inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium leading-snug", TONE_CLASS[tone], className)}>
       {icon}
       {children}
     </span>

@@ -175,6 +175,7 @@ await page.waitForSelector("text=Cargado a mano");
 t = await confirmStep("Sí, llegó al banco", "Sí, llegó");
 check(4, "Pago completo cancela recordatorios y alertas", /S\/ 0\.00/.test(t) && /cancelan/.test(t), t);
 await page.goto(`${BASE}/pedidos/ORD-002`);
+await page.getByRole("tab", { name: "Seguimiento" }).click();
 await page.waitForSelector("text=Mensajes al cliente");
 check(4, "Alerta de ORD-002 cancelada", (await text("main")).includes("Cancelada"));
 await logout();

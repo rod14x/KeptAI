@@ -59,7 +59,7 @@ export function ClientesPage() {
         </div>
       ) : (
         <Stagger className="flex flex-col gap-6">
-          <motion.dl variants={listVariants} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <motion.dl variants={listVariants} className="metric-strip grid md:grid-cols-2 lg:grid-cols-4">
             <Stat label="Crédito en uso" value={<Money cents={totals.used} />} hint={`${data.length} clientes`} />
             <Stat label="Saldo vencido" value={<Money cents={totals.overdue} />} hint={`${totals.inMora} ${totals.inMora === 1 ? "cliente en mora" : "clientes en mora"}`} bad={totals.overdue > 0} />
             <Stat label="Órdenes por confirmar" value={String(totals.pending)} hint="Esperan la decisión del vendedor" />
@@ -80,7 +80,7 @@ export function ClientesPage() {
                 className="-mx-1 flex px-1"
                 options={FILTERS.map((f) => ({ value: f.id, label: f.label, count: f.id === "todos" ? data.length : data.filter((r) => r.status === f.id).length }))}
               />
-              <label className="flex h-11 items-center gap-2 rounded-full bg-panel px-4 ring-1 ring-line focus-within:ring-2 focus-within:ring-violet lg:w-72">
+              <label className="flex h-11 shrink-0 items-center gap-2 rounded-lg bg-panel px-4 ring-1 ring-line focus-within:ring-2 focus-within:ring-violet lg:w-60">
                 <MagnifyingGlass size={16} className="text-faint" />
                 <span className="sr-only">Buscar cliente</span>
                 <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar cliente" className="w-full bg-transparent text-sm outline-none placeholder:text-faint" />
@@ -125,7 +125,7 @@ function avgLabel(rows: CustomerRow[]) {
 
 function Stat({ label, value, hint, bad }: { label: string; value: React.ReactNode; hint: string; bad?: boolean }) {
   return (
-    <motion.div variants={itemVariants} className="rounded-[18px] bg-card p-4 shadow-[0_1px_2px_rgb(23_23_26/0.04)] ring-1 ring-line/70">
+    <motion.div variants={itemVariants}>
       <dt className="text-[13px] font-semibold text-muted">{label}</dt>
       <dd className={cx("tabular mt-1 text-xl font-extrabold tracking-tight", bad && "text-bad")}>{value}</dd>
       <p className="mt-0.5 text-xs text-muted">{hint}</p>

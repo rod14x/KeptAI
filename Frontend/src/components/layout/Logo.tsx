@@ -1,12 +1,14 @@
 import { cx } from "../../lib/format";
 
-// Marca provisional: nombre del producto en texto con monograma. Pendiente de logo definitivo.
+// Marca oficial: isotipo de assets/ (copias web en public/brand) y nombre en texto para que se adapte al tema.
 export function Logo({ className, subtitle = true }: { className?: string; subtitle?: boolean }) {
   return (
     <span className={cx("inline-flex items-center gap-2.5", className)}>
-      <span className="flex size-9 items-center justify-center rounded-[11px] bg-ink text-[15px] font-extrabold text-white">K</span>
+      <img src="/brand/isotipo-128.png" alt="" width={36} height={36} className="size-9 shrink-0" decoding="async" />
       <span className="flex flex-col leading-none">
-        <span className="text-[17px] font-extrabold tracking-tight">KeptAI</span>
+        <span className="text-[19px] font-extrabold tracking-tight" aria-label="KeptAI">
+          <span className="text-brand-word">Kept</span><span className="text-brand-yellow">AI</span>
+        </span>
         {subtitle && <span className="mt-1 text-[11px] font-medium text-muted">Cobros y caja con evidencia</span>}
       </span>
     </span>

@@ -33,13 +33,13 @@ export function CobranzaPage() {
     <Stagger className="mx-auto flex max-w-[1200px] flex-col gap-6">
       <PageHeader
         title="Cobranza"
-        subtitle={<>Cartera por vencimiento, alertas internas y mensajes de WhatsApp al cliente. Vista {SCOPE_LABEL[scope]}.</>}
+        subtitle={<>Prioriza los vencimientos y da seguimiento a cada saldo. Vista {SCOPE_LABEL[scope]}.</>}
         actions={IS_MOCK ? <DemoBadge /> : undefined}
       />
-      <motion.p variants={itemVariants} className="flex items-start gap-2 rounded-2xl bg-info-tint px-4 py-3 text-[13px] text-info">
+      {view === "mensajes" && <motion.p variants={itemVariants} className="flex items-start gap-2 rounded-lg border border-line px-4 py-3 text-[13px] text-muted">
         <Info size={18} weight="bold" className="mt-px shrink-0" />
         WhatsApp en modo prueba (D-005): los mensajes salen por n8n WF3 y Evolution API solo al contacto de prueba.{IS_MOCK ? " En esta demo el envío se simula." : " KeptAI no guarda el texto de los mensajes."}
-      </motion.p>
+      </motion.p>}
       <motion.div variants={itemVariants}>
         <Segmented
           kind="tab"
@@ -82,11 +82,11 @@ function Cartera({ rows }: { rows: ReceivableRow[] }) {
     );
   return (
     <>
-      <motion.dl variants={listVariants} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <motion.dl variants={listVariants} className="metric-strip grid grid-cols-1 md:grid-cols-3">
         {BUCKETS.map((b) => {
           const list = rows.filter(b.test);
           return (
-            <motion.div variants={itemVariants} key={b.id} className="rounded-[18px] bg-card p-4 ring-1 ring-line/70">
+            <motion.div variants={itemVariants} key={b.id}>
               <dt className="text-[13px] font-semibold text-muted">{b.label}</dt>
               <dd className={cx("tabular mt-1 text-xl font-extrabold", b.tone)}>{formatMoney(list.reduce((s, r) => s + r.balanceCents, 0))}</dd>
               <p className="text-xs text-muted">{list.length} órdenes</p>

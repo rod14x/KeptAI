@@ -28,7 +28,7 @@ export function TallerPage() {
 
   return (
     <Stagger className="mx-auto flex max-w-[1100px] flex-col gap-6">
-      <PageHeader title="Taller" subtitle={<>Solo llegan órdenes liberadas: crédito aprobado o anticipo verificado. Vista {SCOPE_LABEL[scope]}.</>} actions={IS_MOCK ? <DemoBadge /> : undefined} />
+      <PageHeader title="Producción y despacho" subtitle={<>Registra la salida de los pedidos listos para entregar. Vista {SCOPE_LABEL[scope]}.</>} actions={IS_MOCK ? <DemoBadge /> : undefined} />
 
       {error ? (
         <ErrorState error={error} onRetry={reload} />
@@ -46,7 +46,7 @@ export function TallerPage() {
                 <EmptyState title="Nada en producción">Cuando el vendedor confirme una orden con crédito, o se verifique un anticipo, aparecerá aquí.</EmptyState>
               </div>
             ) : (
-              <motion.ul variants={listVariants} className="mt-4 flex flex-col gap-3">
+              <motion.ul variants={listVariants} className="mt-4 flex flex-col divide-y divide-line">
                 {data.enProduccion.map((o) => (
                   <motion.li variants={itemVariants} key={o.id}>
                     <TallerRow
@@ -121,7 +121,7 @@ function TallerRow({ o, cutDate, onDispatch }: { o: TallerOrder; cutDate: string
   const me = useMe();
   const daysLeft = o.entregaSolicitada ? daysBetween(cutDate, o.entregaSolicitada) : null;
   return (
-    <div className="flex flex-col gap-3 rounded-[var(--radius-block)] bg-panel p-4 ring-1 ring-line/70 sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
         <p className="font-bold">
           {o.ref} · {o.customer}

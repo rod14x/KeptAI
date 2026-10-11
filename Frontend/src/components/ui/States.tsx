@@ -4,10 +4,11 @@ import { itemVariants } from "../motion/primitives";
 import { ArrowClockwise, CloudSlash, Flask, Tray } from "./icons";
 import { Button } from "./Button";
 import { cx, formatMoney } from "../../lib/format";
+import { IS_MOCK } from "../../config";
 
 /** Superficie elevada. Hereda la entrada escalonada del Stagger más cercano. */
 export function Card({ className, ...rest }: HTMLMotionProps<"div">) {
-  return <motion.div variants={itemVariants} {...rest} className={cx("rounded-[var(--radius-card)] bg-card shadow-[var(--shadow-card)] ring-1 ring-line/70", className)} />;
+  return <motion.div variants={itemVariants} {...rest} className={cx("rounded-[var(--radius-card)] border border-line bg-card", className)} />;
 }
 
 export function Money({ cents, className, signed, short }: { cents: number | null; className?: string; signed?: boolean; short?: boolean }) {
@@ -50,10 +51,11 @@ export function ErrorState({ error, onRetry }: { error: Error; onRetry: () => vo
 }
 
 export function DemoBadge() {
+  if (!IS_MOCK) return null;
   return (
     <span
       title="Cifras ficticias de la semilla de demostración. No son datos de Corpotex."
-      className="inline-flex items-center gap-1.5 rounded-full bg-warn-tint px-3 py-1 text-xs font-semibold text-warn"
+      className="inline-flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1 text-xs font-medium text-muted"
     >
       <Flask size={14} weight="bold" />
       Datos de demostración

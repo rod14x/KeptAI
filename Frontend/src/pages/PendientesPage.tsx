@@ -136,19 +136,19 @@ export function PendientesPage() {
   const [first, ...rest] = tasks;
 
   return (
-    <Stagger className="mx-auto flex max-w-[960px] flex-col gap-6 lg:gap-8">
+    <Stagger className="mx-auto flex max-w-[1240px] flex-col gap-7 lg:gap-9">
       <PageHeader
-        title={`Hola, ${me.name.split(" ")[0]}`}
-        subtitle={!data ? "Revisando qué hay por hacer…" : total === 0 ? "Todo al día. No tienes nada pendiente." : `Tienes ${total} ${total === 1 ? "cosa" : "cosas"} por hacer. Empieza por la primera.`}
+        title="Tu jornada"
+        subtitle={!data ? "Revisando tus pendientes…" : total === 0 ? `${me.name.split(" ")[0]}, todo está al día.` : `${me.name.split(" ")[0]}, tienes ${total} ${total === 1 ? "pendiente" : "pendientes"}. Empieza por aquí.`}
         actions={
           <>
             {can(me.role, "captura") && (
-              <MotionLink to="/captura" {...press} className="inline-flex h-11 items-center gap-2 rounded-full bg-card px-4 text-[13px] font-semibold ring-1 ring-line transition-colors hover:bg-panel">
+              <MotionLink to="/captura" {...press} className="inline-flex h-11 items-center gap-2 rounded-lg bg-card px-4 text-[13px] font-semibold ring-1 ring-line transition-colors hover:bg-panel">
                 <UploadSimple size={16} weight="bold" /> Subir comprobante
               </MotionLink>
             )}
             <MotionLink to="/resumen" {...press} className="inline-flex h-11 items-center rounded-full px-4 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink">
-              Ver números
+              Ver resumen
             </MotionLink>
           </>
         }
@@ -165,48 +165,51 @@ export function PendientesPage() {
         <AllDone />
       ) : (
         <>
-          <MainTask task={first} />
-          {rest.length > 0 && (
-            <section aria-label="También pendiente" className="flex flex-col gap-3">
-              <h2 className="text-sm font-semibold text-muted">También pendiente</h2>
-              <motion.div variants={listVariants} className="grid gap-3 sm:grid-cols-2">
-                {rest.map((t) => (
-                  <SmallTask key={t.id} task={t} />
-                ))}
-              </motion.div>
-            </section>
-          )}
+          {((can(me.role, "aprobar_credito") && !data.board) || (can(me.role, "verificar") && !data.queue) || (can(me.role, "ver_cobranza") && !data.cobranza)) && <p role="status" className="rounded-lg bg-warn-tint p-3 text-sm text-warn">Algunos pendientes no se pudieron cargar. <button onClick={reload} className="min-h-11 font-semibold underline">Reintentar</button></p>}
+          <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
+            <MainTask task={first} />
+            <aside className="flex flex-col gap-7">
+              {rest.length > 0 && <section aria-label="También pendiente">
+                <h2 className="mb-3 text-sm font-semibold">Después, revisa</h2>
+                <motion.div variants={listVariants} className="flex flex-col divide-y divide-line">
+                  {rest.map((t) => <SmallTask key={t.id} task={t} />)}
+                </motion.div>
+              </section>}
+              <div className="border-t border-line pt-5">
+                <h2 className="text-sm font-semibold">Un pendiente a la vez</h2>
+                <p className="mt-2 text-[13px] leading-relaxed text-muted">{can(me.role, "verificar") ? "Al resolver un comprobante pasarás al siguiente. El saldo solo cambia después de verificar y aplicar el pago." : "Revisa cada pedido antes de confirmarlo. El crédito y el anticipo tienen recorridos distintos."}</p>
+              </div>
+            </aside>
+          </div>
         </>
       )}
     </Stagger>
   );
 }
 
-const PRIMARY_LINK =
-  "inline-flex h-12 items-center justify-center gap-2 rounded-full bg-ink px-6 text-[15px] font-semibold text-white shadow-[0_1px_2px_rgb(23_23_26/0.2),inset_0_1px_0_rgb(255_255_255/0.08)] transition-colors hover:bg-ink-soft";
+const PRIMARY_LINK = "primary-link";
 
 function MainTask({ task }: { task: Task }) {
-  const shown = task.items.slice(0, 4);
+  const shown = task.items.slice(0, 5);
   return (
-    <Card className="flex flex-col gap-5 p-5 sm:p-7">
-      <div className="flex items-start gap-4">
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-violet text-white shadow-[0_6px_16px_-6px_rgb(124_92_219/0.7)]">{task.icon}</span>
+    <Card className="overflow-hidden">
+      <div className="flex flex-wrap items-start gap-4 border-b border-line bg-panel px-5 py-6 sm:px-7">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold uppercase tracking-wide text-violet-ink">Empieza por aquí</p>
-          <h2 className="mt-0.5 text-section font-bold">
-            {task.title} <span className="tabular text-muted">({task.items.length})</span>
+          <h2 className="text-section font-bold">
+            {task.title}
           </h2>
-          <p className="mt-1 text-[13px] leading-relaxed text-muted">{task.hint}</p>
+          <p className="mt-2 max-w-[48ch] text-[13px] leading-relaxed text-muted">{task.hint}</p>
         </div>
+        <span className="tabular text-3xl font-semibold tracking-tight text-violet-ink">{task.items.length}</span>
       </div>
 
-      <motion.ul variants={listVariants} className="flex flex-col">
+      <motion.ul variants={listVariants} className="flex flex-col px-5 sm:px-7">
         {shown.map((it) => (
           <motion.li key={it.id} variants={itemVariants} className="border-t border-line-soft first:border-t-0">
-            <Link to={it.href} className="group -mx-2 flex min-h-14 items-center gap-3 rounded-xl px-2 py-2.5 hover:bg-panel">
+            <Link to={it.href} className="group -mx-2 flex min-h-20 items-center gap-3 rounded-lg px-2 py-4 hover:bg-panel">
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold">{it.title}</span>
-                <span className="flex items-center gap-2 text-[13px] text-muted">
+                <span className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-muted">
                   <span className="truncate">{it.detail}</span>
                   {it.flag && <span className="shrink-0 rounded-full bg-warn-tint px-2 py-0.5 text-[11px] font-semibold text-warn">{it.flag}</span>}
                 </span>
@@ -218,13 +221,13 @@ function MainTask({ task }: { task: Task }) {
         ))}
       </motion.ul>
 
-      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+      <div className="flex flex-col items-stretch justify-between gap-2 border-t border-line px-5 py-5 sm:flex-row sm:items-center sm:px-7">
         <MotionLink to={task.items[0].href} {...press} className={cx(PRIMARY_LINK, "sm:min-w-[220px]")}>
-          {task.cta} <ArrowRight size={18} weight="bold" />
+          {task.cta}
         </MotionLink>
         {task.items.length > shown.length && (
           <Link to={task.allHref} className="inline-flex min-h-11 items-center justify-center px-3 text-[13px] font-semibold text-muted hover:text-ink">
-            Ver los {task.items.length}
+             Ver todos ({task.items.length})
           </Link>
         )}
       </div>
@@ -235,17 +238,16 @@ function MainTask({ task }: { task: Task }) {
 function SmallTask({ task }: { task: Task }) {
   return (
     <MotionLink
-      to={task.items[0].href}
+      to={task.allHref}
       variants={itemVariants}
       {...press}
-      className="group flex items-center gap-3 rounded-[var(--radius-card)] bg-card p-4 shadow-[var(--shadow-card)] ring-1 ring-line/70"
+      className="group flex items-center gap-3 py-5 transition-colors hover:text-violet-ink"
     >
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-panel text-ink-soft ring-1 ring-line/70">{task.icon}</span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-bold">{task.title}</span>
-        <span className="block truncate text-[13px] text-muted">{task.items[0].title}</span>
+        <span className="mt-1 block text-xs leading-relaxed text-muted">{task.items[0].title}</span>
       </span>
-      <span className="tabular flex size-8 shrink-0 items-center justify-center rounded-full bg-ink text-[13px] font-bold text-white">{task.items.length}</span>
+      <span className="tabular text-xl font-semibold text-muted">{task.items.length}</span>
     </MotionLink>
   );
 }

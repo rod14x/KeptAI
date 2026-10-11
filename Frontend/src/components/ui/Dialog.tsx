@@ -35,10 +35,21 @@ export function DialogShell({
       panel.current?.querySelector<HTMLElement>("input, select, textarea") ??
       panel.current?.querySelector<HTMLElement>("button");
     target?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeRef.current();
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeRef.current();
+      if (e.key !== "Tab") return;
+      const nodes = [...(panel.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]') ?? [])].filter((node) => node.getClientRects().length);
+      const first = nodes[0], last = nodes[nodes.length - 1];
+      if (!first) { e.preventDefault(); return; }
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
       prev?.focus();
     };
   }, [open]);
@@ -61,13 +72,13 @@ export function DialogShell({
             tabIndex={-1}
             variants={overlayVariants}
             onClick={() => closeRef.current()}
-            className={cx("absolute inset-0 bg-ink/40", overlayClassName)}
+            className={cx("absolute inset-0 bg-navy/60", overlayClassName)}
           />
           <motion.div
             ref={panel}
             variants={dialogVariants}
             className={cx(
-              "relative max-h-[92dvh] w-full overflow-y-auto rounded-[24px] bg-card shadow-[var(--shadow-lift)] ring-1 ring-black/[0.03]",
+              "relative max-h-[92dvh] w-full overflow-y-auto rounded-xl bg-card shadow-[var(--shadow-lift)]",
               panelClassName,
             )}
           >

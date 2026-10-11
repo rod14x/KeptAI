@@ -3,7 +3,7 @@ import { MotionLink, Stagger, itemVariants, listVariants, press } from "../compo
 import { PageHeader } from "../components/ui/PageHeader";
 import { useState } from "react";
 import { Link } from "react-router";
-import { ArrowRight, Bank, CaretDown, CaretRight, HandCoins, ChartLineUp, Info, MagnifyingGlass, Receipt, Sparkle, Wallet, WarningCircle } from "../components/ui/icons";
+import { ArrowRight, Bank, CaretDown, CaretRight, HandCoins, ChartLineUp, Info, MagnifyingGlass, Receipt, Wallet, WarningCircle } from "../components/ui/icons";
 import { getDashboard, type ActivityItem, type AssistantNote, type DashboardDTO, type WeekPoint } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { SCOPE_LABEL, useScope } from "../context/ScopeContext";
@@ -24,7 +24,7 @@ export function DashboardPage() {
   return (
     <Stagger className="mx-auto flex max-w-[1320px] flex-col gap-6 lg:gap-8">
       <PageHeader
-        title={`Hola, ${me.name.split(" ")[0]}`}
+        title="Resumen financiero"
         subtitle={
           <>
             {ROLE_LABEL[me.role]}. Vista {SCOPE_LABEL[scope]}
@@ -70,9 +70,9 @@ function Kpi({
   href: string | null;
 }) {
   return (
-    <Card className="flex flex-col gap-4 p-5">
+    <div className="flex min-w-0 flex-col gap-4">
       <div className="flex items-center justify-between">
-        <span className="flex size-10 items-center justify-center rounded-xl bg-ink text-white">{icon}</span>
+        <span className="text-muted">{icon}</span>
         {href && (
           <MotionLink
             to={href}
@@ -88,13 +88,13 @@ function Kpi({
         <p className={cx("tabular mt-1 text-[clamp(1.625rem,1.35rem+0.9vw,1.875rem)] font-extrabold leading-tight tracking-tight", (value ?? 0) < 0 && "text-bad")}>{formatMoney(value)}</p>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-[13px] text-muted">{children}</div>
-    </Card>
+    </div>
   );
 }
 
 function Kpis({ d, canResult }: { d: DashboardDTO; canResult: boolean }) {
   return (
-    <section aria-label="Indicadores" className="grid gap-4 md:grid-cols-3">
+    <section aria-label="Indicadores" className="metric-strip grid md:grid-cols-3">
       <Kpi icon={<ChartLineUp size={20} weight="bold" />} label="Ingresos esperados" value={d.expectedCents} href="/pedidos">
         {d.overdueCents > 0 ? (
           <Chip tone="bad" icon={<WarningCircle size={14} weight="bold" />}>
@@ -200,9 +200,10 @@ function CashCard({ d, weeks }: { d: DashboardDTO; weeks: WeekPoint[] }) {
           </table>
         </motion.div>
       )}
-      <p className="mt-4 text-xs text-muted">
-        Fuente: semilla de demostración. Saldo inicial = apertura supuesta + pagos aplicados. Un pago aplicado deja de contar como cobro futuro.
-      </p>
+       <details className="quiet-disclosure mt-4">
+         <summary>Cómo se calcula la proyección</summary>
+         <p className="mt-2 text-xs leading-relaxed text-muted">{d.demo && "Fuente: semilla de demostración. "}Saldo inicial = apertura supuesta + pagos aplicados. Un pago aplicado deja de contar como cobro futuro.</p>
+       </details>
     </Card>
   );
 }
@@ -224,25 +225,18 @@ function AssistantCard({ notes }: { notes: AssistantNote[] }) {
   return (
     <motion.section variants={itemVariants}
       aria-labelledby="assistant-title"
-      className="relative isolate overflow-hidden rounded-[var(--radius-card)] bg-violet-tint p-5 ring-1 ring-[#e0d8f7] sm:p-6"
+      className="rounded-[var(--radius-card)] border border-line bg-card p-5 sm:p-6"
     >
-      {/* Volúmenes abstractos: marcan la tarjeta como zona del asistente sin competir con los datos. */}
-      <div aria-hidden="true" className="pointer-events-none absolute -right-14 -top-16 -z-10 size-52 rounded-full bg-[radial-gradient(circle_at_30%_30%,#ffffff_0%,#d9cdf8_45%,#b9a6f0_100%)] opacity-80" />
-      <div aria-hidden="true" className="pointer-events-none absolute -bottom-10 right-16 -z-10 size-24 rounded-full bg-[radial-gradient(circle_at_35%_30%,#ffffff_0%,#e6ddfb_50%,#c8b8f4_100%)] opacity-70" />
-
       <div className="flex items-center gap-3">
-        <span className="flex size-10 items-center justify-center rounded-xl bg-violet text-white shadow-[0_6px_16px_-6px_rgb(124_92_219/0.7)]">
-          <Sparkle size={20} weight="fill" />
-        </span>
         <div>
           <h2 id="assistant-title" className="text-section font-bold">
-            Asistente KeptAI
+            Requiere atención
           </h2>
-          <p className="text-[13px] text-violet-ink">{notes.length ? `${notes.length} asuntos por revisar` : "Todo al día"}</p>
+          <p className="mt-1 text-[13px] text-muted">{notes.length ? `${notes.length} asuntos por revisar` : "Todo al día"}</p>
         </div>
       </div>
 
-      <motion.ul variants={listVariants} className="mt-5 flex flex-col gap-2.5">
+      <motion.ul variants={listVariants} className="mt-4 flex flex-col divide-y divide-line-soft">
         {notes.length === 0 && (
           <li className="rounded-2xl bg-card/80 p-4 text-sm text-muted">No hay duplicados, vencimientos ni comprobantes sin pedido en esta vista.</li>
         )}
@@ -251,7 +245,7 @@ function AssistantCard({ notes }: { notes: AssistantNote[] }) {
             <MotionLink
               to={n.href}
               {...press}
-              className="group flex items-start gap-3 rounded-2xl bg-card/90 p-3.5 ring-1 ring-white transition-[background-color,box-shadow] hover:bg-card hover:shadow-[var(--shadow-card)]"
+              className="group -mx-2 flex items-start gap-3 rounded-lg px-2 py-4 transition-colors hover:bg-panel"
             >
               <span className={cx("mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full", NOTE_TONE[n.tone])}>{NOTE_ICON[n.tone]}</span>
               <span className="min-w-0 flex-1">
@@ -264,7 +258,7 @@ function AssistantCard({ notes }: { notes: AssistantNote[] }) {
           </motion.li>
         ))}
       </motion.ul>
-      <p className="mt-4 text-xs text-violet-ink">Alertas generadas con reglas sobre la evidencia registrada. Nada se aplica sin revisión humana.</p>
+      <p className="mt-4 border-t border-line pt-4 text-xs leading-relaxed text-muted">Alertas sobre la evidencia registrada. Los pagos requieren revisión humana.</p>
     </motion.section>
   );
 }

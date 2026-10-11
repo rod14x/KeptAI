@@ -12,13 +12,13 @@ export const softSpring: Transition = { type: "spring", stiffness: 240, damping:
 /** Contenedor que escalona la entrada de sus hijos con variantes. */
 export const listVariants: Variants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.055, delayChildren: 0.02 } },
+  show: { transition: { staggerChildren: 0.015 } },
 };
 
 /** Cada bloque entra con opacidad y un leve desplazamiento en Y. */
 export const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: softSpring },
+  hidden: { opacity: 0.8 },
+  show: { opacity: 1, transition: { duration: 0.16 } },
 };
 
 /** Menús, popovers y diálogos: aparecen desde su origen y salen igual. */
@@ -41,9 +41,9 @@ export const overlayVariants: Variants = {
 };
 
 /** Feedback físico estándar para cualquier elemento pulsable. */
-export const press = { whileHover: { y: -1 }, whileTap: { scale: 0.97 }, transition: spring } as const;
+export const press = { whileTap: { scale: 0.99 }, transition: spring } as const;
 /** Tarjetas clicables: elevación al pasar el cursor, hundimiento leve al pulsar. */
-export const lift = { whileHover: { y: -3 }, whileTap: { scale: 0.99 }, transition: spring } as const;
+export const lift = { whileTap: { scale: 0.995 }, transition: spring } as const;
 
 export function Stagger({ children, ...rest }: HTMLMotionProps<"div">) {
   return (

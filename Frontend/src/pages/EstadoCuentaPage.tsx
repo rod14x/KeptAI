@@ -18,7 +18,7 @@ export function EstadoCuentaPage() {
 
   return (
     <div className="mx-auto max-w-xl">
-      <div className="mb-4 flex items-center justify-between gap-3 print:hidden">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
         <Link to={`/clientes/${id}`} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink">
           <ArrowLeft size={16} weight="bold" /> Ficha del cliente
         </Link>
@@ -64,16 +64,16 @@ function Statement({ d }: { d: StatementDTO }) {
         </p>
       </motion.header>
 
-      <motion.section variants={itemVariants} className="rounded-[24px] bg-ink p-6 text-white shadow-[var(--shadow-lift)]">
+      <motion.section variants={itemVariants} className="rounded-xl bg-navy p-6 text-white">
         <p className="text-sm text-white/70">{d.customer}</p>
         <p className="mt-4 text-sm text-white/70">Saldo pendiente</p>
         <p className="tabular text-4xl font-extrabold tracking-tight">{formatMoney(d.balanceCents)}</p>
         <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-2xl bg-white/10 p-3">
+          <div className="border-t border-white/20 pt-3">
             <p className="text-white/70">Vencido</p>
             <p className={cx("tabular text-lg font-bold", d.overdueCents > 0 && "text-[#ffb4ab]")}>{formatMoney(d.overdueCents)}</p>
           </div>
-          <div className="rounded-2xl bg-white/10 p-3">
+          <div className="border-t border-white/20 pt-3">
             <p className="text-white/70">{d.nextDue && d.nextDue.date < d.generatedAt.slice(0, 10) ? "Venció el" : "Próximo vencimiento"}</p>
             <p className="tabular text-lg font-bold">{d.nextDue ? formatDate(d.nextDue.date) : "Ninguno"}</p>
             {d.nextDue && <p className="tabular text-xs text-white/70">{formatMoney(d.nextDue.amountCents)}</p>}
@@ -81,7 +81,7 @@ function Statement({ d }: { d: StatementDTO }) {
         </div>
       </motion.section>
 
-      <motion.section variants={itemVariants} className="rounded-[24px] bg-card p-5 shadow-[var(--shadow-card)]" aria-labelledby="st-orders">
+      <motion.section variants={itemVariants} className="rounded-xl border border-line bg-card p-5" aria-labelledby="st-orders">
         <h2 id="st-orders" className="text-base font-bold">
           Tus pedidos
         </h2>
@@ -121,7 +121,7 @@ function Statement({ d }: { d: StatementDTO }) {
         </motion.ul>
       </motion.section>
 
-      <motion.section variants={itemVariants} className="rounded-[24px] bg-card p-5 shadow-[var(--shadow-card)]" aria-labelledby="st-pay">
+      <motion.section variants={itemVariants} className="rounded-xl border border-line bg-card p-5" aria-labelledby="st-pay">
         <h2 id="st-pay" className="text-base font-bold">
           Pagos registrados
         </h2>

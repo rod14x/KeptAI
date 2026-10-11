@@ -2,19 +2,23 @@
 <html lang="es-PE">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/brand/favicon-48.png" />
+    <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f6f4fb" />
+    <meta name="theme-color" content="#f3f6fa" />
     <meta name="description" content="KeptAI ordena lo que cobras, lo que ganas y la caja que viene, con evidencias y revisión humana." />
     <title>KeptAI</title>
+    <script>
+      try { document.documentElement.dataset.theme = localStorage.getItem("keptai-theme") === "dark" ? "dark" : "light"; } catch {}
+    </script>
   </head>
-  <body style="margin:0;background:#f6f4fb">
+  <body style="margin:0">
     <!-- Primera pintura inmediata mientras carga la app; React reemplaza este contenido al montar. -->
     <div id="root">
       <div style="min-height:100dvh;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif">
-        <div style="display:flex;align-items:center;gap:10px;color:#17171a">
-          <span style="width:36px;height:36px;border-radius:11px;background:#17171a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800">K</span>
-          <span style="font-size:17px;font-weight:800;letter-spacing:-0.01em">KeptAI</span>
+        <div style="display:flex;align-items:center;gap:10px;color:#00285f">
+          <img src="/brand/isotipo-64.png" alt="" width="36" height="36" />
+          <span style="font-size:17px;font-weight:800;letter-spacing:-0.01em">Kept<span style="color:#faa901">AI</span></span>
         </div>
       </div>
     </div>

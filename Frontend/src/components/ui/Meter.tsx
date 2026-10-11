@@ -2,7 +2,7 @@ import { motion } from "motion/react";
 import { softSpring } from "../motion/primitives";
 import { cx } from "../../lib/format";
 
-const TONE = { violet: "bg-violet", warn: "bg-[#d69a1f]", bad: "bg-bad", ok: "bg-series-in" } as const;
+const TONE = { violet: "bg-violet", warn: "bg-brand-yellow", bad: "bg-bad", ok: "bg-series-in" } as const;
 
 /** Barra de proporción. Crece con scaleX desde la izquierda (GPU), nunca animando el ancho. */
 export function Meter({ value, tone, label, thick, track = true }: { value: number; tone?: keyof typeof TONE; label?: string; thick?: boolean; track?: boolean }) {

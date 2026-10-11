@@ -34,7 +34,7 @@ export function Segmented<T extends string>({
     <div
       role={kind === "tab" ? "tablist" : "radiogroup"}
       aria-label={label}
-      className={cx("no-scrollbar relative flex max-w-full gap-1 overflow-x-auto rounded-full p-1", solid ? "" : "bg-line-soft ring-1 ring-line/60", className ?? "inline-flex")}
+      className={cx("no-scrollbar relative flex max-w-full gap-1 overflow-x-auto rounded-lg p-1", solid ? "" : "bg-line-soft", className ?? "inline-flex")}
     >
       {options.map((o) => {
         const active = o.value === value;
@@ -45,12 +45,21 @@ export function Segmented<T extends string>({
             role={kind === "tab" ? "tab" : "radio"}
             aria-checked={kind === "radio" ? active : undefined}
             aria-selected={kind === "tab" ? active : undefined}
+            tabIndex={active ? 0 : -1}
             onClick={() => onChange(o.value)}
+            onKeyDown={(e) => {
+              const index = options.indexOf(o);
+              const next = e.key === "ArrowRight" ? (index + 1) % options.length : e.key === "ArrowLeft" ? (index - 1 + options.length) % options.length : e.key === "Home" ? 0 : e.key === "End" ? options.length - 1 : -1;
+              if (next < 0) return;
+              e.preventDefault();
+              onChange(options[next].value);
+              (e.currentTarget.parentElement?.children[next] as HTMLButtonElement)?.focus();
+            }}
             className={cx(
-              "relative flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full font-semibold transition-colors duration-200",
-              size === "sm" ? "h-9 px-3.5 text-[13px]" : "h-10 px-4 text-sm",
+              "relative flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-semibold transition-colors duration-150",
+              size === "sm" ? "h-11 px-3.5 text-[13px]" : "h-11 px-4 text-sm",
               solid && !active && "bg-line-soft",
-              active ? (solid ? "text-white" : "text-ink") : "text-muted hover:text-ink",
+              active ? (solid ? "text-inverse" : "text-ink") : "text-muted hover:text-ink",
             )}
           >
             {active && (
@@ -58,7 +67,7 @@ export function Segmented<T extends string>({
                 layoutId={`seg-${id}`}
                 transition={spring}
                 aria-hidden="true"
-                className={cx("absolute inset-0 rounded-full", solid ? "bg-ink" : "bg-card shadow-[0_1px_3px_rgb(23_23_26/0.12)]")}
+                className={cx("absolute inset-0 rounded-md", solid ? "bg-action" : "bg-card shadow-[var(--shadow-card)]")}
               />
             )}
             <span className="relative z-10">{o.label}</span>

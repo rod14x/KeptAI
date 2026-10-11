@@ -76,7 +76,7 @@ export function ConciliacionPage() {
             <DemoBadge />
             {/* La carga manual es el respaldo cuando WhatsApp no trae el comprobante. */}
             {can(me.role, "captura") && (
-              <MotionLink to="/captura" {...press} className="inline-flex h-11 items-center gap-2 rounded-full bg-card px-4 text-[13px] font-semibold ring-1 ring-line transition-colors hover:bg-panel">
+              <MotionLink to="/captura" {...press} className="inline-flex h-11 items-center gap-2 rounded-lg bg-card px-4 text-[13px] font-semibold ring-1 ring-line transition-colors hover:bg-panel">
                 <UploadSimple size={16} weight="bold" /> Subir comprobante
               </MotionLink>
             )}
@@ -85,7 +85,7 @@ export function ConciliacionPage() {
       />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
-        <motion.aside variants={listVariants} className={cx("flex-col gap-3", id ? "hidden xl:flex" : "flex")} aria-label="Lista de pagos">
+        <motion.aside variants={listVariants} className={cx("flex-col gap-3 xl:sticky xl:top-24 xl:max-h-[calc(100dvh-120px)] xl:self-start xl:overflow-y-auto xl:pr-2", id ? "hidden xl:flex" : "flex")} aria-label="Lista de pagos">
           <motion.div variants={itemVariants}>
             <Segmented
               label="Qué pagos ver"
@@ -105,7 +105,7 @@ export function ConciliacionPage() {
               Cuando llegue un comprobante por WhatsApp o lo subas a mano, aparecerá aquí.
             </EmptyState>
           ) : (
-            <motion.div key={fase} variants={listVariants} initial="hidden" animate="show" className="flex flex-col gap-2">
+            <motion.div key={fase} variants={listVariants} initial="hidden" animate="show" className="flex flex-col gap-1">
               {visible.map((c) => (
                 <QueueItem key={c.id} card={c} active={c.id === id} fase={fase} />
               ))}
@@ -129,11 +129,11 @@ function QueueItem({ card, active, fase }: { card: PaymentCard; active: boolean;
       variants={itemVariants}
       {...press}
       className={cx(
-        "relative flex min-h-[84px] items-center gap-3 rounded-2xl p-3 transition-colors duration-200",
-        active ? "bg-card shadow-[var(--shadow-card)]" : "bg-card/60 ring-1 ring-line/70 hover:bg-card",
+        "relative flex min-h-[100px] items-center gap-3 rounded-lg p-3 transition-colors duration-150",
+        active ? "bg-violet-tint" : "border-b border-line hover:bg-card",
       )}
     >
-      {active && <motion.span layoutId="queue-active" transition={spring} aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-violet" />}
+      {active && <motion.span layoutId="queue-active" transition={spring} aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-violet/40" />}
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 text-xs font-semibold text-muted">
           {card.origen === "whatsapp" ? <ChatCircleText size={13} weight="bold" /> : <UploadSimple size={13} weight="bold" />}
@@ -428,7 +428,7 @@ function SplitView({ d, nextHref }: { d: EvidenceDetailDTO; nextHref: string | n
 
         {d.match === "no_cuadra" && ev.status === "recibido" && (
           <label className="flex min-h-12 cursor-pointer items-start gap-3 rounded-xl bg-warn-tint/70 p-3.5 text-[13px] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-violet">
-            <input type="checkbox" checked={acceptMismatch} onChange={(e) => setAcceptMismatch(e.target.checked)} className="mt-0.5 size-4 accent-[#7c5cdb]" />
+            <input type="checkbox" checked={acceptMismatch} onChange={(e) => setAcceptMismatch(e.target.checked)} className="mt-0.5 size-4 accent-violet" />
             <span>
               <span className="font-semibold">
                 {ev.declaredAmountCents != null ? `El cliente anunció ${formatMoney(ev.declaredAmountCents)} y el comprobante dice ${amount}.` : `El monto del comprobante (${amount}) no cuadra con el saldo.`}

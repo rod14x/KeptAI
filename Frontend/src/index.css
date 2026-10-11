@@ -4,41 +4,89 @@
 @theme {
   --font-sans: "Manrope Variable", ui-sans-serif, system-ui, sans-serif;
 
-  --color-app: #f2f1ee;
-  --color-panel: #fafaf8;
+  /* Marca KeptAI (logo oficial, assets/). Usar los tokens semánticos de abajo en la UI. */
+  --color-brand-blue: #03509b;   /* Hyper Blue */
+  --color-brand-navy: #00285f;   /* Black Sea Night */
+  --color-brand-deep: #042450;   /* Subnautical */
+  --color-brand-green: #21b090;  /* Herbal */
+  --color-brand-teal: #04685d;   /* Peacock Pride */
+  --color-brand-yellow: #faa901; /* Spicy Sweetcorn */
+  --color-brand-word: #00285f;
+
+  --color-app: #f3f6fa;
+  --color-panel: #f6f9fc;
   --color-card: #ffffff;
-  --color-ink: #17171a;
-  --color-ink-soft: #2b2b31;
-  --color-muted: #5f5f67;
-  --color-faint: #8a8a92;
-  --color-line: #e6e4df;
-  --color-line-soft: #efede9;
+  --color-ink: #0f2747;
+  --color-ink-soft: #2a4466;
+  --color-muted: #4d6280;
+  --color-faint: #62758f;
+  --color-line: #d9e2ed;
+  --color-line-soft: #e8eef5;
+  --color-action: #03509b;
+  --color-action-hover: #00285f;
+  --color-inverse: #ffffff;
+  --color-navy: #042450;
 
-  --color-violet: #7c5cdb;
-  --color-violet-ink: #5b3fc0;
-  --color-violet-tint: #efebfb;
-  --color-violet-wash: #f6f3fd;
+  /* Alias conservados para los componentes existentes: representan la selección en azul de marca. */
+  --color-violet: #03509b;
+  --color-violet-ink: #00285f;
+  --color-violet-tint: #e2edf8;
+  --color-violet-wash: #eff5fb;
 
-  --color-ok: #1e7a50;
-  --color-ok-tint: #e6f4ec;
-  --color-warn: #8f600a;
-  --color-warn-tint: #fcf2dc;
+  --color-ok: #04685d;
+  --color-ok-tint: #e1f5ef;
+  --color-warn: #8a5a00;
+  --color-warn-tint: #fff3d6;
   --color-bad: #b23a2f;
   --color-bad-tint: #fceae8;
-  --color-info: #2d5fa8;
-  --color-info-tint: #e8effa;
+  --color-info: #03509b;
+  --color-info-tint: #e2edf8;
 
-  --color-series-in: #2e9e6b;
-  --color-series-out: #8466dd;
+  --color-series-in: #21b090;
+  --color-series-out: #03509b;
 
-  --radius-card: 20px;
-  --radius-block: 12px;
+  --radius-card: 12px;
+  --radius-block: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
 
-  --shadow-card: 0 1px 2px rgb(23 23 26 / 0.04), 0 10px 28px -16px rgb(23 23 26 / 0.12);
-  --shadow-lift: 0 2px 4px rgb(23 23 26 / 0.05), 0 22px 48px -20px rgb(23 23 26 / 0.22);
+  --shadow-card: 0 1px 2px rgb(26 43 62 / 0.025);
+  --shadow-lift: 0 12px 40px -12px rgb(26 43 62 / 0.24);
 }
 
 @layer base {
+  :root { color-scheme: light; }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --color-brand-word: #eef4fb;
+    --color-app: #061629;
+    --color-panel: #0a1e36;
+    --color-card: #0e2542;
+    --color-ink: #eaf1f9;
+    --color-ink-soft: #cfdcec;
+    --color-muted: #a7b9cf;
+    --color-faint: #93a8c1;
+    --color-line: #24405f;
+    --color-line-soft: #1a3250;
+    --color-action: #7fb8f0;
+    --color-action-hover: #a7cff6;
+    --color-inverse: #00285f;
+    --color-navy: #042450;
+    --color-violet: #7fb8f0;
+    --color-violet-ink: #a7cff6;
+    --color-violet-tint: #163a62;
+    --color-violet-wash: #112f52;
+    --color-ok: #6fdcbf;
+    --color-ok-tint: #0f3d3a;
+    --color-warn: #fcc955;
+    --color-warn-tint: #3f3416;
+    --color-bad: #f3ada5;
+    --color-bad-tint: #472e30;
+    --color-info: #7fb8f0;
+    --color-info-tint: #163a62;
+    --color-series-in: #4fc9a8;
+    --color-series-out: #7fb8f0;
+  }
   html {
     -webkit-text-size-adjust: 100%;
   }
@@ -46,6 +94,12 @@
     @apply bg-app text-ink font-sans antialiased;
     font-feature-settings: "ss01" on;
   }
+  ::selection { background: var(--color-violet-tint); color: var(--color-ink); }
+  * { scrollbar-width: thin; scrollbar-color: var(--color-line) transparent; }
+  input, textarea { caret-color: var(--color-violet); }
+  input::placeholder, textarea::placeholder { color: var(--color-faint); }
+  a { text-underline-offset: 3px; }
+  button, input, select, textarea { font: inherit; }
   :focus-visible {
     outline: 2px solid var(--color-violet);
     outline-offset: 2px;
@@ -56,6 +110,46 @@
   }
   button:disabled {
     cursor: not-allowed;
+  }
+  h1, h2, h3 { text-wrap: balance; }
+  summary { cursor: pointer; }
+}
+
+@layer components {
+  .app-shell { min-height: 100dvh; }
+  .app-sidebar { background: var(--color-card); border-right: 1px solid var(--color-line); }
+  .app-topbar { background: var(--color-card); border-bottom: 1px solid var(--color-line); }
+  .page-heading { padding-bottom: 4px; }
+  .page-heading h1 { font-weight: 700; }
+  .primary-link { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; background: var(--color-action); color: var(--color-inverse); padding: 10px 20px; font-size: 14px; font-weight: 650; }
+  .primary-link:hover { background: var(--color-action-hover); }
+  .metric-strip { border: 1px solid var(--color-line); border-radius: 12px; background: var(--color-card); overflow: hidden; }
+  .metric-strip > * { padding: 22px 24px; }
+  .metric-strip > * + * { border-left: 1px solid var(--color-line); }
+  .quiet-disclosure { border-top: 1px solid var(--color-line); padding-top: 16px; }
+  .quiet-disclosure > summary { min-height: 44px; padding: 10px 0; color: var(--color-muted); font-size: 13px; font-weight: 600; }
+  .skip-link { position: fixed; left: 16px; top: -60px; z-index: 100; background: var(--color-card); color: var(--color-ink); padding: 12px 20px; border: 2px solid var(--color-violet); border-radius: 8px; }
+  .skip-link:focus { top: 12px; }
+  .login-layout { display: grid; min-height: 100dvh; grid-template-columns: minmax(0, 1.08fr) minmax(400px, 1fr); }
+  .login-story { --color-muted: #b3c6dd; --color-action: #faa901; --color-action-hover: #fbbd3a; --color-inverse: #00285f; --color-brand-word: #ffffff; display: flex; flex-direction: column; justify-content: space-between; background: var(--color-navy); color: #f1f6fa; padding: clamp(32px, 5vw, 80px); }
+  .login-workflow { margin: 48px 0; padding: 0; list-style: none; }
+  .login-workflow li { display: grid; grid-template-columns: 32px 1fr; gap: 16px; padding: 20px 0; border-top: 1px solid #22426b; }
+  .login-workflow li > span { color: #faa901; font-variant-numeric: tabular-nums; font-size: 13px; padding-top: 3px; }
+  .login-form-panel { display: flex; flex-direction: column; justify-content: center; padding: 40px clamp(24px, 5vw, 88px); background: var(--color-card); }
+  .login-form-panel > section { width: 100%; max-width: 400px; margin: auto; }
+  .login-form-panel input { background: var(--color-card); }
+  @media (min-width: 1024px) {
+    .app-shell { display: grid; grid-template-columns: 224px minmax(0, 1fr); }
+    .app-shell.single-workspace { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 767px) {
+    .login-layout { display: flex; flex-direction: column; }
+    .login-story { padding: 28px 24px; gap: 24px; }
+    .login-story h1 { font-size: 30px; }
+    .login-workflow, .login-story-footer { display: none; }
+    .login-form-panel { padding: 32px 24px; flex: 1; }
+    .metric-strip > * { padding: 18px; }
+    .metric-strip > * + * { border-left: 0; border-top: 1px solid var(--color-line); }
   }
 }
 
@@ -96,7 +190,7 @@
   letter-spacing: -0.03em;
 }
 @utility text-title {
-  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 1.875rem);
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
   line-height: 1.15;
   letter-spacing: -0.02em;
 }
@@ -106,7 +200,14 @@
   letter-spacing: -0.01em;
 }
 @utility skeleton {
-  background: linear-gradient(90deg, #efede9 25%, #f7f6f3 50%, #efede9 75%);
+  background: linear-gradient(90deg, var(--color-line-soft) 25%, var(--color-panel) 50%, var(--color-line-soft) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s linear infinite;
+}
+
+@media print {
+  :root[data-theme] { color-scheme: light; --color-app: #fff; --color-card: #fff; --color-panel: #fff; --color-ink: #0f2747; --color-muted: #43566a; --color-faint: #526477; --color-line: #c6cfd8; --color-line-soft: #e4e8ec; }
+  .app-sidebar, .app-topbar, .skip-link { display: none !important; }
+  .app-shell { display: block; }
+  main { padding: 0 !important; }
 }

@@ -47,6 +47,8 @@ export { LockOpen } from "@phosphor-icons/react/dist/csr/LockOpen";
 export { MagnifyingGlass } from "@phosphor-icons/react/dist/csr/MagnifyingGlass";
 export { Microphone } from "@phosphor-icons/react/dist/csr/Microphone";
 export { Minus } from "@phosphor-icons/react/dist/csr/Minus";
+export { Moon } from "@phosphor-icons/react/dist/csr/Moon";
+export { Sun } from "@phosphor-icons/react/dist/csr/Sun";
 export { NotePencil } from "@phosphor-icons/react/dist/csr/NotePencil";
 export { Package } from "@phosphor-icons/react/dist/csr/Package";
 export { PaperPlaneTilt } from "@phosphor-icons/react/dist/csr/PaperPlaneTilt";

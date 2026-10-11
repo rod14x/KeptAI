@@ -5,7 +5,7 @@ import { popVariants, spring } from "../motion/primitives";
 import { CaretDown, ClockCounterClockwise, GearSix, SignOut, SlidersHorizontal, UserCircle } from "../ui/icons";
 import { Avatar } from "../ui/Avatar";
 import { useAuth } from "../../context/AuthContext";
-import { ROLE_LABEL } from "../../lib/permissions";
+import { can, ROLE_LABEL } from "../../lib/permissions";
 import { cx } from "../../lib/format";
 
 const ITEMS = [
@@ -42,6 +42,7 @@ export function UserMenu() {
   }, [open]);
 
   if (!person) return null;
+  const visibleItems = ITEMS.filter((item) => item.label !== "Configuración" || can(person.role, "configurar"));
 
   const go = (to: string) => {
     setOpen(false);
@@ -69,7 +70,7 @@ export function UserMenu() {
         aria-expanded={open}
         aria-label={`Menú de ${person.name}`}
         className={cx(
-          "flex items-center gap-1.5 rounded-full p-0.5 pr-2 transition-colors hover:bg-line-soft",
+          "flex min-h-11 items-center gap-1.5 rounded-lg p-0.5 pr-2 transition-colors hover:bg-line-soft",
           open && "bg-line-soft",
         )}
       >
@@ -99,7 +100,7 @@ export function UserMenu() {
             </div>
           </div>
           <div className="my-1 h-px bg-line-soft" />
-          {ITEMS.map(({ to, label, icon: Icon }, i) => (
+          {visibleItems.map(({ to, label, icon: Icon }, i) => (
             <button
               key={to}
               ref={(el) => {
@@ -116,7 +117,7 @@ export function UserMenu() {
           <div className="my-1 h-px bg-line-soft" />
           <button
             ref={(el) => {
-              items.current[ITEMS.length] = el;
+              items.current[visibleItems.length] = el;
             }}
             role="menuitem"
             onClick={() => {
