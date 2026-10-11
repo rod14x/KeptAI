@@ -2,9 +2,8 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { ArrowLeft, Bank, CheckCircle, CopySimple, Info, LinkSimple, NotePencil, Trash, WarningCircle, ChatCircleText, UploadSimple } from "../components/ui/icons";
-import { getEvidence, getQueue, queueGroup, type EvidenceDetailDTO, type PaymentCard, type QueueFilter } from "../api/client";
-import { actions, type ActionResult } from "../api/store";
-import type { FieldKey, Person } from "../api/schemas";
+import { capabilities, commands, getEvidence, getQueue, queueGroup, type ActionResult, type EvidenceDetailDTO, type PaymentCard, type QueueFilter } from "../api/client";
+import type { FieldKey, Person } from "../api/model";
 import { useApi } from "../hooks/useApi";
 import { useScope } from "../context/ScopeContext";
 import { useMe } from "../context/AuthContext";
@@ -112,8 +111,8 @@ function QueueItem({ card, active, filter }: { card: PaymentCard; active: boolea
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 text-xs font-semibold text-muted">
           {card.origen === "whatsapp" ? <ChatCircleText size={13} weight="bold" /> : <UploadSimple size={13} weight="bold" />}
-          {card.id}
-          {card.orderId && <span className="text-faint">· {card.orderId}</span>}
+          {card.ref}
+          {card.orderRef && <span className="text-faint">· {card.orderRef}</span>}
         </p>
         <p className="mt-0.5 truncate text-sm font-bold">{card.customer}</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
@@ -148,7 +147,7 @@ function Detail({ id }: { id: string }) {
         <Skeleton className="h-[520px] rounded-[var(--radius-card)]" />
       </div>
     );
-  if (data === null || (me.role === "vendedor" && data.evidence.brand !== me.brand))
+  if (data === null || (me.role === "vendedor" && me.brand && data.brand && data.brand !== me.brand))
     return (
       <EmptyState title={`El comprobante ${id} no está disponible`}>
         <Link to="/conciliacion" className="font-semibold text-violet-ink underline">
@@ -198,13 +197,14 @@ const FIELDS: Array<{ key: FieldKey; label: string; money?: boolean; placeholder
   { key: "channel", label: "Banco o billetera", placeholder: "Yape, Plin, BCP..." },
 ];
 
-type Pending = { title: string; body: ReactNode; label: string; tone: "primary" | "violet" | "danger"; run: () => ActionResult };
+type Pending = { title: string; body: ReactNode; label: string; tone: "primary" | "violet" | "danger"; run: () => Promise<ActionResult> };
 
 function SplitView({ d }: { d: EvidenceDetailDTO }) {
   const me = useMe();
   const toast = useToast();
   const ev = d.evidence;
-  const canEdit = can(me.role, "editar_evidencia");
+  const canEdit = can(me.role, "editar_evidencia") && capabilities.editPaymentFields;
+  const canLink = can(me.role, "aplicar");
   const [pending, setPendingState] = useState<Pending | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [acceptMismatch, setAcceptMismatch] = useState(false);
@@ -216,8 +216,8 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
   };
   const locked = !canEdit || ev.status !== "recibido";
 
-  const run = (fn: () => ActionResult) => {
-    const r = fn();
+  const run = async (fn: () => Promise<ActionResult>) => {
+    const r = await fn();
     toast(r.ok, r.message);
   };
 
@@ -234,6 +234,13 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
         </span>
       </p>
     );
+  } else if (ev.status === "recibido" && d.match === "duplicado" && !capabilities.discardPayment) {
+    primary = (
+      <p className="flex items-start gap-2 rounded-xl bg-panel px-4 py-3 text-[13px] text-muted ring-1 ring-line">
+        <CopySimple size={18} weight="bold" className="mt-px shrink-0" />
+        <span>El backend lo clasificó como duplicado: queda en revisión y no se aplica.</span>
+      </p>
+    );
   } else if (ev.status === "recibido" && d.match === "duplicado") {
     primary = (
       <Button
@@ -243,11 +250,11 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
         icon={<CopySimple size={18} weight="bold" />}
         onClick={() =>
           setPending({
-            title: `Marcar ${ev.id} como duplicado`,
+            title: `Marcar ${ev.ref} como duplicado`,
             body: `Tiene el mismo código, monto y fecha que ${d.duplicateOfId}. Se guarda en el historial y no reduce el saldo.`,
             label: "Marcar duplicado",
             tone: "danger",
-            run: () => actions.markDuplicate(ev.id, me),
+            run: () => commands.markDuplicate(ev.id, me),
           })
         }
       >
@@ -268,7 +275,7 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
             body: `Confirmas que el abono de ${amount} aparece en la banca de la empresa. KeptAI no se conecta al banco: esta verificación la hace Administración.`,
             label: "Verificado",
             tone: "primary",
-            run: () => actions.verifyFunds(ev.id, me, acceptMismatch),
+            run: () => commands.verifyFunds(ev.id, me, acceptMismatch),
           })
         }
       >
@@ -284,11 +291,11 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
         icon={<CheckCircle size={18} weight="bold" />}
         onClick={() =>
           setPending({
-            title: `Aplicar ${amount} a ${ev.orderId}`,
-            body: d.order ? `El saldo de ${d.order.id} pasa de ${formatMoney(d.order.balanceCents)} a ${formatMoney(d.order.balanceCents - (ev.fields.amountCents ?? 0))}.` : "",
+            title: `Aplicar ${amount} a ${d.order?.ref ?? "la orden"}`,
+            body: d.order ? `El saldo de ${d.order.ref} pasa de ${formatMoney(d.order.balanceCents)} a ${formatMoney(d.order.balanceCents - (ev.fields.amountCents ?? 0))}.` : "",
             label: "Aplicar pago",
             tone: "violet",
-            run: () => actions.applyPayment(ev.id, me),
+            run: () => commands.applyPayment(ev.id, me),
           })
         }
       >
@@ -302,7 +309,7 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
           Pago aplicado
         </Button>
         {can(me.role, "aplicar") && (
-          <button onClick={() => run(() => actions.applyPayment(ev.id, me))} className="min-h-10 text-[13px] font-semibold text-muted underline-offset-2 hover:text-ink hover:underline">
+          <button onClick={() => run(() => commands.applyPayment(ev.id, me))} className="min-h-10 text-[13px] font-semibold text-muted underline-offset-2 hover:text-ink hover:underline">
             Reintentar aplicación (no duplica el pago)
           </button>
         )}
@@ -310,7 +317,7 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
     );
   }
 
-  const canDiscard = can(me.role, "descartar") && ev.status === "recibido" && d.match !== "duplicado";
+  const canDiscard = capabilities.discardPayment && can(me.role, "descartar") && ev.status === "recibido" && d.match !== "duplicado";
 
   return (
     <Stagger className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
@@ -319,7 +326,7 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
       </Link>
 
       <Card className="p-5 sm:p-6 lg:self-start">
-        <EvidenceViewer ev={ev} />
+        <EvidenceViewer ev={ev} imageUrl={d.imageUrl} />
       </Card>
 
       <Card className="flex flex-col gap-5 p-5 sm:p-6">
@@ -337,8 +344,8 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
               )}
             </p>
             <h2 className="text-xl font-extrabold tracking-tight">
-              {ev.id}
-              {ev.orderId && <span className="font-semibold text-muted"> · {ev.orderId}</span>}
+              {ev.ref}
+              {d.order && <span className="font-semibold text-muted"> · {d.order.ref}</span>}
             </h2>
           </div>
           {ev.status === "aplicado" ? (
@@ -391,12 +398,15 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
           <label className="flex min-h-12 cursor-pointer items-start gap-3 rounded-xl bg-warn-tint/70 p-3.5 text-[13px] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-violet">
             <input type="checkbox" checked={acceptMismatch} onChange={(e) => setAcceptMismatch(e.target.checked)} className="mt-0.5 size-4 accent-[#7c5cdb]" />
             <span>
-              <span className="font-semibold">El chat anuncia {formatMoney(ev.declaredAmountCents ?? 0)} y el comprobante dice {amount}.</span> Confirmo que el monto correcto es el del comprobante.
+              <span className="font-semibold">
+                {ev.declaredAmountCents != null ? `El cliente anunció ${formatMoney(ev.declaredAmountCents)} y el comprobante dice ${amount}.` : `El monto del comprobante (${amount}) no cuadra con el saldo.`}
+              </span>{" "}
+              Confirmo que el monto correcto es el del comprobante.
             </span>
           </label>
         )}
 
-        <OrderBlock d={d} canEdit={canEdit} orderChoice={orderChoice} setOrderChoice={setOrderChoice} onAssign={() => run(() => actions.assignOrder(ev.id, orderChoice, me))} />
+        <OrderBlock d={d} canEdit={canLink} orderChoice={orderChoice} setOrderChoice={setOrderChoice} onAssign={() => run(() => commands.assignOrder(ev.id, orderChoice, me))} />
 
         <div className="mt-auto flex flex-col gap-2 border-t border-line-soft pt-5">
           {primary}
@@ -410,11 +420,11 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
               className="self-center"
               onClick={() =>
                 setPending({
-                  title: `Descartar ${ev.id}`,
+                  title: `Descartar ${ev.ref}`,
                   body: "El comprobante se cierra sin afectar saldos. Queda registrado en el historial.",
                   label: "Descartar",
                   tone: "danger",
-                  run: () => actions.discard(ev.id, me, "No corresponde a un pago"),
+                  run: () => commands.discard(ev.id, me, "No corresponde a un pago"),
                 })
               }
             >
@@ -476,9 +486,9 @@ function FieldInput({ evId, field, value, by }: { evId: string; field: (typeof F
   const id = `f-${evId}-${field.key}`;
   const missing = value == null || value === "";
 
-  const commit = () => {
+  const commit = async () => {
     if (draft === initial) return;
-    const r = actions.editField(evId, field.key, draft, by);
+    const r = await commands.editField(evId, field.key, draft, by);
     if (!r.ok) {
       toast(false, r.message);
       setDraft(initial);
@@ -540,11 +550,9 @@ function OrderBlock({
           <div className="min-w-0">
             <p className="text-xs font-semibold text-muted">Orden vinculada</p>
             <Link to={`/pedidos/${o.id}`} className="block truncate font-bold hover:underline">
-              {o.id} · {o.customer}
+              {o.ref} · {o.customer}
             </Link>
-            <p className="text-[13px] text-muted">
-              {o.line} · vendedor {o.seller}
-            </p>
+            {(o.line || o.seller) && <p className="text-[13px] text-muted">{[o.line, o.seller && `vendedor ${o.seller}`].filter(Boolean).join(" · ")}</p>}
           </div>
           {o.balanceCents <= 0 ? <Chip tone="ok">Sin saldo</Chip> : o.daysToDue != null ? <DueTag daysToDue={o.daysToDue} /> : <Chip tone="neutral">Sin despacho</Chip>}
         </div>

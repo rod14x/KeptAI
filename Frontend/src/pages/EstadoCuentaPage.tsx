@@ -1,69 +1,60 @@
 import { motion } from "motion/react";
 import { Stagger, itemVariants, listVariants } from "../components/motion/primitives";
-import { useParams } from "react-router";
-import { CalendarBlank, CheckCircle, Clock, LinkBreak, WarningCircle } from "../components/ui/icons";
+import { Link, useParams } from "react-router";
+import { ArrowLeft, CalendarBlank, CheckCircle, Clock, Printer, WarningCircle } from "../components/ui/icons";
 import { getStatement, type StatementDTO } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { Chip, type Tone } from "../components/ui/Chip";
-import { ErrorState, Skeleton } from "../components/ui/States";
+import { DemoBadge, EmptyState, ErrorState, Skeleton } from "../components/ui/States";
+import { Button } from "../components/ui/Button";
 import { cx, formatDate, formatDateTime, formatMoney } from "../lib/format";
 
-// Vista del cliente corporativo: solo lectura, sin costos, márgenes, comprobantes ni datos de otros clientes.
+// Estado de cuenta autenticado (GET /customers/{id}/statement). V6 no tiene enlace público:
+// el equipo lo abre aquí y lo imprime o lo envía. Sin costos, márgenes ni datos de otros clientes.
 
 export function EstadoCuentaPage() {
-  const { token = "" } = useParams();
-  const { data, loading, error, reload } = useApi(() => getStatement(token), [token]);
+  const { id = "" } = useParams();
+  const { data, loading, error, reload } = useApi(() => getStatement(id), [id]);
 
   return (
-    <div className="min-h-[100dvh] bg-[#f6f4fb]">
-      <div className="mx-auto max-w-xl px-4 py-6 sm:py-10">
-        {error ? (
-          <ErrorState error={error} onRetry={reload} />
-        ) : loading || !data ? (
-          <div className="flex flex-col gap-4" aria-busy="true" aria-label="Cargando">
-            <Skeleton className="h-16 rounded-2xl" />
-            <Skeleton className="h-48 rounded-[24px]" />
-            <Skeleton className="h-72 rounded-[24px]" />
-          </div>
-        ) : data.ok ? (
-          <Stagger className="flex flex-col gap-5">
-            <Statement d={data} />
-          </Stagger>
-        ) : (
-          <Invalid reason={data.reason} />
+    <div className="mx-auto max-w-xl">
+      <div className="mb-4 flex items-center justify-between gap-3 print:hidden">
+        <Link to={`/clientes/${id}`} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink">
+          <ArrowLeft size={16} weight="bold" /> Ficha del cliente
+        </Link>
+        {data && (
+          <Button variant="secondary" size="sm" icon={<Printer size={16} />} onClick={() => window.print()}>
+            Imprimir o guardar PDF
+          </Button>
         )}
       </div>
+      {error ? (
+        <ErrorState error={error} onRetry={reload} />
+      ) : loading || data === undefined ? (
+        <div className="flex flex-col gap-4" aria-busy="true" aria-label="Cargando">
+          <Skeleton className="h-16 rounded-2xl" />
+          <Skeleton className="h-48 rounded-[24px]" />
+          <Skeleton className="h-72 rounded-[24px]" />
+        </div>
+      ) : data === null ? (
+        <EmptyState title="Estado de cuenta no disponible">No existe el cliente o tu rol no tiene acceso a su estado de cuenta.</EmptyState>
+      ) : (
+        <Stagger className="flex flex-col gap-5">
+          <Statement d={data} />
+        </Stagger>
+      )}
     </div>
-  );
-}
-
-function Invalid({ reason }: { reason: "no_existe" | "revocado" | "vencido" }) {
-  const text =
-    reason === "vencido"
-      ? "Este enlace ya venció. Pide uno nuevo a tu vendedor."
-      : reason === "revocado"
-        ? "Este enlace fue desactivado. Pide uno nuevo a tu vendedor."
-        : "No encontramos este estado de cuenta. Revisa que el enlace esté completo.";
-  return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-16 flex flex-col items-center gap-3 rounded-[24px] bg-card px-6 py-12 text-center shadow-[var(--shadow-card)]">
-      <span className="flex size-12 items-center justify-center rounded-full bg-warn-tint text-warn">
-        <LinkBreak size={24} weight="bold" />
-      </span>
-      <h1 className="text-lg font-bold">Enlace no disponible</h1>
-      <p className="max-w-[34ch] text-sm text-muted">{text}</p>
-    </motion.div>
   );
 }
 
 const STATE_TONE: Record<string, Tone> = { Pagado: "ok", Vencido: "bad", "Por pagar": "neutral", "En revisión": "warn" };
 
-function Statement({ d }: { d: Extract<StatementDTO, { ok: true }> }) {
-  const brand = d.brand === "corpotex" ? "Corpotex" : "Unicrack";
+function Statement({ d }: { d: StatementDTO }) {
   return (
     <>
       <motion.header variants={itemVariants} className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-violet-ink">{brand}</p>
+          {d.demo ? <DemoBadge /> : <p className="text-sm font-semibold text-violet-ink">Corpotex · Unicrack</p>}
           <h1 className="text-2xl font-extrabold tracking-tight">Estado de cuenta</h1>
         </div>
         <p className="tabular text-right text-xs text-muted">
@@ -99,8 +90,8 @@ function Statement({ d }: { d: Extract<StatementDTO, { ok: true }> }) {
             <motion.li variants={itemVariants} key={o.id} className="border-t border-line-soft py-3.5 first:border-t-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-semibold">{o.id}</p>
-                  <p className="text-[13px] text-muted">{o.description}</p>
+                  <p className="font-semibold">{o.ref}</p>
+                  {o.description && <p className="text-[13px] text-muted">{o.description}</p>}
                 </div>
                 <Chip
                   tone={STATE_TONE[o.state]}
@@ -109,11 +100,7 @@ function Statement({ d }: { d: Extract<StatementDTO, { ok: true }> }) {
                   {o.state}
                 </Chip>
               </div>
-              <div className="tabular mt-2 grid grid-cols-3 gap-2 text-xs">
-                <span>
-                  <span className="block text-faint">Pedido</span>
-                  {formatDate(o.issuedOn)}
-                </span>
+              <div className="tabular mt-2 grid grid-cols-2 gap-2 text-xs">
                 <span>
                   <span className="block text-faint">Despacho</span>
                   {o.despachoOn ? formatDate(o.despachoOn) : "En producción"}
@@ -147,7 +134,7 @@ function Statement({ d }: { d: Extract<StatementDTO, { ok: true }> }) {
                 <span>
                   <span className="block font-semibold">{formatDate(p.at)}</span>
                   <span className="block text-xs text-muted">
-                    {p.orderId} · {p.channel}
+                    {[p.orderRef, p.paymentRef].filter(Boolean).join(" · ")}
                   </span>
                 </span>
                 <span className="font-bold text-ok">{formatMoney(p.amountCents)}</span>
@@ -159,7 +146,7 @@ function Statement({ d }: { d: Extract<StatementDTO, { ok: true }> }) {
 
       <p className="flex items-start gap-2 px-1 text-xs leading-relaxed text-muted">
         <CalendarBlank size={14} className="mt-0.5 shrink-0" />
-        Enlace válido hasta el {formatDate(d.expiresAt)}. Un pago aparece aquí cuando ya fue verificado. Si ves algo que no corresponde, escribe a tu vendedor.
+        Un pago aparece aquí cuando ya fue verificado y aplicado. Si el cliente ve algo que no corresponde, lo revisa con su vendedor.
       </p>
     </>
   );

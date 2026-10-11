@@ -2,9 +2,7 @@ import { useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { Link, useParams } from "react-router";
 import { ArrowLeft, ChatCircleText, Check, CheckCircle, Factory, Hourglass, Info, LockOpen, Prohibit, Robot, Truck, UploadSimple, WarningCircle } from "../components/ui/icons";
-import { getOrder, MESSAGE_LABEL, type OrderDetailDTO } from "../api/client";
-import { actions, type PaymentTerms } from "../api/store";
-import { PLAZO_MAX, PLAZO_MIN } from "../api/schemas";
+import { capabilities, commands, getOrder, MESSAGE_LABEL, PLAZO_MAX, PLAZO_MIN, type OrderDetailDTO, type PaymentTerms } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useMe } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
@@ -17,7 +15,6 @@ import { Button } from "../components/ui/Button";
 import { Segmented } from "../components/ui/Segmented";
 import { DialogShell } from "../components/ui/Dialog";
 import { inputClass } from "../components/ui/Modal";
-import { ChatThread } from "../components/evidence/EvidenceViewer";
 import { cx, formatDate, formatDateTime, formatMoney } from "../lib/format";
 
 export function OrdenDetailPage() {
@@ -33,7 +30,7 @@ export function OrdenDetailPage() {
         <Skeleton className="h-[480px] rounded-[var(--radius-card)]" />
       </div>
     );
-  if (data === null || (me.role === "vendedor" && me.brand !== data.order.brand))
+  if (data === null || (me.role === "vendedor" && me.brand && data.card.brand && me.brand !== data.card.brand))
     return (
       <div className="mx-auto max-w-md py-12">
         <EmptyState title="Orden no disponible">
@@ -76,20 +73,24 @@ function Detail({ d }: { d: OrderDetailDTO }) {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-title font-extrabold">{o.id}</h1>
+              <h1 className="text-title font-extrabold">{o.ref}</h1>
               <OrderStateChip estado={o.estado} />
               {o.estado === "despachada" && <FinanceChip finance={d.card.finance} daysToDue={d.card.daysToDue ?? undefined} />}
             </div>
             <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted">
-              <Link to={`/clientes/${d.customer.id}`} className="font-semibold text-ink hover:underline">
-                {d.customer.name}
-              </Link>
-              <span>
-                {o.brand === "corpotex" ? "Corpotex" : "Unicrack"} · {o.line} · producción {o.modality}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Avatar name={d.seller ?? "?"} size="sm" /> {d.seller}
-              </span>
+              {d.customer.id ? (
+                <Link to={`/clientes/${d.customer.id}`} className="font-semibold text-ink hover:underline">
+                  {d.customer.name}
+                </Link>
+              ) : (
+                <span className="font-semibold text-ink">{d.customer.name}</span>
+              )}
+              <span>{[d.card.brand && (d.card.brand === "corpotex" ? "Corpotex" : "Unicrack"), o.line, `producción ${o.modality}`].filter(Boolean).join(" · ")}</span>
+              {d.seller && (
+                <span className="inline-flex items-center gap-1">
+                  <Avatar name={d.seller} size="sm" /> {d.seller}
+                </span>
+              )}
             </p>
           </div>
           <div className="flex items-end gap-6">
@@ -107,9 +108,11 @@ function Detail({ d }: { d: OrderDetailDTO }) {
                 <dd className={cx("font-extrabold", d.card.finance === "vencido" && "text-bad")}>{formatMoney(d.card.balanceCents)}</dd>
               </div>
             </dl>
-            <span className="hidden sm:block">
-              <DemoBadge />
-            </span>
+            {d.card.demo && (
+              <span className="hidden sm:block">
+                <DemoBadge />
+              </span>
+            )}
           </div>
         </div>
         {o.estado !== "rechazada" && (
@@ -151,12 +154,11 @@ function Detail({ d }: { d: OrderDetailDTO }) {
 
 function HojaCard({ d }: { d: OrderDetailDTO }) {
   const h = d.order.hoja;
-  const [chat, setChat] = useState(false);
   if (!h)
     return (
       <Card className="p-5 sm:p-6">
         <h2 className="text-section font-bold">Hoja de resumen</h2>
-        <p className="mt-2 text-sm text-muted">Pedido registrado antes de KeptAI: no tiene chat ni hoja de resumen asociada.</p>
+        <p className="mt-2 text-sm text-muted">Orden sin hoja de resumen asociada: registro histórico o creada fuera del flujo de WhatsApp.</p>
       </Card>
     );
   return (
@@ -178,7 +180,16 @@ function HojaCard({ d }: { d: OrderDetailDTO }) {
         </div>
         <Chip tone={h.estado === "confirmada" ? "ok" : "violet"}>{h.estado === "confirmada" ? "Confirmada" : "Borrador"}</Chip>
       </div>
-      <pre className="mt-4 whitespace-pre-wrap rounded-[var(--radius-block)] bg-panel p-4 font-sans text-sm leading-relaxed text-ink-soft ring-1 ring-line/70">{h.md}</pre>
+      <dl className="mt-4 grid gap-2 rounded-[var(--radius-block)] bg-panel p-4 text-sm ring-1 ring-line/70 sm:grid-cols-2">
+        {h.campos.map((c) => (
+          <div key={c.campo} className="flex min-w-0 items-baseline justify-between gap-3 sm:block">
+            <dt className="text-[13px] text-muted">{c.campo}</dt>
+            <dd className={cx("truncate font-semibold", c.estado !== "present" && "text-warn")}>
+              {c.estado === "present" ? c.valor : c.estado === "illegible" ? "Ilegible" : "Falta"}
+            </dd>
+          </div>
+        ))}
+      </dl>
       <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px]">
         {h.confianza != null && <Chip tone="neutral">Confianza de la extracción {Math.round(h.confianza * 100)}%</Chip>}
         {h.faltantes.length > 0 ? (
@@ -196,23 +207,13 @@ function HojaCard({ d }: { d: OrderDetailDTO }) {
           Revisada y confirmada por {h.revisadoPor} el {formatDateTime(h.revisadoAt)}.
         </p>
       )}
-      {h.chat.length > 0 && (
-        <>
-          <button onClick={() => setChat((c) => !c)} aria-expanded={chat} className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink">
-            <ChatCircleText size={16} /> {chat ? "Ocultar chat de origen" : `Ver chat de origen (${h.chat.length} mensajes)`}
-          </button>
-          {chat && (
-            <motion.div variants={itemVariants} initial="hidden" animate="show" className="mt-2">
-              <ChatThread chat={h.chat} />
-            </motion.div>
-          )}
-        </>
-      )}
     </Card>
   );
 }
 
 function ItemsCard({ d }: { d: OrderDetailDTO }) {
+  // El DTO Order del contrato no trae ítems: la tarjeta solo aparece cuando la fuente los tiene.
+  if (!capabilities.orderItems || d.order.items.length === 0) return null;
   return (
     <Card className="p-5 sm:p-6">
       <h2 className="text-section font-bold">Ítems</h2>
@@ -242,7 +243,7 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
   const me = useMe();
   const toast = useToast();
   const o = d.order;
-  const canDecide = can(me.role, "aprobar_credito") && can(me.role, "confirmar_orden") && (me.role !== "vendedor" || me.brand === o.brand);
+  const canDecide = can(me.role, "aprobar_credito") && can(me.role, "confirmar_orden") && (me.role !== "vendedor" || !me.brand || !d.card.brand || me.brand === d.card.brand);
   const [tipo, setTipo] = useState<PaymentTerms["tipo"]>("credito");
   const [plazo, setPlazo] = useState(String(Math.min(Math.max(d.plazoDefecto, PLAZO_MIN), PLAZO_MAX)));
   const [pct, setPct] = useState("50");
@@ -252,8 +253,8 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
   const [reason, setReason] = useState("");
 
   const terms = (): PaymentTerms => ({ tipo, plazoDias: Number(plazo), anticipoPct: tipo === "anticipo" ? Number(pct) : null });
-  const confirm = (moraAcknowledged: boolean) => {
-    const r = actions.confirmOrder(o.id, terms(), me, { moraAcknowledged, nota: nota.trim() || null });
+  const confirm = async (moraAcknowledged: boolean) => {
+    const r = await commands.confirmOrder(o.id, terms(), me, { moraAcknowledged, nota: nota.trim() || null });
     if (!r.ok && r.code === "aviso_mora") {
       setMoraOpen(true);
       return;
@@ -319,7 +320,7 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
   return (
     <Card className="p-5 sm:p-6">
       <h2 className="text-section font-bold">Condición de pago y crédito</h2>
-      <p className="mt-1 text-[13px] text-muted">El vendedor revisa la hoja, elige la condición y confirma. Equivale a escribir /ok {o.id} en WhatsApp.</p>
+      <p className="mt-1 text-[13px] text-muted">El vendedor revisa la hoja, elige la condición y confirma. Equivale a escribir /ok {o.ref} en WhatsApp.</p>
 
       {d.credit.aviso && (
         <p className="mt-4 flex items-start gap-2 rounded-xl bg-warn-tint px-3.5 py-2.5 text-[13px] font-medium text-warn">
@@ -431,7 +432,7 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
 
       <DialogShell open={rejectOpen} onClose={() => setRejectOpen(false)} labelledBy="reject-title" panelClassName="max-w-md p-6">
         <h2 id="reject-title" className="text-section font-bold">
-          Rechazar {o.id}
+          Rechazar {o.ref}
         </h2>
         <label htmlFor="reason" className="mt-4 block text-[13px] font-semibold">
           Motivo
@@ -450,8 +451,8 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
           </Button>
           <Button
             variant="danger"
-            onClick={() => {
-              const r = actions.rejectOrder(o.id, reason, me);
+            onClick={async () => {
+              const r = await commands.rejectOrder(o.id, reason, me);
               toast(r.ok, r.message);
               if (r.ok) setRejectOpen(false);
             }}
@@ -504,7 +505,7 @@ function PaymentsCard({ d }: { d: OrderDetailDTO }) {
             <li key={e.id} className="flex items-center justify-between gap-3 border-t border-line-soft py-2.5 text-[13px] first:border-t-0">
               <span className="min-w-0">
                 <Link to={`/conciliacion/${e.id}`} className="font-semibold text-violet-ink hover:underline">
-                  {e.id}
+                  {e.ref}
                 </Link>{" "}
                 <span className="text-muted">· {e.status === "verificado_banco" ? "verificado, falta aplicar" : "recibido, falta verificar"}</span>
                 <span className="tabular block text-xs text-faint">{formatDateTime(e.receivedAt)}</span>
@@ -540,9 +541,11 @@ function MessagesCard({ d }: { d: OrderDetailDTO }) {
           <h2 className="text-section font-bold">Mensajes al cliente</h2>
           <p className="mt-0.5 text-[13px] text-muted">Los programa el sistema y los envía WhatsApp (n8n WF3), solo al contacto de prueba.</p>
         </div>
-        <Chip tone="neutral">{d.customer.contactoWhatsapp}</Chip>
+        {d.customer.contactoWhatsapp && <Chip tone="neutral">{d.customer.contactoWhatsapp}</Chip>}
       </div>
-      {d.messages.length === 0 ? (
+      {d.messages === null ? (
+        <p className="mt-3 text-sm text-muted">La bitácora de envíos todavía no tiene endpoint en la API. Las alertas de cobranza sí se muestran abajo.</p>
+      ) : d.messages.length === 0 ? (
         <p className="mt-3 text-sm text-muted">Sin mensajes. Los recordatorios −3, 0 y +3 días se programan al despachar.</p>
       ) : (
         <motion.ul variants={listVariants} className="mt-3 flex flex-col">
@@ -552,7 +555,6 @@ function MessagesCard({ d }: { d: OrderDetailDTO }) {
                 <span className="text-sm font-semibold">{MESSAGE_LABEL[m.tipo]}</span>
                 <MessageStateChip estado={m.estado} />
               </div>
-              <p className="mt-1 text-[13px] text-muted">{m.texto}</p>
               <p className="tabular mt-1 text-xs text-faint">
                 {m.estado === "enviado" && m.enviadoAt ? `Enviado ${formatDateTime(m.enviadoAt)}` : `Programado ${formatDateTime(m.programadoPara)}`}
                 {m.intentos > 1 && ` · ${m.intentos} intentos`}
@@ -593,10 +595,10 @@ function MarginCard({ d }: { d: OrderDetailDTO }) {
     <Card className="p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-section font-bold">Margen</h2>
-        <Chip tone={o.costOrigin === "real" ? "ok" : "warn"}>Costo {o.costOrigin === "real" ? "real" : "teórico"}</Chip>
+        {d.costCents != null && <Chip tone={o.costOrigin === "real" ? "ok" : "warn"}>Costo {o.costOrigin === "real" ? "real" : "teórico"}</Chip>}
       </div>
-      {d.costCents === 0 ? (
-        <p className="mt-2 text-sm text-muted">Costo por registrar: no se calcula margen sin costos.</p>
+      {d.costCents == null ? (
+        <p className="mt-2 text-sm text-muted">Costeo incompleto: no hay margen hasta cerrar los costos reales de la orden.</p>
       ) : (
         <dl className="tabular mt-4 grid grid-cols-3 gap-4 text-sm">
           <div>
@@ -607,7 +609,7 @@ function MarginCard({ d }: { d: OrderDetailDTO }) {
             <dt className="text-[13px] text-muted" title="Venta menos costo">
               Teórico
             </dt>
-            <dd className={cx("font-bold", d.marginCents < 0 ? "text-bad" : "text-ok")}>
+            <dd className={cx("font-bold", (d.marginCents ?? 0) < 0 ? "text-bad" : "text-ok")}>
               <Money cents={d.marginCents} />
             </dd>
           </div>
@@ -615,7 +617,7 @@ function MarginCard({ d }: { d: OrderDetailDTO }) {
             <dt className="text-[13px] text-muted" title="Margen en proporción a lo cobrado">
               Percibido
             </dt>
-            <dd className={cx("font-bold", d.perceivedCents < 0 ? "text-bad" : "text-ink")}>
+            <dd className={cx("font-bold", (d.perceivedCents ?? 0) < 0 ? "text-bad" : "text-ink")}>
               <Money cents={d.perceivedCents} />
             </dd>
           </div>

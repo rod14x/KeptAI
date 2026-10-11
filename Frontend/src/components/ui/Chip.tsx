@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { CheckCircle, CircleHalf, Clock, CopySimple, Factory, Flag, Hourglass, LinkBreak, NotePencil, PaperPlaneTilt, Prohibit, Scales, Truck, WarningCircle, XCircle } from "./icons";
-import type { OrderState, OutgoingMessage } from "../../api/schemas";
-import type { CreditStatus, MatchKind, OrderFinance } from "../../api/domain";
+import type { OrderState, OutgoingMessage } from "../../api/model";
+import type { CreditStatus, MatchKind, OrderFinance } from "../../api/model";
 import { cx } from "../../lib/format";
 
 export type Tone = "ok" | "warn" | "bad" | "violet" | "info" | "neutral";
@@ -27,6 +27,7 @@ export function Chip({ tone, icon, children, className }: { tone: Tone; icon?: R
 const I = { size: 14, weight: "bold" as const };
 
 export const MATCH_META: Record<MatchKind, { label: string; tone: Tone; icon: ReactNode }> = {
+  pendiente: { label: "Por conciliar", tone: "neutral", icon: <Hourglass {...I} /> },
   total: { label: "Cubre el saldo", tone: "ok", icon: <CheckCircle {...I} /> },
   parcial: { label: "Parcial", tone: "info", icon: <CircleHalf {...I} /> },
   duplicado: { label: "Duplicado", tone: "bad", icon: <CopySimple {...I} /> },

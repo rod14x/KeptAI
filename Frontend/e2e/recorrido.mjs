@@ -78,11 +78,8 @@ await page.waitForSelector("text=Marcar como duplicado");
 t = await confirmStep("Marcar como duplicado", "Marcar duplicado");
 check(1, "V-003 duplicado no cambia saldo", /no cambia/i.test(t), t);
 await page.goto(`${BASE}/resultado`);
-await page.waitForSelector("text=Taller como centro de resultados");
-await page.waitForTimeout(500);
-const r001 = await text("tr:has-text('ORD-001')");
-check(1, "ORD-001 margen -S/ 40", r001.includes("-S/ 40.00"), r001);
-await shot("02-resultado");
+await page.waitForTimeout(600);
+check(5, "Administración sin acceso a Resultado (solo GERENTE)", (await text("main")).includes("no tiene acceso"));
 
 /* 3. Anticipo libera la orden retenida */
 await page.goto(`${BASE}/conciliacion/V-007`);
@@ -94,29 +91,19 @@ await page.goto(`${BASE}/pedidos/ORD-014`);
 await page.waitForSelector("text=Condición de pago");
 check(3, "ORD-014 en producción", (await text("main")).includes("En producción"));
 
-/* 6. Estado de cuenta por WhatsApp */
+/* 6. Estado de cuenta autenticado (V6 no tiene enlace público) */
 await page.goto(`${BASE}/clientes/c-sechura`);
-await page.waitForSelector("text=Estado de cuenta");
-await page.getByRole("button", { name: "Generar enlace" }).click();
-await toast();
-await page.getByRole("button", { name: "Enviar por WhatsApp" }).click();
-t = await toast();
-check(6, "Estado de cuenta enviado al contacto de prueba", /contacto de prueba/i.test(t), t);
-const link = await page.locator("a", { hasText: "Ver como cliente" }).first().getAttribute("href");
-const client = await ctx.newPage();
-await client.goto(`${BASE}${link}`);
-await client.waitForSelector("text=Tus pedidos");
-const leaks = await client.evaluate(() => /margen|costo|V-00|Carmen|Rosa/i.test(document.body.innerText));
-check(6, "Estado de cuenta sin datos internos", !leaks);
-await page.getByRole("button", { name: "Revocar" }).click();
-await toast();
-await client.reload();
-await client.waitForSelector("text=Enlace no disponible");
-check(6, "Enlace revocado deja de abrir", true);
-await client.close();
+await page.getByRole("link", { name: "Abrir estado de cuenta" }).click();
+await page.waitForURL(/\/clientes\/c-sechura\/estado-cuenta$/);
+await page.waitForSelector("text=Tus pedidos");
+check(6, "Estado de cuenta se abre dentro de la sesión", true);
+check(6, "Estado de cuenta sin costos ni márgenes", !/margen|costo/i.test(await text("main")));
+await page.goto(`${BASE}/estado-cuenta/cualquier-token`);
+await page.waitForTimeout(500);
+check(6, "Ya no existe la ruta pública por token", (await text("main")).includes("Esta página no existe"));
 await page.goto(`${BASE}/cobranza?vista=mensajes`);
 await page.waitForSelector("text=Bitácora de envíos");
-check(6, "Mensaje de estado de cuenta en la bitácora", (await text("main")).includes("Estado de cuenta"));
+check(6, "Bitácora sin texto de mensajes (V6)", !/Hola|estimado/i.test(await text("main")));
 await page.getByRole("button", { name: "Reintentar" }).first().click();
 t = await toast();
 check(6, "Reintento de mensaje con error", /Reintento enviado/i.test(t), t);
@@ -197,6 +184,12 @@ await page.goto(`${BASE}/`);
 await page.waitForSelector("text=Factor de cobro 90%");
 check(5, "Dashboard refleja factor de cobro 90%", true);
 await shot("05-dashboard-gerencia");
+await page.goto(`${BASE}/resultado`);
+await page.waitForSelector("text=Taller como centro de resultados");
+await page.waitForTimeout(500);
+const r001 = await text("tr:has-text('ORD-001')");
+check(1, "ORD-001 margen -S/ 40", r001.includes("-S/ 40.00"), r001);
+await shot("02-resultado");
 
 /* 7. Calidad: móvil sin desborde */
 await page.setViewportSize({ width: 390, height: 844 });

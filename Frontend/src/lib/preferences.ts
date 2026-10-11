@@ -1,4 +1,4 @@
-import type { Scope } from "../api/schemas";
+import type { Scope } from "../api/model";
 
 // Preferencias por persona en este navegador. No son datos de negocio: si el
 // almacenamiento no está disponible, se usan los valores por defecto.

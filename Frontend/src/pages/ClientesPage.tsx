@@ -6,10 +6,11 @@ import { Meter } from "../components/ui/Meter";
 import { useMemo, useState } from "react";
 import { CaretRight, HandCoins, MagnifyingGlass } from "../components/ui/icons";
 import { getCustomers, type CustomerRow } from "../api/client";
-import type { CreditStatus } from "../api/domain";
+import type { CreditStatus } from "../api/model";
 import { useApi } from "../hooks/useApi";
 import { SCOPE_LABEL, useScope } from "../context/ScopeContext";
 import { Card, DemoBadge, EmptyState, ErrorState, Money, Skeleton } from "../components/ui/States";
+import { IS_MOCK } from "../config";
 import { Chip, CreditChip } from "../components/ui/Chip";
 import { Avatar } from "../components/ui/Avatar";
 import { cx, formatDate, formatMoney } from "../lib/format";
@@ -47,7 +48,7 @@ export function ClientesPage() {
 
   return (
     <Stagger className="mx-auto flex max-w-[1320px] flex-col gap-6">
-      <PageHeader title="Clientes y crédito" subtitle={<>Saldo, mora e historial de pago de cada cliente. Vista {SCOPE_LABEL[scope]}.</>} actions={<DemoBadge />} />
+      <PageHeader title="Clientes y crédito" subtitle={<>Saldo, mora e historial de pago de cada cliente. Vista {SCOPE_LABEL[scope]}.</>} actions={IS_MOCK ? <DemoBadge /> : undefined} />
 
       {error ? (
         <ErrorState error={error} onRetry={reload} />
@@ -148,7 +149,7 @@ function CustomerRowView({ r }: { r: CustomerRow }) {
           <span className="min-w-0">
             <span className="block truncate font-bold">{r.name}</span>
             <span className="block truncate text-[13px] text-muted">
-              {r.brand === "corpotex" ? "Corpotex" : "Unicrack"} · {r.tipo === "colegio" ? "Colegio" : r.tipo === "empresa" ? "Empresa" : "Persona"} · {r.seller}
+              {[r.brand && (r.brand === "corpotex" ? "Corpotex" : "Unicrack"), r.tipo && { colegio: "Colegio", empresa: "Empresa", persona: "Persona" }[r.tipo], r.seller].filter(Boolean).join(" · ") || "Cliente"}
             </span>
           </span>
         </span>
@@ -156,7 +157,7 @@ function CustomerRowView({ r }: { r: CustomerRow }) {
         <span className="col-span-2 flex flex-col gap-1.5 xl:col-span-1">
           <span className="tabular flex items-baseline justify-between gap-2 text-[13px]">
             <span className="font-bold">{formatMoney(r.usedCents)}</span>
-            <span className="text-muted">de {formatMoney(r.creditLimitCents, { short: true })}</span>
+            {r.creditLimitCents != null && <span className="text-muted">de {formatMoney(r.creditLimitCents, { short: true })}</span>}
           </span>
           <Meter value={r.creditLimitCents ? r.usedCents / r.creditLimitCents : 0} label={`Crédito usado de ${r.name}`} />
           <span className="text-xs text-muted">Línea de referencia</span>
@@ -180,7 +181,7 @@ function CustomerRowView({ r }: { r: CustomerRow }) {
             <>
               <span className={cx("font-semibold", r.nextDue.overdue && "text-bad")}>{formatDate(r.nextDue.date)}</span>
               <span className="block text-xs text-muted">
-                {r.nextDue.id}
+                {r.nextDue.ref}
                 {r.nextDue.overdue && " · vencido"}
               </span>
             </>

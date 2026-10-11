@@ -1,9 +1,9 @@
-import { Image, Microphone, EyeSlash } from "../ui/icons";
-import type { ChatMessage, Evidence } from "../../api/schemas";
+import { EyeSlash } from "../ui/icons";
+import type { Evidence } from "../../api/model";
 import { cx, formatDateTime, formatMoney } from "../../lib/format";
 
-// Representación de la evidencia recibida. En la demo no hay imágenes reales:
-// el comprobante se dibuja a partir de lo extraído y se rotula como representación.
+// Comprobante recibido. En la API se muestra la imagen original con su URL firmada;
+// en la demo (MOCK) no hay imágenes: se dibuja a partir de lo extraído y se rotula como representación.
 
 export function VoucherMock({ ev, compact = false }: { ev: Evidence; compact?: boolean }) {
   const f = ev.fields;
@@ -41,69 +41,24 @@ export function VoucherMock({ ev, compact = false }: { ev: Evidence; compact?: b
           <p className="text-xs text-muted">La IA no pudo leer monto ni operación. Completa los datos a mano o pídelos al cliente.</p>
         </div>
       )}
-      <figcaption className="border-t border-line-soft px-5 py-2.5 text-[11px] text-muted">Representación del comprobante (demo)</figcaption>
+      <figcaption className="border-t border-line-soft px-5 py-2.5 text-[11px] text-muted">Representación del comprobante a partir de los datos leídos</figcaption>
     </figure>
   );
 }
 
-export function ChatThread({ chat }: { chat: ChatMessage[] }) {
-  if (chat.length === 0) return null;
-  return (
-    <div className="flex flex-col gap-2 rounded-[20px] bg-[#f1efe9] p-3.5" aria-label="Conversación de WhatsApp">
-      {chat.map((m, i) => (
-        <div key={i} className={cx("flex", m.from === "vendedor" ? "justify-end" : "justify-start")}>
-          <div
-            className={cx(
-              "max-w-[85%] rounded-2xl px-3 py-2 text-[13px] leading-snug shadow-[0_1px_1px_rgb(23_23_26/0.06)]",
-              m.from === "vendedor" ? "rounded-br-md bg-[#dcf3e5]" : "rounded-bl-md bg-card",
-            )}
-          >
-            {m.attachment ? (
-              <span className="flex items-center gap-2 font-medium text-muted">
-                <Image size={16} weight="bold" /> {m.text}
-              </span>
-            ) : (
-              m.text
-            )}
-            {m.time && <span className="tabular ml-2 inline-block translate-y-0.5 text-[10px] text-faint">{m.time}</span>}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-const BARS = [6, 12, 18, 10, 22, 16, 8, 20, 14, 24, 12, 18, 9, 15, 21, 11, 17, 7, 13, 19, 10, 16, 8, 12];
-
-export function AudioNote({ ev }: { ev: Evidence }) {
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-3 rounded-[20px] bg-card p-4 ring-1 ring-line">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-violet-tint text-violet-ink">
-          <Microphone size={20} weight="bold" />
-        </span>
-        <div aria-hidden="true" className="flex h-8 flex-1 items-center gap-[3px]">
-          {BARS.map((h, i) => (
-            <span key={i} className="w-[3px] rounded-full bg-[#c9bdf0]" style={{ height: h }} />
-          ))}
-        </div>
-        <span className="tabular text-xs text-muted">0:14</span>
-      </div>
-      {ev.transcript && (
-        <blockquote className="rounded-[20px] bg-violet-wash p-4 text-sm leading-relaxed text-ink-soft ring-1 ring-violet-tint">
-          <p className="mb-1 text-xs font-semibold text-violet-ink">Transcripción automática</p>“{ev.transcript}”
-        </blockquote>
-      )}
-    </div>
-  );
-}
-
-export function EvidenceViewer({ ev }: { ev: Evidence }) {
+/** Voucher real (URL firmada de getEvidenceDownloadLink) o representación en la demo. Sin chat ni audio: V6 no los guarda. */
+export function EvidenceViewer({ ev, imageUrl = null }: { ev: Evidence; imageUrl?: string | null }) {
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-xs font-semibold text-muted">Evidencia original · recibida {formatDateTime(ev.receivedAt)}</p>
-      {ev.kind === "audio" ? <AudioNote ev={ev} /> : <VoucherMock ev={ev} />}
-      <ChatThread chat={ev.chat} />
+      <p className="text-xs font-semibold text-muted">Comprobante · recibido {formatDateTime(ev.receivedAt)}</p>
+      {imageUrl ? (
+        <figure className="mx-auto w-full max-w-[300px] overflow-hidden rounded-[20px] bg-card ring-1 ring-line">
+          <img src={imageUrl} alt={`Voucher ${ev.ref}`} className="w-full object-contain" />
+          <figcaption className="border-t border-line-soft px-5 py-2.5 text-[11px] text-muted">Imagen original (enlace temporal)</figcaption>
+        </figure>
+      ) : (
+        <VoucherMock ev={ev} />
+      )}
     </div>
   );
 }

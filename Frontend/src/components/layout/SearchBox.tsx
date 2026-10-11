@@ -1,40 +1,12 @@
-import { useMemo, useRef, useState } from "react";
+import { useDeferredValue, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { MagnifyingGlass } from "../ui/icons";
 import { popVariants } from "../motion/primitives";
-import { getState } from "../../api/store";
-import { cx, formatMoney } from "../../lib/format";
+import { search, type SearchHit as Hit } from "../../api/client";
+import { useApi } from "../../hooks/useApi";
+import { cx } from "../../lib/format";
 import { useAuth } from "../../context/AuthContext";
-
-type Hit = { id: string; label: string; detail: string; href: string };
-
-function hitBrand(s: ReturnType<typeof getState>, href: string) {
-  const id = href.split("/").pop() ?? "";
-  return s.customers.find((c) => c.id === id)?.brand ?? s.orders.find((o) => o.id === id)?.brand ?? s.evidences.find((e) => e.id === id)?.brand;
-}
-
-function search(q: string, brand: string | null): Hit[] {
-  const s = getState();
-  const term = q.trim().toLowerCase();
-  if (!term) return [];
-  const customer = (id: string) => s.customers.find((c) => c.id === id)?.name ?? "";
-  const orders = s.orders
-    .filter((o) => o.id.toLowerCase().includes(term) || customer(o.customerId).toLowerCase().includes(term))
-    .map((o) => ({ id: o.id, label: `${o.id} · ${customer(o.customerId)}`, detail: `Orden ${formatMoney(o.saleCents)}`, href: `/pedidos/${o.id}` }));
-  const evs = s.evidences
-    .filter((e) => e.id.toLowerCase().includes(term) || (e.fields.payer ?? "").toLowerCase().includes(term) || (e.fields.operationRef ?? "").includes(term))
-    .map((e) => ({
-      id: e.id,
-      label: `${e.id} · ${e.fields.payer ?? "Sin remitente"}`,
-      detail: `${e.fields.channel ?? "Evidencia"} ${e.fields.amountCents != null ? formatMoney(e.fields.amountCents) : ""}`,
-      href: `/conciliacion/${e.id}`,
-    }));
-  const customers = s.customers
-    .filter((c) => c.name.toLowerCase().includes(term))
-    .map((c) => ({ id: c.id, label: c.name, detail: `Cliente ${c.brand === "corpotex" ? "Corpotex" : "Unicrack"}`, href: `/clientes/${c.id}` }));
-  return [...customers, ...orders, ...evs].filter((h) => !brand || hitBrand(s, h.href) === brand).slice(0, 7);
-}
 
 export function SearchBox({ className }: { className?: string }) {
   const [q, setQ] = useState("");
@@ -43,7 +15,8 @@ export function SearchBox({ className }: { className?: string }) {
   const navigate = useNavigate();
   const { person } = useAuth();
   const brand = person?.role === "vendedor" ? person.brand : null;
-  const hits = useMemo(() => search(q, brand), [q, brand]);
+  const term = useDeferredValue(q);
+  const hits = useApi(() => search(term, brand), [term, brand]).data ?? [];
   const inputRef = useRef<HTMLInputElement>(null);
 
   const go = (hit: Hit) => {
@@ -74,7 +47,7 @@ export function SearchBox({ className }: { className?: string }) {
             if (e.key === "Enter" && hits[active]) go(hits[active]);
             if (e.key === "Escape") setOpen(false);
           }}
-          placeholder="Buscar cliente, ORD-002 o V-003"
+          placeholder="Buscar cliente, orden o pago"
           className="w-full bg-transparent text-sm outline-none placeholder:text-faint"
           role="combobox"
           aria-expanded={open && q.length > 0}

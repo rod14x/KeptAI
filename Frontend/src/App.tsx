@@ -34,8 +34,9 @@ function PageFallback() {
 import { can, type Permission } from "./lib/permissions";
 
 function RequireSession() {
-  const { person, signedOut } = useAuth();
+  const { person, ready, signedOut } = useAuth();
   const location = useLocation();
+  if (!ready) return <PageFallback />;
   if (!person) return <Navigate to="/login" replace state={signedOut ? null : { from: location.pathname + location.search }} />;
   return <Outlet />;
 }
@@ -88,7 +89,6 @@ export default function App() {
             <Suspense fallback={<PageFallback />}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/estado-cuenta/:token" element={<EstadoCuentaPage />} />
               <Route element={<RequireSession />}>
                 <Route element={<AppLayout />}>
                   <Route index element={<Home />} />
@@ -96,9 +96,10 @@ export default function App() {
                   <Route path="pedidos/:ref" element={gate("ver_comercial", <OrdenDetailPage />)} />
                   <Route path="clientes" element={gate("ver_comercial", <ClientesPage />)} />
                   <Route path="clientes/:id" element={gate("ver_comercial", <ClienteDetailPage />)} />
-                  <Route path="conciliacion" element={gate(["verificar", "ver_resultado"], <ConciliacionPage />)} />
-                  <Route path="conciliacion/:id" element={gate(["verificar", "ver_resultado"], <ConciliacionPage />)} />
-                  <Route path="cobranza" element={gate(["gestionar_cobranza", "ver_resultado"], <CobranzaPage />)} />
+                  <Route path="clientes/:id/estado-cuenta" element={gate("ver_estado_cuenta", <EstadoCuentaPage />)} />
+                  <Route path="conciliacion" element={gate(["verificar", "ver_pagos"], <ConciliacionPage />)} />
+                  <Route path="conciliacion/:id" element={gate(["verificar", "ver_pagos"], <ConciliacionPage />)} />
+                  <Route path="cobranza" element={gate("ver_cobranza", <CobranzaPage />)} />
                   <Route path="taller" element={gate(["registrar_despacho", "ver_resultado"], <TallerPage />)} />
                   <Route path="captura" element={gate("captura", <CapturaPage />)} />
                   <Route path="resultado" element={gate("ver_resultado", <ResultadoPage />)} />

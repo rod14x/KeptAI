@@ -1,7 +1,7 @@
 import { motion } from "motion/react";
 import { Link, useSearchParams } from "react-router";
 import { CalendarBlank, ChatCircleText, CheckCircle, Factory, Hourglass, NotePencil, Truck, UploadSimple, WarningCircle } from "../components/ui/icons";
-import { getOrderBoard, getOrders, type OrderBoardDTO, type OrderCard, type OrderColumnId, type OrderRow } from "../api/client";
+import { capabilities, getOrderBoard, getOrders, type OrderBoardDTO, type OrderCard, type OrderColumnId, type OrderRow } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { SCOPE_LABEL, useScope } from "../context/ScopeContext";
 import { useMe } from "../context/AuthContext";
@@ -10,6 +10,7 @@ import { MotionLink, Stagger, itemVariants, lift, listVariants, press } from "..
 import { PageHeader } from "../components/ui/PageHeader";
 import { Segmented } from "../components/ui/Segmented";
 import { Card, DemoBadge, EmptyState, ErrorState, Money, Skeleton } from "../components/ui/States";
+import { IS_MOCK } from "../config";
 import { Chip, FinanceChip, OrderStateChip } from "../components/ui/Chip";
 import { Avatar } from "../components/ui/Avatar";
 import { cx, formatDate, formatDateTime, formatMoney } from "../lib/format";
@@ -36,8 +37,8 @@ export function PedidosPage() {
         subtitle={<>Del chat a la cobranza: ninguna orden entra a producción sin crédito aprobado o anticipo verificado. Vista {SCOPE_LABEL[scope]}.</>}
         actions={
           <>
-            <DemoBadge />
-            {can(me.role, "captura") && (
+            {IS_MOCK && <DemoBadge />}
+            {can(me.role, "captura") && capabilities.manualOrderCapture && (
               <MotionLink to="/captura?tipo=orden" {...press} className="inline-flex h-10 items-center gap-2 rounded-full bg-card px-4 text-[13px] font-semibold ring-1 ring-line transition-colors hover:bg-panel">
                 <UploadSimple size={16} weight="bold" /> Cargar pedido a mano
               </MotionLink>
@@ -116,7 +117,7 @@ function OrderCardView({ card }: { card: OrderCard }) {
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
           {card.origen === "whatsapp" ? <ChatCircleText size={14} weight="bold" /> : card.origen === "manual" ? <UploadSimple size={14} weight="bold" /> : null}
-          {card.id}
+          {card.ref}
         </span>
         {card.estado === "pendiente_aprobacion" && card.clienteEnMora && (
           <Chip tone="bad" icon={<WarningCircle size={12} weight="bold" />} className="rounded-md px-1.5 py-0.5">
@@ -190,7 +191,7 @@ function OrdersList() {
               <motion.tr variants={itemVariants} key={o.id} className="border-t border-line-soft">
                 <td className="px-5 py-3.5">
                   <Link to={`/pedidos/${o.id}`} className="group block">
-                    <span className="block font-bold group-hover:underline">{o.id}</span>
+                    <span className="block font-bold group-hover:underline">{o.ref}</span>
                     <span className="block max-w-[220px] truncate text-[13px] text-muted">{o.customer}</span>
                   </Link>
                 </td>

@@ -1,7 +1,9 @@
-import type { Application, AuditEvent, CollectionAlert, DemoState, Evidence, Order, OutgoingMessage } from "./schemas";
+import type { Application, AuditEvent, CollectionAlert, Evidence, Order, OutgoingMessage } from "../model";
+import type { DemoState } from "./state";
 import { addDays, dueDateOf, orderBalance, scheduleCollection } from "./domain";
 
-// Semilla ficticia del recorrido de demostración, alineada con PROP-FLUJO-DER-001 (D-005).
+// MOCK: semilla ficticia de la demo (data_origin = demo_fixture). Eliminar al integrar con Spring.
+// Alineada con PROP-FLUJO-DER-001 (D-005) y BD V6: sin chats, transcripciones ni texto saliente.
 // Ninguna cifra es dato real de Corpotex; nombres inventados.
 // Equivalencia con el recorrido del cerebro: P-001 = ORD-001 y P-002 = ORD-002, con las mismas cifras.
 
@@ -11,8 +13,11 @@ const TALLER = "Jorge Ipanaqué";
 const ROSA = "Rosa Chunga";
 const LUIS = "Luis Yarlequé";
 
-const baseEv: Omit<Evidence, "id" | "brand" | "kind" | "receivedAt" | "orderId" | "fields" | "declaredAmountCents" | "chat" | "transcript" | "status"> = {
+const baseEv: Omit<Evidence, "id" | "ref" | "brand" | "receivedAt" | "orderId" | "fields" | "declaredAmountCents" | "status"> = {
+  kind: "voucher",
   origen: "whatsapp",
+  evidenceIds: [],
+  dataOrigin: "demo_fixture",
   legible: true,
   mismatchAccepted: false,
   verifiedBy: null,
@@ -22,12 +27,16 @@ const baseEv: Omit<Evidence, "id" | "brand" | "kind" | "receivedAt" | "orderId" 
   corrections: [],
 };
 
-type OrderSeed = Omit<Order, "costs" | "internalChargeCents" | "items" | "costOrigin" | "hoja" | "credito" | "fechaEntregaSolicitada" | "inicioProduccion"> & {
+type OrderSeed = Omit<Order, "ref" | "costComplete" | "dataOrigin" | "costs" | "internalChargeCents" | "items" | "costOrigin" | "hoja" | "credito" | "fechaEntregaSolicitada" | "inicioProduccion"> & {
   costs: Partial<Order["costs"]>;
 } & Partial<Pick<Order, "internalChargeCents" | "items" | "costOrigin" | "hoja" | "credito" | "fechaEntregaSolicitada" | "inicioProduccion">>;
 
 function order(o: OrderSeed): Order {
   return {
+    ref: o.id,
+    dataOrigin: "demo_fixture",
+    // Con costo real cerrado hay margen; el teórico (orden sin terminar) no lo genera (v_margen_orden).
+    costComplete: (o.costOrigin ?? "real") === "real",
     internalChargeCents: null,
     items: [{ descripcion: o.description, cantidad: 1, detalle: "Detalle consolidado del pedido", precioUnitCents: o.saleCents }],
     costOrigin: "real",
@@ -64,7 +73,7 @@ function audit(id: string, at: string, by: string, kind: AuditEvent["kind"], bra
 
 export function createSeed(): DemoState {
   const state: DemoState = {
-    version: 3,
+    version: 4,
     cutDate: "2026-10-10",
     settings: { factorCobro: 1, plazoDefecto: 30, alertOffsets: [-3, 0, 3], updatedBy: null, updatedAt: null },
     people: [
@@ -152,18 +161,21 @@ export function createSeed(): DemoState {
         hoja: {
           version: 1,
           origen: "whatsapp",
-          md: "Cliente: Club Deportivo Tallán\nMarca: Unicrack Sport\nÍtems: 30 camisetas sublimadas con número (dry-fit)\nTotal: S/ 600.00\nCondición pedida: crédito a 15 días\nEntrega solicitada: 24/10/2026",
+          campos: [
+            { campo: "Cliente", valor: "Club Deportivo Tallán", estado: "present" },
+            { campo: "Marca", valor: "Unicrack Sport", estado: "present" },
+            { campo: "Producto", valor: "Camisetas sublimadas con número (dry-fit)", estado: "present" },
+            { campo: "Cantidad", valor: "30", estado: "present" },
+            { campo: "Tallas", valor: null, estado: "missing" },
+            { campo: "Total", valor: "S/ 600.00", estado: "present" },
+            { campo: "Condición pedida", valor: "Crédito a 15 días", estado: "present" },
+            { campo: "Entrega solicitada", valor: "24/10/2026", estado: "present" },
+          ],
           faltantes: ["tallas por jugador"],
           confianza: 0.82,
           estado: "borrador",
           revisadoPor: null,
           revisadoAt: null,
-          chat: [
-            { from: "cliente", text: "Hola Luis, necesitamos 30 camisetas para el campeonato regional, con número.", time: "09:21" },
-            { from: "vendedor", text: "Claro, dry-fit sublimadas a S/ 20 cada una. ¿Para cuándo?", time: "09:24" },
-            { from: "cliente", text: "Para el 24. ¿Nos das 15 días como la vez pasada? Las tallas te las paso luego.", time: "09:30" },
-            { from: "vendedor", text: "/cerrar", time: "09:38" },
-          ],
         },
       }),
       order({
@@ -176,18 +188,19 @@ export function createSeed(): DemoState {
         hoja: {
           version: 2,
           origen: "whatsapp",
-          md: "Cliente: Academia Deportiva Cuatro Vientos\nMarca: Unicrack Sport\nÍtems: 24 casacas cortavientos con logo\nTotal: S/ 720.00\nCondición: anticipo 50% y saldo a 30 días",
+          campos: [
+            { campo: "Cliente", valor: "Academia Deportiva Cuatro Vientos", estado: "present" },
+            { campo: "Marca", valor: "Unicrack Sport", estado: "present" },
+            { campo: "Producto", valor: "Casacas cortavientos con logo", estado: "present" },
+            { campo: "Cantidad", valor: "24", estado: "present" },
+            { campo: "Total", valor: "S/ 720.00", estado: "present" },
+            { campo: "Condición", valor: "Anticipo 50% y saldo a 30 días", estado: "present" },
+          ],
           faltantes: [],
           confianza: 0.9,
           estado: "confirmada",
           revisadoPor: LUIS,
           revisadoAt: "2026-10-08T16:20:00",
-          chat: [
-            { from: "cliente", text: "Luis, queremos 24 casacas de invierno con el logo.", time: "15:02" },
-            { from: "vendedor", text: "Te quedan en S/ 30. Te pido 50% de adelanto y el resto a 30 días.", time: "15:10" },
-            { from: "cliente", text: "Ok, mañana te yapeo el adelanto.", time: "15:40" },
-            { from: "vendedor", text: "/ok ORD-014", time: "16:20" },
-          ],
         },
       }),
       order({
@@ -198,17 +211,20 @@ export function createSeed(): DemoState {
         hoja: {
           version: 1,
           origen: "whatsapp",
-          md: "Cliente: Agroindustrias Sullana Verde\nMarca: Corpotex\nÍtems: 25 polos piqué con logo bordado\nTotal: S/ 520.00\nCondición pedida: crédito a 30 días\nEntrega solicitada: 30/10/2026",
+          campos: [
+            { campo: "Cliente", valor: "Agroindustrias Sullana Verde", estado: "present" },
+            { campo: "Marca", valor: "Corpotex", estado: "present" },
+            { campo: "Producto", valor: "Polos piqué con logo bordado", estado: "present" },
+            { campo: "Cantidad", valor: "25", estado: "present" },
+            { campo: "Total", valor: "S/ 520.00", estado: "present" },
+            { campo: "Condición pedida", valor: "Crédito a 30 días", estado: "present" },
+            { campo: "Entrega solicitada", valor: "30/10/2026", estado: "present" },
+          ],
           faltantes: [],
           confianza: 0.91,
           estado: "borrador",
           revisadoPor: null,
           revisadoAt: null,
-          chat: [
-            { from: "cliente", text: "Rosa, otra vez los polos verdes con el logo, 25 unidades.", time: "10:11" },
-            { from: "vendedor", text: "Perfecto, S/ 20.80 cada uno, crédito a 30 días como siempre.", time: "10:15" },
-            { from: "vendedor", text: "/cerrar", time: "10:16" },
-          ],
         },
       }),
       order({
@@ -222,81 +238,39 @@ export function createSeed(): DemoState {
     ],
     evidences: [
       {
-        ...baseEv, id: "V-001", brand: "corpotex", kind: "voucher", receivedAt: "2026-10-02T16:40:00", orderId: "ORD-001",
+        ...baseEv, id: "V-001", ref: "V-001", brand: "corpotex", receivedAt: "2026-10-02T16:40:00", orderId: "ORD-001",
         fields: { amountCents: 30000, operationRef: "48213307", payer: "Constructora Huancabamba Norte", paidAt: "02/10/2026 16:31", channel: "Yape" },
-        declaredAmountCents: 30000,
-        chat: [
-          { from: "cliente", text: "Buenas tardes, le yapeé los 300 de las camisas.", time: "16:38" },
-          { from: "cliente", text: "Comprobante", time: "16:38", attachment: true },
-        ],
-        transcript: null, status: "aplicado", verifiedBy: ADMIN, verifiedAt: "2026-10-03T09:10:00", appliedAt: "2026-10-03T09:12:00",
+        declaredAmountCents: 30000, status: "aplicado", verifiedBy: ADMIN, verifiedAt: "2026-10-03T09:10:00", appliedAt: "2026-10-03T09:12:00",
       },
       {
-        ...baseEv, id: "V-002", brand: "unicrack", kind: "voucher", receivedAt: "2026-10-09T09:14:00", orderId: "ORD-002",
+        ...baseEv, id: "V-002", ref: "V-002", brand: "unicrack", receivedAt: "2026-10-09T09:14:00", orderId: "ORD-002",
         fields: { amountCents: 10000, operationRef: "00927714", payer: "Club Deportivo Tallán", paidAt: "09/10/2026 09:05", channel: "Transferencia BCP" },
-        declaredAmountCents: 10000,
-        chat: [
-          { from: "cliente", text: "Buen día, le hago un adelanto de 100 soles por las camisetas del club.", time: "09:12" },
-          { from: "cliente", text: "Voucher de la transferencia", time: "09:13", attachment: true },
-        ],
-        transcript: null, status: "recibido",
+        declaredAmountCents: 10000, status: "recibido",
       },
       {
-        ...baseEv, id: "V-003", brand: "unicrack", kind: "voucher", receivedAt: "2026-10-09T18:02:00", orderId: "ORD-002",
+        ...baseEv, id: "V-003", ref: "V-003", brand: "unicrack", receivedAt: "2026-10-09T18:02:00", orderId: "ORD-002",
         fields: { amountCents: 10000, operationRef: "00927714", payer: "Club Deportivo Tallán", paidAt: "09/10/2026 09:05", channel: "Transferencia BCP" },
-        declaredAmountCents: 10000,
-        chat: [
-          { from: "cliente", text: "Le reenvío el voucher de la mañana por si no le llegó.", time: "18:01" },
-          { from: "cliente", text: "Voucher de la transferencia", time: "18:02", attachment: true },
-        ],
-        transcript: null, status: "recibido",
+        declaredAmountCents: 10000, status: "recibido",
       },
       {
-        ...baseEv, id: "V-004", brand: "unicrack", kind: "voucher", receivedAt: "2026-10-09T20:47:00", orderId: null,
+        ...baseEv, id: "V-004", ref: "V-004", brand: "unicrack", receivedAt: "2026-10-09T20:47:00", orderId: null,
         fields: { amountCents: 25000, operationRef: "7731045", payer: "Marco Sernaqué", paidAt: "09/10/2026 20:45", channel: "Plin" },
-        declaredAmountCents: null,
-        chat: [
-          { from: "cliente", text: "Pago de los polos, gracias.", time: "20:46" },
-          { from: "cliente", text: "Captura de Plin", time: "20:47", attachment: true },
-        ],
-        transcript: null, status: "recibido",
+        declaredAmountCents: null, status: "recibido",
       },
       {
-        ...baseEv, id: "V-005", brand: "unicrack", kind: "voucher", receivedAt: "2026-10-10T08:21:00", orderId: "ORD-002",
+        ...baseEv, id: "V-005", ref: "V-005", brand: "unicrack", receivedAt: "2026-10-10T08:21:00", orderId: "ORD-002",
         fields: { amountCents: 18000, operationRef: "5520198", payer: "Club Deportivo Tallán", paidAt: "10/10/2026 08:19", channel: "Yape" },
-        declaredAmountCents: 20000,
-        chat: [
-          { from: "cliente", text: "Le mando 200 por Yape a cuenta del saldo.", time: "08:20" },
-          { from: "cliente", text: "Captura de Yape", time: "08:21", attachment: true },
-        ],
-        transcript: null, status: "recibido",
+        declaredAmountCents: 20000, status: "recibido",
       },
       {
-        ...baseEv, id: "V-006", brand: "corpotex", kind: "voucher", receivedAt: "2026-10-10T10:05:00", orderId: null,
+        ...baseEv, id: "V-006", ref: "V-006", brand: "corpotex", receivedAt: "2026-10-10T10:05:00", orderId: null,
         fields: { amountCents: null, operationRef: null, payer: null, paidAt: null, channel: "Yape" },
-        declaredAmountCents: null, legible: false,
-        chat: [
-          { from: "cliente", text: "Ahí le mandé.", time: "10:04" },
-          { from: "cliente", text: "Foto del comprobante (borrosa)", time: "10:05", attachment: true },
-        ],
-        transcript: null, status: "recibido",
+        declaredAmountCents: null, legible: false, status: "recibido",
       },
       {
-        ...baseEv, id: "N-001", brand: "unicrack", kind: "audio", receivedAt: "2026-10-10T11:32:00", orderId: "ORD-002",
-        fields: { amountCents: 15000, operationRef: null, payer: "Club Deportivo Tallán", paidAt: null, channel: "Transferencia" },
-        declaredAmountCents: 15000, chat: [],
-        transcript: "Hola, le habla el delegado del Club Tallán. Ya le transferí ciento cincuenta soles por lo de las camisetas, el número de operación se lo paso más tarde.",
-        status: "recibido",
-      },
-      {
-        ...baseEv, id: "V-007", brand: "unicrack", kind: "voucher", receivedAt: "2026-10-10T09:40:00", orderId: "ORD-014",
+        ...baseEv, id: "V-007", ref: "V-007", brand: "unicrack", receivedAt: "2026-10-10T09:40:00", orderId: "ORD-014",
         fields: { amountCents: 36000, operationRef: "61190427", payer: "Academia Deportiva Cuatro Vientos", paidAt: "10/10/2026 09:36", channel: "Yape" },
-        declaredAmountCents: 36000,
-        chat: [
-          { from: "cliente", text: "Luis, ahí va el 50% de las casacas.", time: "09:38" },
-          { from: "cliente", text: "Captura de Yape", time: "09:40", attachment: true },
-        ],
-        transcript: null, status: "recibido",
+        declaredAmountCents: 36000, status: "recibido",
       },
     ],
     applications: [
@@ -312,8 +286,7 @@ export function createSeed(): DemoState {
     ],
     messages: [],
     alerts: [],
-    shareLinks: [],
-    audit: [
+        audit: [
       audit("E-01", "2026-09-20T12:00:00", TALLER, "despacho", "unicrack", "Despacho registrado", { orderId: "ORD-002", amountCents: 50000 }),
       audit("E-02", "2026-10-01T15:00:00", TALLER, "despacho", "corpotex", "Despacho registrado", { orderId: "ORD-001", amountCents: 30000 }),
       audit("E-03", "2026-10-03T09:12:00", ADMIN, "aplicado", "corpotex", "Pago aplicado", { evidenceId: "V-001", orderId: "ORD-001", amountCents: 30000 }),
@@ -322,7 +295,6 @@ export function createSeed(): DemoState {
       audit("E-06", "2026-10-09T20:47:00", "n8n WF2", "recibido", "unicrack", "Comprobante sin orden", { evidenceId: "V-004", amountCents: 25000 }),
       audit("E-07", "2026-10-10T08:21:00", "n8n WF2", "recibido", "unicrack", "Comprobante recibido por WhatsApp", { evidenceId: "V-005", orderId: "ORD-002", amountCents: 18000 }),
       audit("E-08", "2026-10-10T10:05:00", "n8n WF2", "recibido", "corpotex", "Imagen ilegible en revisión", { evidenceId: "V-006" }),
-      audit("E-09", "2026-10-10T11:32:00", "n8n WF2", "recibido", "unicrack", "Nota de voz transcrita", { evidenceId: "N-001", orderId: "ORD-002", amountCents: 15000 }),
       audit("E-10", "2026-10-03T09:10:00", ADMIN, "verificado", "corpotex", "Verificado en banco", { evidenceId: "V-001", orderId: "ORD-001", amountCents: 30000 }),
       audit("E-11", "2026-10-07T12:05:00", ROSA, "credito_aprobado", "corpotex", "Crédito aprobado a 15 días", { orderId: "ORD-016", customerId: "c-huanca", amountCents: 45000 }),
       audit("E-12", "2026-10-07T12:05:00", ROSA, "produccion", "corpotex", "Liberada a producción", { orderId: "ORD-016", customerId: "c-huanca" }),
@@ -355,7 +327,7 @@ export function createSeed(): DemoState {
     const customer = state.customers.find((c) => c.id === o.customerId)!;
     const balance = orderBalance(state, o);
     const lastPaid = state.applications.filter((a) => a.orderId === o.id).map((a) => a.at.slice(0, 10)).sort().pop() ?? null;
-    for (const m of scheduleCollection(o, customer, balance > 0 ? balance : o.saleCents, "M")) {
+    for (const m of scheduleCollection(o, customer, "M")) {
       const day = m.programadoPara.slice(0, 10);
       if (balance <= 0 && lastPaid && lastPaid <= day) m.estado = "cancelado";
       else if (day <= state.cutDate) {
@@ -391,12 +363,10 @@ export function createSeed(): DemoState {
   messages.push(
     {
       id: "M-CONF-V001", customerId: "c-huanca", orderId: "ORD-001", tipo: "confirmacion_pago",
-      texto: "Hola Constructora Huancabamba Norte, registramos tu pago de S/ 300.00 para ORD-001. Gracias.",
       estado: "enviado", programadoPara: "2026-10-03T09:13:00", intentos: 1, enviadoAt: "2026-10-03T09:13:00", error: null,
     },
     {
       id: "M-RES-ORD014", customerId: "c-vientos", orderId: "ORD-014", tipo: "resumen_orden",
-      texto: "Resumen de ORD-014: 24 casacas, total S/ 720.00. Anticipo 50% (S/ 360.00) y saldo a 30 días desde el despacho.",
       estado: "enviado", programadoPara: "2026-10-08T16:21:00", intentos: 1, enviadoAt: "2026-10-08T16:21:00", error: null,
     },
   );

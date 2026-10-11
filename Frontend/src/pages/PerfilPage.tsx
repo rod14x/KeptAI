@@ -4,9 +4,8 @@ import { Stagger, itemVariants, listVariants, spring } from "../components/motio
 import { Segmented } from "../components/ui/Segmented";
 import { Link, useSearchParams } from "react-router";
 import { CalendarBlank, Check, EnvelopeSimple, Lock, Minus, FloppyDisk, Storefront } from "../components/ui/icons";
-import { getProfile, type ProfileDTO } from "../api/client";
-import { actions } from "../api/store";
-import type { Scope } from "../api/schemas";
+import { capabilities, commands, getProfile, type ProfileDTO } from "../api/client";
+import type { Scope, Settings } from "../api/model";
 import { useApi } from "../hooks/useApi";
 import { useMe } from "../context/AuthContext";
 import { SCOPE_LABEL, useScope } from "../context/ScopeContext";
@@ -32,7 +31,7 @@ export function PerfilPage() {
   const me = useMe();
   const [params, setParams] = useSearchParams();
   const tab = (TABS.find((t) => t.id === params.get("tab"))?.id ?? "datos") as TabId;
-  const { data, loading, error, reload } = useApi(() => getProfile(me.name, me.role), [me.name, me.role]);
+  const { data, loading, error, reload } = useApi(() => getProfile(me), [me.id, me.role]);
 
   return (
     <Stagger className="mx-auto flex max-w-[1100px] flex-col gap-6">
@@ -122,7 +121,11 @@ function ActivityTab({ d }: { d: ProfileDTO }) {
     <Card className="p-5 sm:p-6">
       <h2 className="text-section font-bold">Mi actividad</h2>
       <p className="mt-1 text-sm text-muted">Todo lo que hiciste en KeptAI, con fecha y hora. Este registro no se puede borrar.</p>
-      {d.activity.length === 0 ? (
+      {d.activity === null ? (
+        <div className="mt-4">
+          <EmptyState title="Actividad no disponible">Tu rol no tiene acceso a la auditoría (GET /audit-events).</EmptyState>
+        </div>
+      ) : d.activity.length === 0 ? (
         <div className="mt-4">
           <EmptyState title="Aún no registras acciones">Cuando valides, apliques o solicites algo, aparecerá aquí.</EmptyState>
         </div>
@@ -242,10 +245,24 @@ function PreferencesTab() {
 }
 
 function SettingsTab({ d }: { d: ProfileDTO }) {
+  if (!d.settings || !capabilities.settings)
+    return (
+      <Card className="p-5 sm:p-6">
+        <h2 className="text-section font-bold">Supuestos de caja y crédito</h2>
+        <p className="mt-2 flex items-start gap-2 text-sm text-muted">
+          <Lock size={16} className="mt-0.5 shrink-0" />
+          Los supuestos de escenario (factor de cobro, plazo por defecto) y el precio de transferencia viven en el backend. El contrato de la API todavía no
+          tiene un endpoint para editarlos desde el panel; gerencia ve el factor aplicado en la proyección de caja.
+        </p>
+      </Card>
+    );
+  return <SettingsForm d={d} s={d.settings} />;
+}
+
+function SettingsForm({ d, s }: { d: ProfileDTO; s: Settings }) {
   const me = useMe();
   const toast = useToast();
   const editable = can(me.role, "configurar");
-  const s = d.settings;
   const [cobro, setCobro] = useState(String(Math.round(s.factorCobro * 100)));
   const [plazo, setPlazo] = useState(String(s.plazoDefecto));
 
@@ -254,13 +271,13 @@ function SettingsTab({ d }: { d: ProfileDTO }) {
     setPlazo(String(s.plazoDefecto));
   }, [s.factorCobro, s.plazoDefecto]);
 
-  const save = () => {
+  const save = async () => {
     const n = Number(cobro);
     if (!Number.isFinite(n)) {
       toast(false, "El factor de cobro debe ser un número.");
       return;
     }
-    const r = actions.updateSettings({ factorCobro: n / 100, plazoDefecto: Number(plazo) }, me);
+    const r = await commands.updateSettings({ factorCobro: n / 100, plazoDefecto: Number(plazo) }, me);
     toast(r.ok, r.message);
   };
 
@@ -346,8 +363,8 @@ function TransferCard({ d, editable }: { d: ProfileDTO; editable: boolean }) {
             key={o.id}
             o={o}
             editable={editable}
-            onSave={(cents) => {
-              const r = actions.setInternalCharge(o.id, cents, me);
+            onSave={async (cents) => {
+              const r = await commands.setInternalCharge(o.id, cents, me);
               toast(r.ok, r.message);
             }}
           />
@@ -365,7 +382,7 @@ function TransferRow({ o, editable, onSave }: { o: ProfileDTO["ownOrders"][numbe
   return (
     <li className="grid grid-cols-2 items-center gap-3 border-t border-line-soft py-3 first:border-t-0 sm:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))_auto]">
       <span className="col-span-2 min-w-0 sm:col-span-1">
-        <span className="block font-bold">{o.id}</span>
+        <span className="block font-bold">{o.ref}</span>
         <span className="block truncate text-[13px] text-muted">{o.customer}</span>
       </span>
       <span className="tabular text-[13px]">

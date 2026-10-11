@@ -10,8 +10,12 @@ export function Card({ className, ...rest }: HTMLMotionProps<"div">) {
   return <motion.div variants={itemVariants} {...rest} className={cx("rounded-[var(--radius-card)] bg-card shadow-[var(--shadow-card)] ring-1 ring-line/70", className)} />;
 }
 
-export function Money({ cents, className, signed, short }: { cents: number; className?: string; signed?: boolean; short?: boolean }) {
-  return <span className={cx("tabular whitespace-nowrap", className)}>{formatMoney(cents, { signed, short })}</span>;
+export function Money({ cents, className, signed, short }: { cents: number | null; className?: string; signed?: boolean; short?: boolean }) {
+  return (
+    <span className={cx("tabular whitespace-nowrap", className)} title={cents == null ? "Sin dato: la fuente aún no lo provee o el costeo está incompleto" : undefined}>
+      {formatMoney(cents, { signed, short })}
+    </span>
+  );
 }
 
 export function Skeleton({ className }: { className?: string }) {

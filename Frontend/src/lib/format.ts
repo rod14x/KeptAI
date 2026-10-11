@@ -1,8 +1,9 @@
 const money = new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN", minimumFractionDigits: 2 });
 const moneyShort = new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN", maximumFractionDigits: 0 });
 
-/** Céntimos enteros a "S/ 1,234.00". El signo va delante del símbolo. */
-export function formatMoney(cents: number, opts: { short?: boolean; signed?: boolean } = {}) {
+/** Céntimos enteros a "S/ 1,234.00". El signo va delante del símbolo. null = sin dato ("—"), nunca cero. */
+export function formatMoney(cents: number | null, opts: { short?: boolean; signed?: boolean } = {}) {
+  if (cents == null) return "—";
   const fmt = opts.short ? moneyShort : money;
   const abs = fmt.format(Math.abs(cents) / 100);
   if (cents < 0) return `-${abs}`;

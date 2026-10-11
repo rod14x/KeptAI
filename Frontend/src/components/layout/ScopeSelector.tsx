@@ -1,5 +1,5 @@
 import { Lock } from "../ui/icons";
-import type { Scope } from "../../api/schemas";
+import type { Scope } from "../../api/model";
 import { SCOPE_LABEL, useScope } from "../../context/ScopeContext";
 import { Segmented } from "../ui/Segmented";
 import { cx } from "../../lib/format";

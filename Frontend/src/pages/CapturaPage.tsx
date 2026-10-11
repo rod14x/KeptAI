@@ -1,11 +1,11 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { motion } from "motion/react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Image, Info, Receipt, UploadSimple, NotePencil } from "../components/ui/icons";
-import { getState } from "../api/store";
-import { actions } from "../api/store";
-import { isConfirmed, orderBalance } from "../api/domain";
-import type { Brand } from "../api/schemas";
+import { capabilities, commands, getCaptureOptions } from "../api/client";
+import type { Brand } from "../api/model";
+import { useApi } from "../hooks/useApi";
+import { IS_MOCK } from "../config";
 import { useMe } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { Stagger, itemVariants } from "../components/motion/primitives";
@@ -14,10 +14,12 @@ import { Segmented } from "../components/ui/Segmented";
 import { Card, DemoBadge } from "../components/ui/States";
 import { Button } from "../components/ui/Button";
 import { inputClass } from "../components/ui/Modal";
-import { cx, formatMoney } from "../lib/format";
+import { cx } from "../lib/format";
 
 // Respaldo de la entrada por WhatsApp (D-005): la extracción automática corre en n8n.
-// Aquí una persona registra los datos a mano; quedan con origen "manual" y pasan por la misma revisión.
+// - mock: una persona tipea los datos del voucher o del pedido (origen "manual").
+// - api: se sube la imagen (POST /evidences/files) y se pide la extracción; el borrador se revisa antes de confirmar.
+//   El alta manual de pedidos no existe en el contrato (createTextEvidence está fuera del MVP).
 
 type Tab = "comprobante" | "orden";
 const CHANNELS = ["Yape", "Plin", "Transferencia BCP", "Transferencia BBVA", "Transferencia Interbank", "Depósito en cuenta"];
@@ -36,14 +38,16 @@ function Field({ id, label, children, hint }: { id: string; label: string; child
 
 export function CapturaPage() {
   const [params, setParams] = useSearchParams();
-  const tab: Tab = params.get("tipo") === "orden" ? "orden" : "comprobante";
+  const tab: Tab = params.get("tipo") === "orden" && capabilities.manualOrderCapture ? "orden" : "comprobante";
   return (
     <Stagger className="mx-auto flex max-w-[860px] flex-col gap-6">
-      <PageHeader title="Carga manual" subtitle="Respaldo cuando WhatsApp no trae el dato. Lo que cargues aquí pasa por la misma revisión que lo que lee la IA." actions={<DemoBadge />} />
+      <PageHeader title="Carga manual" subtitle="Respaldo cuando WhatsApp no trae el dato. Lo que cargues aquí pasa por la misma revisión que lo que lee la IA." actions={IS_MOCK ? <DemoBadge /> : undefined} />
       <motion.p variants={itemVariants} className="flex items-start gap-2 rounded-2xl bg-info-tint px-4 py-3 text-[13px] text-info">
         <Info size={18} weight="bold" className="mt-px shrink-0" />
-        En la operación normal, el vendedor escribe /cerrar y n8n arma la hoja de resumen; el cliente envía su voucher y n8n lo lee. Esta pantalla no usa IA: tú escribes los datos.
+        En la operación normal, el vendedor escribe /cerrar y n8n arma la hoja de resumen; el cliente envía su voucher y n8n lo lee.{" "}
+        {capabilities.voucherNeedsFile ? "Aquí subes la imagen del voucher y la IA propone los datos para revisar." : "Esta pantalla no usa IA: tú escribes los datos."}
       </motion.p>
+      {capabilities.manualOrderCapture && (
       <motion.div variants={itemVariants}>
         <Segmented
           kind="tab"
@@ -56,6 +60,7 @@ export function CapturaPage() {
           ]}
         />
       </motion.div>
+      )}
       <Stagger key={tab}>{tab === "comprobante" ? <VoucherForm /> : <OrderForm />}</Stagger>
     </Stagger>
   );
@@ -79,28 +84,38 @@ function VoucherForm() {
   const [paidAt, setPaidAt] = useState("");
   const [channel, setChannel] = useState(CHANNELS[0]);
   const [preview, setPreview] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const needsFile = capabilities.voucherNeedsFile;
 
-  const orders = useMemo(() => {
-    const s = getState();
-    return s.orders
-      .filter((o) => o.brand === brand && isConfirmed(o) && orderBalance(s, o) > 0)
-      .map((o) => ({ id: o.id, label: `${o.id} · ${s.customers.find((c) => c.id === o.customerId)?.name} · saldo ${formatMoney(orderBalance(s, o))}` }));
-  }, [brand]);
+  const orders = useApi(() => getCaptureOptions(brand), [brand]).data?.orders ?? [];
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     const n = Number(amount.replace(",", "."));
-    const r = actions.captureVoucher(
-      { brand, orderId: orderId || null, amountCents: Number.isFinite(n) ? Math.round(n * 100) : 0, operationRef: ref, payer, paidAt: paidAt ? paidAt.split("T").map((p, i) => (i === 0 ? p.split("-").reverse().join("/") : p)).join(" ") : "", channel },
+    setBusy(true);
+    const r = await commands.captureVoucher(
+      {
+        brand,
+        orderId: orderId || null,
+        amountCents: Number.isFinite(n) ? Math.round(n * 100) : 0,
+        operationRef: ref,
+        payer,
+        paidAt: paidAt ? paidAt.split("T").map((p, i) => (i === 0 ? p.split("-").reverse().join("/") : p)).join(" ") : "",
+        channel,
+        file,
+      },
       me,
     );
+    setBusy(false);
     if (!r.ok) {
       setErr(r.message);
       return;
     }
     toast(true, r.message);
-    navigate(`/conciliacion/${"id" in r ? r.id : ""}`);
+    // En la API el resultado es una evidencia en extracción, todavía no un pago: se vuelve a la cola.
+    navigate(needsFile ? "/conciliacion" : `/conciliacion/${r.id ?? ""}`);
   };
 
   return (
@@ -110,6 +125,8 @@ function VoucherForm() {
           <Receipt size={20} className="text-violet" /> Comprobante de pago
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
+          {!needsFile && (
+          <>
           <Field id="v-brand" label="Marca">
             <select id="v-brand" value={brand} disabled={locked} onChange={(e) => setBrand(e.target.value as Brand)} className={inputClass}>
               {brands.map((b) => (
@@ -148,7 +165,13 @@ function VoucherForm() {
           <Field id="v-paid" label="Fecha y hora del pago">
             <input id="v-paid" type="datetime-local" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} className={cx(inputClass, "tabular")} />
           </Field>
-          <Field id="v-file" label="Imagen del voucher (opcional)" hint="Solo vista previa: al integrar se guarda en Supabase Storage privado.">
+          </>
+          )}
+          <Field
+            id="v-file"
+            label={needsFile ? "Imagen del voucher" : "Imagen del voucher (opcional)"}
+            hint={needsFile ? "Se guarda en Supabase Storage privado y la IA extrae monto, operación y remitente." : "Solo vista previa en la demo."}
+          >
             <label
               htmlFor="v-file"
               className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-block)] border border-dashed border-line bg-panel text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-violet sm:h-11"
@@ -160,7 +183,8 @@ function VoucherForm() {
                 accept="image/*"
                 className="sr-only"
                 onChange={(e) => {
-                  const f = e.target.files?.[0];
+                  const f = e.target.files?.[0] ?? null;
+                  setFile(f);
                   setPreview(f ? URL.createObjectURL(f) : null);
                 }}
               />
@@ -173,8 +197,8 @@ function VoucherForm() {
             {err}
           </p>
         )}
-        <Button type="submit" size="lg" icon={<UploadSimple size={18} weight="bold" />} className="w-full sm:w-auto sm:self-end">
-          Registrar como recibido
+        <Button type="submit" size="lg" loading={busy} disabled={needsFile && !file} icon={<UploadSimple size={18} weight="bold" />} className="w-full sm:w-auto sm:self-end">
+          {needsFile ? "Subir y extraer datos" : "Registrar como recibido"}
         </Button>
       </form>
     </Card>
@@ -186,28 +210,25 @@ function OrderForm() {
   const toast = useToast();
   const navigate = useNavigate();
   const { brands } = useBrands();
-  const customers = useMemo(() => getState().customers.filter((c) => brands.includes(c.brand)), [brands]);
-  const [customerId, setCustomerId] = useState(customers[0]?.id ?? "");
+  const customers = useApi(() => getCaptureOptions(brands[0]), [brands[0]]).data?.customers ?? [];
+  const [picked, setCustomerId] = useState("");
+  const customerId = picked || customers[0]?.id || "";
   const [description, setDescription] = useState("");
   const [qty, setQty] = useState("");
   const [total, setTotal] = useState("");
   const [entrega, setEntrega] = useState("");
-  const [chat, setChat] = useState("");
   const [err, setErr] = useState<string | null>(null);
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     const t = Number(total.replace(",", "."));
-    const r = actions.captureOrder(
-      { customerId, description, cantidad: Number(qty) || 0, totalCents: Number.isFinite(t) ? Math.round(t * 100) : 0, entrega: entrega || null, chatText: chat },
-      me,
-    );
+    const r = await commands.captureOrder({ customerId, description, cantidad: Number(qty) || 0, totalCents: Number.isFinite(t) ? Math.round(t * 100) : 0, entrega: entrega || null }, me);
     if (!r.ok) {
       setErr(r.message);
       return;
     }
     toast(true, r.message);
-    navigate(`/pedidos/${"id" in r ? r.id : ""}`);
+    navigate(`/pedidos/${r.id ?? ""}`);
   };
 
   return (
@@ -240,18 +261,6 @@ function OrderForm() {
           <Field id="o-total" label="Total (S/)">
             <input id="o-total" inputMode="decimal" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="0.00" className={cx(inputClass, "tabular")} />
           </Field>
-          <div className="sm:col-span-2">
-            <Field id="o-chat" label="Chat pegado (opcional)" hint="Se guarda como evidencia de origen de la hoja de resumen.">
-              <textarea
-                id="o-chat"
-                rows={5}
-                value={chat}
-                onChange={(e) => setChat(e.target.value)}
-                placeholder="Pega aquí la conversación de WhatsApp"
-                className="rounded-[var(--radius-block)] bg-panel px-3.5 py-2.5 text-sm outline-none ring-1 ring-line placeholder:text-faint focus:bg-card focus:ring-2 focus:ring-violet"
-              />
-            </Field>
-          </div>
         </div>
         <p className="text-xs text-muted">Se crea como borrador por confirmar. El vendedor define la condición de pago; los costos se registran después.</p>
         {err && (

@@ -1,7 +1,7 @@
-import type { Role } from "../api/schemas";
+import type { Role } from "../api/model";
 
-// Matriz de permisos de la demo, según los actores de PROP-FLUJO-DER-001.
-// El servidor es quien autoriza; la UI oculta o deshabilita y explica por qué.
+// Matriz de permisos alineada con los "Roles propuestos" de Backend/docs/contrato-api.md.
+// Spring es quien autoriza (y RLS V4 aísla por organización); la UI solo oculta o explica.
 
 export type Permission =
   | "ver_comercial"
@@ -12,30 +12,40 @@ export type Permission =
   | "aplicar"
   | "editar_evidencia"
   | "descartar"
+  | "ver_pagos"
+  | "ver_cobranza"
   | "gestionar_cobranza"
   | "registrar_despacho"
-  | "compartir_estado"
+  | "ver_estado_cuenta"
   | "ver_resultado"
   | "exportar"
+  | "ver_auditoria"
   | "configurar"
   | "cambiar_vista";
 
 const MATRIX: Record<Role, Permission[]> = {
-  vendedor: ["ver_comercial", "confirmar_orden", "aprobar_credito", "captura"],
+  // confirmDraft, submitCreditDecision (solo vendedor), uploadEvidenceFile, receivables, alerts, statement.
+  vendedor: ["ver_comercial", "confirmar_orden", "aprobar_credito", "captura", "ver_cobranza", "ver_estado_cuenta"],
+  // payments/verifications/applications, drafts, dispatch, alerts, audit, statement.
   administracion: [
     "ver_comercial",
+    "confirmar_orden",
     "captura",
     "verificar",
     "aplicar",
     "editar_evidencia",
     "descartar",
+    "ver_pagos",
+    "ver_cobranza",
     "gestionar_cobranza",
-    "compartir_estado",
-    "ver_resultado",
-    "exportar",
+    "registrar_despacho",
+    "ver_estado_cuenta",
+    "ver_auditoria",
     "cambiar_vista",
   ],
-  gerencia: ["ver_comercial", "compartir_estado", "ver_resultado", "exportar", "configurar", "cambiar_vista"],
+  // results/*, reports/orders.csv, payments (lectura), receivables, statement, audit.
+  gerencia: ["ver_comercial", "ver_pagos", "ver_cobranza", "ver_estado_cuenta", "ver_resultado", "exportar", "ver_auditoria", "configurar", "cambiar_vista"],
+  // listOrders/getOrder y registerDispatch. Sin acceso financiero a pagos ni vouchers.
   jefe_taller: ["registrar_despacho", "cambiar_vista"],
 };
 
@@ -49,6 +59,9 @@ export function rolesWith(p: Permission) {
   return ROLES.filter((r) => can(r, p)).map((r) => ROLE_LABEL[r]);
 }
 
+/** usuario.rol del contrato ↔ rol de la vista. */
+export const ROLE_FROM_API = { VENDEDOR: "vendedor", ADMIN: "administracion", GERENTE: "gerencia", JEFE_TALLER: "jefe_taller" } as const satisfies Record<string, Role>;
+
 export const ROLE_LABEL: Record<Role, string> = {
   vendedor: "Vendedor",
   administracion: "Administración",
@@ -58,26 +71,29 @@ export const ROLE_LABEL: Record<Role, string> = {
 
 export const ROLE_SUMMARY: Record<Role, string> = {
   vendedor: "Negocia por WhatsApp, revisa la hoja de resumen, aprueba el crédito de sus clientes y confirma la orden.",
-  administracion: "Verifica los pagos en su banca, los aplica, atiende la mora, resuelve pagos dudosos y comparte estados de cuenta.",
-  gerencia: "Ve margen real, flujo de caja y reportes, exporta a contabilidad y ajusta los supuestos.",
-  jefe_taller: "Recibe solo órdenes liberadas y registra el despacho, que fija el vencimiento.",
+  administracion: "Verifica los pagos en su banca, los aplica, revisa borradores, atiende la cobranza y registra despachos.",
+  gerencia: "Consulta margen, caja y reportes, y exporta a contabilidad. No escribe datos de negocio.",
+  jefe_taller: "Ve las órdenes liberadas y registra el despacho, que fija el vencimiento. Sin acceso a pagos.",
 };
 
 export const PERMISSION_LABEL: Record<Permission, string> = {
-  ver_comercial: "Ver pedidos, clientes y caja",
-  confirmar_orden: "Confirmar órdenes (/ok)",
-  aprobar_credito: "Aprobar crédito de sus clientes",
-  captura: "Cargar comprobantes y chats a mano",
+  ver_comercial: "Ver pedidos y clientes",
+  confirmar_orden: "Confirmar borradores de orden",
+  aprobar_credito: "Decidir el crédito de sus clientes",
+  captura: "Subir comprobantes",
   verificar: "Verificar pagos en el banco",
   aplicar: "Aplicar pagos a órdenes",
   editar_evidencia: "Corregir datos leídos por la IA",
-  descartar: "Descartar comprobantes",
-  gestionar_cobranza: "Resolver alertas y reenviar mensajes",
+  descartar: "Descartar borradores",
+  ver_pagos: "Ver pagos y comprobantes",
+  ver_cobranza: "Ver cartera y alertas",
+  gestionar_cobranza: "Gestionar alertas de cobranza",
   registrar_despacho: "Registrar despacho",
-  compartir_estado: "Compartir estado de cuenta",
-  ver_resultado: "Ver margen y resultado",
-  exportar: "Exportar CSV y reportes",
-  configurar: "Editar supuestos de caja",
+  ver_estado_cuenta: "Ver estado de cuenta del cliente",
+  ver_resultado: "Ver margen, caja y resultado",
+  exportar: "Exportar CSV",
+  ver_auditoria: "Ver auditoría",
+  configurar: "Editar supuestos (demo)",
   cambiar_vista: "Cambiar entre marcas y consolidado",
 };
 

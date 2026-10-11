@@ -8,13 +8,10 @@ import {
   ChatCircleDots,
   ChatCircleText,
   CheckCircle,
-  Copy,
   HandCoins,
-  LinkSimple,
   Package,
-  PaperPlaneTilt,
   Phone,
-  ShareNetwork,
+  Receipt,
   Truck,
   Wallet,
   WarningCircle,
@@ -22,10 +19,8 @@ import {
   IdentificationCard,
 } from "../components/ui/icons";
 import { getCustomer, type CustomerDetailDTO, type TimelineItem } from "../api/client";
-import { actions } from "../api/store";
 import { useApi } from "../hooks/useApi";
 import { useMe } from "../context/AuthContext";
-import { useToast } from "../context/ToastContext";
 import { can } from "../lib/permissions";
 import { MotionLink, Stagger, itemVariants, listVariants, press } from "../components/motion/primitives";
 import { Segmented } from "../components/ui/Segmented";
@@ -33,7 +28,6 @@ import { Meter } from "../components/ui/Meter";
 import { Card, DemoBadge, EmptyState, ErrorState, Money, Skeleton } from "../components/ui/States";
 import { Chip, CreditChip, FinanceChip, OrderStateChip, type Tone } from "../components/ui/Chip";
 import { Avatar } from "../components/ui/Avatar";
-import { Button } from "../components/ui/Button";
 import { cx, formatDate, formatDateTime, formatMoney } from "../lib/format";
 
 const TIPO_LABEL = { colegio: "Colegio", empresa: "Empresa", persona: "Persona" } as const;
@@ -52,7 +46,7 @@ export function ClienteDetailPage() {
         <Skeleton className="h-[420px] rounded-[var(--radius-card)]" />
       </div>
     );
-  if (data === null || (me.role === "vendedor" && me.brand !== data.customer.brand))
+  if (data === null || (me.role === "vendedor" && me.brand && data.customer.brand && me.brand !== data.customer.brand))
     return (
       <div className="mx-auto max-w-md py-12">
         <EmptyState title="Cliente no disponible">
@@ -90,25 +84,29 @@ function Detail({ d }: { d: CustomerDetailDTO }) {
               <CreditChip status={snap.status} />
             </div>
             <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted">
-              <span>
-                {c.brand === "corpotex" ? "Corpotex" : "Unicrack"} · {TIPO_LABEL[c.tipo]}
-              </span>
+              {(c.brand || c.tipo) && <span>{[c.brand && (c.brand === "corpotex" ? "Corpotex" : "Unicrack"), c.tipo && TIPO_LABEL[c.tipo]].filter(Boolean).join(" · ")}</span>}
               <span className="inline-flex items-center gap-1">
                 <IdentificationCard size={14} /> RUC/DNI {c.rucDni ?? "por confirmar"}
               </span>
-              <span className="inline-flex items-center gap-1">
-                <Avatar name={d.seller ?? "?"} size="sm" /> {d.seller}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Phone size={14} /> {c.contactoWhatsapp}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <CalendarBlank size={14} /> Cliente desde {formatDate(c.since)}
-              </span>
+              {d.seller && (
+                <span className="inline-flex items-center gap-1">
+                  <Avatar name={d.seller} size="sm" /> {d.seller}
+                </span>
+              )}
+              {c.contactoWhatsapp && (
+                <span className="inline-flex items-center gap-1">
+                  <Phone size={14} /> {c.contactoWhatsapp}
+                </span>
+              )}
+              {c.since && (
+                <span className="inline-flex items-center gap-1">
+                  <CalendarBlank size={14} /> Cliente desde {formatDate(c.since)}
+                </span>
+              )}
             </p>
           </div>
         </div>
-        <DemoBadge />
+        {d.orders.some((o) => o.demo) && <DemoBadge />}
       </Card>
 
       {snap.aviso && (
@@ -121,12 +119,22 @@ function Detail({ d }: { d: CustomerDetailDTO }) {
       )}
 
       <motion.section variants={listVariants} aria-label="Crédito" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <CreditStat label="Línea de referencia" value={<Money cents={c.creditLimitCents} />} hint="Plazo por orden: 15 a 30 días desde el despacho" />
+        <CreditStat
+          label="Línea de referencia"
+          value={<Money cents={c.creditLimitCents} />}
+          hint={c.creditLimitCents == null ? "Sin línea registrada en la API" : "Plazo por orden: 15 a 30 días desde el despacho"}
+        />
         <CreditStat
           label="Saldo abierto"
           value={<Money cents={snap.usedCents} />}
-          hint={snap.usedCents > c.creditLimitCents ? `Supera la línea en ${formatMoney(snap.usedCents - c.creditLimitCents)}` : `Disponible ${formatMoney(snap.availableCents)}`}
-          bar={c.creditLimitCents ? snap.usedCents / c.creditLimitCents : 0}
+          hint={
+            c.creditLimitCents == null
+              ? "Suma de saldos por cobrar"
+              : snap.usedCents > c.creditLimitCents
+                ? `Supera la línea en ${formatMoney(snap.usedCents - c.creditLimitCents)}`
+                : `Disponible ${formatMoney(snap.availableCents)}`
+          }
+          bar={c.creditLimitCents ? snap.usedCents / c.creditLimitCents : undefined}
         />
         <CreditStat label="Vencido" value={<Money cents={snap.overdueCents} />} hint={snap.overdueCents > 0 ? `Hasta ${snap.maxOverdueDays} días de atraso` : "Sin atrasos"} bad={snap.overdueCents > 0} />
         <CreditStat
@@ -144,7 +152,7 @@ function Detail({ d }: { d: CustomerDetailDTO }) {
         <div className="flex min-w-0 flex-col gap-6">
           <DecisionsCard d={d} />
           <PaymentsCard d={d} />
-          <ShareCard d={d} />
+          <StatementCard d={d} />
         </div>
       </div>
     </Stagger>
@@ -186,7 +194,7 @@ function OrdersCard({ d }: { d: CustomerDetailDTO }) {
               <Link to={`/pedidos/${o.id}`} className="-mx-2 flex flex-col gap-2 rounded-xl px-2 py-3.5 hover:bg-panel">
                 <span className="flex w-full items-center gap-3">
                   <span className="min-w-0 flex-1">
-                    <span className="block font-bold">{o.id}</span>
+                    <span className="block font-bold">{o.ref}</span>
                     <span className="block truncate text-[13px] text-muted">{o.description}</span>
                   </span>
                   <span className="tabular shrink-0 text-right text-sm">
@@ -234,7 +242,7 @@ function DecisionsCard({ d }: { d: CustomerDetailDTO }) {
               <div className="flex items-start justify-between gap-3">
                 <p className="text-sm font-bold">
                   <Link to={`/pedidos/${r.orderId}`} className="hover:underline">
-                    {r.orderId}
+                    {r.orderRef}
                   </Link>{" "}
                   · {r.tipo}
                   {r.plazoDias ? ` a ${r.plazoDias} días` : ""}
@@ -282,13 +290,16 @@ function PaymentsCard({ d }: { d: CustomerDetailDTO }) {
               <span className="min-w-0">
                 <span className="tabular block font-semibold">{formatDateTime(p.at)}</span>
                 <span className="block truncate text-muted">
-                  {p.orderId} · {p.channel} ·{" "}
+                  {[p.orderRef, p.channel].filter(Boolean).join(" · ")}
                   {p.evidence ? (
-                    <Link to={`/conciliacion/${p.evidence}`} className="font-semibold text-violet-ink hover:underline">
-                      {p.evidence}
-                    </Link>
+                    <>
+                      {" · "}
+                      <Link to={`/conciliacion/${p.evidence}`} className="font-semibold text-violet-ink hover:underline">
+                        {p.evidence}
+                      </Link>
+                    </>
                   ) : (
-                    "histórico"
+                    p.by && " · histórico"
                   )}
                 </span>
               </span>
@@ -301,110 +312,33 @@ function PaymentsCard({ d }: { d: CustomerDetailDTO }) {
   );
 }
 
-function ShareCard({ d }: { d: CustomerDetailDTO }) {
+function StatementCard({ d }: { d: CustomerDetailDTO }) {
   const me = useMe();
-  const toast = useToast();
-  const allowed = can(me.role, "compartir_estado");
-  const url = (token: string) => `${window.location.origin}/estado-cuenta/${token}`;
-  const active = d.links.find((l) => l.state === "activo");
-
-  const copy = async (token: string) => {
-    try {
-      await navigator.clipboard.writeText(url(token));
-      toast(true, "Enlace copiado.");
-    } catch {
-      toast(false, "No se pudo copiar. Selecciona el enlace y cópialo a mano.");
-    }
-  };
-
+  const lastSent = d.messages?.find((m) => m.tipo === "estado_cuenta");
   return (
     <Card className="p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-section font-bold">Estado de cuenta</h2>
-          <p className="mt-0.5 text-[13px] text-muted">Enlace de solo lectura, vence en 7 días. Sin costos, márgenes ni comprobantes.</p>
+          <p className="mt-0.5 text-[13px] text-muted">Vista para el cliente: pedidos, pagos y saldo. Sin costos, márgenes ni comprobantes.</p>
         </div>
-        <ShareNetwork size={22} className="shrink-0 text-faint" />
+        <Receipt size={22} className="shrink-0 text-faint" />
       </div>
-      {allowed ? (
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant="secondary"
-            icon={<LinkSimple size={16} weight="bold" />}
-            onClick={() => {
-              const r = actions.createShareLink(d.customer.id, me);
-              toast(r.ok, r.message);
-            }}
-          >
-            Generar enlace
-          </Button>
-          {active && (
-            <Button
-              size="sm"
-              icon={<PaperPlaneTilt size={16} weight="bold" />}
-              onClick={() => {
-                const r = actions.sendStatement(d.customer.id, active.token, me);
-                toast(r.ok, r.message);
-              }}
-            >
-              Enviar por WhatsApp
-            </Button>
-          )}
-        </div>
+      {can(me.role, "ver_estado_cuenta") ? (
+        <Link
+          to={`/clientes/${d.customer.id}/estado-cuenta`}
+          className="mt-4 inline-flex h-10 items-center gap-2 rounded-full bg-card px-4 text-[13px] font-semibold ring-1 ring-line transition-colors hover:bg-panel"
+        >
+          <ArrowSquareOut size={14} weight="bold" /> Abrir estado de cuenta
+        </Link>
       ) : (
-        <p className="mt-3 text-[13px] text-muted">Administración o gerencia comparten el estado de cuenta.</p>
+        <p className="mt-3 text-[13px] text-muted">Tu rol no tiene acceso al estado de cuenta.</p>
       )}
-      {d.links.length > 0 && (
-        <ul className="mt-4 flex flex-col gap-2">
-          {d.links.map((l) => (
-            <li key={l.token} className="rounded-[var(--radius-block)] bg-panel p-3 ring-1 ring-line">
-              <div className="flex items-center justify-between gap-2">
-                <span className="tabular truncate text-xs text-muted">…/estado-cuenta/{l.token.slice(0, 10)}…</span>
-                <Chip tone={l.state === "activo" ? "ok" : "neutral"} className="px-2 py-0.5 text-[11px]">
-                  {l.state === "activo" ? "Activo" : l.state === "vencido" ? "Vencido" : "Revocado"}
-                </Chip>
-              </div>
-              <p className="tabular mt-1 text-xs text-muted">
-                Creado por {l.createdBy} el {formatDateTime(l.createdAt)}. {l.revokedAt ? `Revocado el ${formatDateTime(l.revokedAt)}.` : `Vence el ${formatDate(l.expiresAt)}.`}
-              </p>
-              {l.state === "activo" && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Button size="sm" variant="secondary" icon={<Copy size={14} weight="bold" />} onClick={() => void copy(l.token)}>
-                    Copiar
-                  </Button>
-                  <a
-                    href={`/estado-cuenta/${l.token}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex h-10 items-center gap-2 rounded-full bg-card px-4 text-[13px] font-semibold ring-1 ring-line transition-colors hover:bg-panel"
-                  >
-                    <ArrowSquareOut size={14} weight="bold" /> Ver como cliente
-                  </a>
-                  {allowed && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        const r = actions.revokeShareLink(l.token, me);
-                        toast(r.ok, r.message);
-                      }}
-                    >
-                      Revocar
-                    </Button>
-                  )}
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-      {d.messages.some((m) => m.tipo === "estado_cuenta") && (
-        <p className="mt-3 text-xs text-muted">
-          Último envío por WhatsApp:{" "}
-          {formatDateTime(d.messages.find((m) => m.tipo === "estado_cuenta")!.enviadoAt ?? d.messages.find((m) => m.tipo === "estado_cuenta")!.programadoPara)}
-        </p>
-      )}
+      <p className="mt-3 text-xs text-muted">
+        {lastSent
+          ? `Último envío por WhatsApp: ${formatDateTime(lastSent.enviadoAt ?? lastSent.programadoPara)}.`
+          : "El envío al cliente por WhatsApp lo hace n8n (WF3) con el contacto de prueba."}
+      </p>
     </Card>
   );
 }
@@ -416,7 +350,6 @@ const TL_ICON: Record<TimelineItem["kind"], ReactNode> = {
   pago: <Wallet size={16} weight="bold" />,
   credito: <HandCoins size={16} weight="bold" />,
   mensaje: <ChatCircleText size={16} weight="bold" />,
-  enlace: <ShareNetwork size={16} weight="bold" />,
 };
 const TL_TONE: Record<Tone, string> = {
   ok: "bg-ok-tint text-ok",

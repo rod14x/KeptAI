@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import type { Scope } from "../api/schemas";
+import type { Scope } from "../api/model";
 import { useAuth } from "./AuthContext";
 import { readPrefs } from "../lib/preferences";
 

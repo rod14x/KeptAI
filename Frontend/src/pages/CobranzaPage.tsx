@@ -2,8 +2,8 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { Link, useSearchParams } from "react-router";
 import { ArrowClockwise, Bell, ChatCircleText, CheckCircle, Info } from "../components/ui/icons";
-import { getCobranza, MESSAGE_LABEL, type AlertRow, type MessageRow, type ReceivableRow } from "../api/client";
-import { actions } from "../api/store";
+import { capabilities, commands, getCobranza, MESSAGE_LABEL, type AlertRow, type MessageRow, type ReceivableRow } from "../api/client";
+import { IS_MOCK } from "../config";
 import { useApi } from "../hooks/useApi";
 import { SCOPE_LABEL, useScope } from "../context/ScopeContext";
 import { useMe } from "../context/AuthContext";
@@ -23,21 +23,22 @@ type View = "cartera" | "alertas" | "mensajes";
 export function CobranzaPage() {
   const { scope } = useScope();
   const [params, setParams] = useSearchParams();
-  const view = (["cartera", "alertas", "mensajes"].includes(params.get("vista") ?? "") ? params.get("vista") : "cartera") as View;
+  const views: View[] = capabilities.messagesLog ? ["cartera", "alertas", "mensajes"] : ["cartera", "alertas"];
+  const view = (views.includes(params.get("vista") as View) ? params.get("vista") : "cartera") as View;
   const { data, loading, error, reload } = useApi(() => getCobranza(scope), [scope]);
   const openAlerts = data?.alerts.filter((a) => a.estado === "abierta").length ?? 0;
-  const failed = data?.messages.filter((m) => m.estado === "error").length ?? 0;
+  const failed = data?.messages?.filter((m) => m.estado === "error").length ?? 0;
 
   return (
     <Stagger className="mx-auto flex max-w-[1200px] flex-col gap-6">
       <PageHeader
         title="Cobranza"
         subtitle={<>Cartera por vencimiento, alertas internas y mensajes de WhatsApp al cliente. Vista {SCOPE_LABEL[scope]}.</>}
-        actions={<DemoBadge />}
+        actions={IS_MOCK ? <DemoBadge /> : undefined}
       />
       <motion.p variants={itemVariants} className="flex items-start gap-2 rounded-2xl bg-info-tint px-4 py-3 text-[13px] text-info">
         <Info size={18} weight="bold" className="mt-px shrink-0" />
-        WhatsApp en modo prueba (D-005): los mensajes salen por n8n WF3 y Evolution API solo al contacto de prueba. En esta demo el envío se simula.
+        WhatsApp en modo prueba (D-005): los mensajes salen por n8n WF3 y Evolution API solo al contacto de prueba.{IS_MOCK ? " En esta demo el envío se simula." : " KeptAI no guarda el texto de los mensajes."}
       </motion.p>
       <motion.div variants={itemVariants}>
         <Segmented
@@ -48,7 +49,7 @@ export function CobranzaPage() {
           options={[
             { value: "cartera", label: "Por cobrar" },
             { value: "alertas", label: "Alertas", count: openAlerts },
-            { value: "mensajes", label: "Mensajes WhatsApp", count: failed || undefined },
+            ...(capabilities.messagesLog ? [{ value: "mensajes" as const, label: "Mensajes WhatsApp", count: failed || undefined }] : []),
           ]}
         />
       </motion.div>
@@ -59,7 +60,7 @@ export function CobranzaPage() {
         <Skeleton className="h-[380px] rounded-[var(--radius-card)]" />
       ) : (
         <Stagger key={view} className="flex flex-col gap-6">
-          {view === "cartera" ? <Cartera rows={data.receivables} /> : view === "alertas" ? <Alertas rows={data.alerts} /> : <Mensajes rows={data.messages} />}
+          {view === "cartera" ? <Cartera rows={data.receivables} /> : view === "alertas" ? <Alertas rows={data.alerts} /> : <Mensajes rows={data.messages ?? []} />}
         </Stagger>
       )}
     </Stagger>
@@ -103,9 +104,7 @@ function Cartera({ rows }: { rows: ReceivableRow[] }) {
                   <Avatar name={r.customer} />
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-semibold">{r.customer}</span>
-                    <span className="block truncate text-[13px] text-muted">
-                      {r.id} · {r.seller}
-                    </span>
+                    <span className="block truncate text-[13px] text-muted">{[r.orderRef, r.seller].filter(Boolean).join(" · ")}</span>
                   </span>
                 </span>
                 <span className="tabular hidden text-[13px] sm:block">
@@ -157,30 +156,38 @@ function AlertCard({ a }: { a: AlertRow }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-semibold text-muted">
-            <Link to={`/pedidos/${a.orderId}`} className="hover:underline">
-              {a.orderId}
-            </Link>{" "}
+            {a.orderId ? (
+              <Link to={`/pedidos/${a.orderId}`} className="hover:underline">
+                {a.orderRef}
+              </Link>
+            ) : (
+              a.orderRef
+            )}{" "}
             · abierta el {formatDateTime(a.creadaAt)} · responsable {a.responsable}
           </p>
           <p className="mt-0.5 font-bold">
-            <Link to={`/clientes/${a.customerId}`} className="hover:underline">
-              {a.customer}
-            </Link>
+            {a.customerId ? (
+              <Link to={`/clientes/${a.customerId}`} className="hover:underline">
+                {a.customer}
+              </Link>
+            ) : (
+              a.customer
+            )}
           </p>
           <p className="text-[13px] text-muted">{a.regla}</p>
         </div>
         <div className="text-right">
           <Chip tone={open ? "bad" : a.estado === "resuelta" ? "ok" : "neutral"}>{open ? "Abierta" : a.estado === "resuelta" ? "Resuelta" : "Cancelada"}</Chip>
-          <p className="tabular mt-1 text-sm font-bold">{a.balanceCents > 0 ? `Saldo ${formatMoney(a.balanceCents)}` : "Pagado"}</p>
+          {a.balanceCents != null && <p className="tabular mt-1 text-sm font-bold">{a.balanceCents > 0 ? `Saldo ${formatMoney(a.balanceCents)}` : "Pagado"}</p>}
           {a.dueDate && <p className="tabular text-xs text-muted">Venció {formatDate(a.dueDate)}</p>}
         </div>
       </div>
       {!open && a.resolucion && (
         <p className="tabular mt-3 rounded-xl bg-panel px-3.5 py-2.5 text-[13px] text-muted">
-          {a.resolucion} · {a.resueltaBy} · {a.resueltaAt ? formatDateTime(a.resueltaAt) : ""}
+          {[a.resolucion, a.resueltaBy, a.resueltaAt && formatDateTime(a.resueltaAt)].filter(Boolean).join(" · ")}
         </p>
       )}
-      {open && can(me.role, "gestionar_cobranza") && (
+      {open && can(me.role, "gestionar_cobranza") && capabilities.resolveAlerts && (
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
           <label htmlFor={`res-${a.id}`} className="sr-only">
             Resolución
@@ -194,8 +201,8 @@ function AlertCard({ a }: { a: AlertRow }) {
           />
           <Button
             icon={<CheckCircle size={16} weight="bold" />}
-            onClick={() => {
-              const r = actions.resolveAlert(a.id, text, me);
+            onClick={async () => {
+              const r = await commands.resolveAlert(a.id, text, me);
               toast(r.ok, r.message);
               if (r.ok) setText("");
             }}
@@ -248,13 +255,13 @@ function Mensajes({ rows }: { rows: MessageRow[] }) {
                 </span>
                 <span className="flex items-center gap-2">
                   <MessageStateChip estado={m.estado} />
-                  {m.estado === "error" && can(me.role, "gestionar_cobranza") && (
+                  {m.estado === "error" && can(me.role, "gestionar_cobranza") && capabilities.retryMessages && (
                     <Button
                       size="sm"
                       variant="secondary"
                       icon={<ArrowClockwise size={14} weight="bold" />}
-                      onClick={() => {
-                        const r = actions.retryMessage(m.id, me);
+                      onClick={async () => {
+                        const r = await commands.retryMessage(m.id, me);
                         toast(r.ok, r.message);
                       }}
                     >
@@ -263,10 +270,9 @@ function Mensajes({ rows }: { rows: MessageRow[] }) {
                   )}
                 </span>
               </div>
-              <p className="mt-1 text-[13px] text-muted">{m.texto}</p>
               <p className="tabular mt-1 text-xs text-faint">
                 {m.contacto} · {m.estado === "enviado" && m.enviadoAt ? `enviado ${formatDateTime(m.enviadoAt)}` : `programado ${formatDateTime(m.programadoPara)}`}
-                {m.orderId && ` · ${m.orderId}`}
+                {m.orderRef && ` · ${m.orderRef}`}
                 {m.intentos > 1 && ` · ${m.intentos} intentos`}
                 {m.error && ` · ${m.error}`}
               </p>

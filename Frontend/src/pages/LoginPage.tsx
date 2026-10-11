@@ -14,9 +14,11 @@ import { Skeleton } from "../components/ui/States";
 import { prefetch } from "../lib/prefetch";
 import { useAuth } from "../context/AuthContext";
 import { cx } from "../lib/format";
+import { IS_MOCK } from "../config";
 
 const LoginPreviewChart = lazy(() => import("../components/charts/LoginPreviewChart"));
 
+// MOCK: cuentas de la semilla de demostración. En modo api se entra con Supabase Auth.
 const DEMO_ACCOUNTS = [
   { label: "Gerencia", email: "patricia.zapata@keptai.pe" },
   { label: "Administración", email: "carmen.ramos@keptai.pe" },
@@ -98,8 +100,8 @@ export function LoginPage() {
 function LoginForm({ from, onClose }: { from: string; onClose: () => void }) {
   const { signIn } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("carmen.ramos@keptai.pe");
-  const [password, setPassword] = useState("demo1234");
+  const [email, setEmail] = useState(IS_MOCK ? "carmen.ramos@keptai.pe" : "");
+  const [password, setPassword] = useState(IS_MOCK ? "demo1234" : "");
   const [show, setShow] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
   const [loading, setLoading] = useState(false);
@@ -202,6 +204,7 @@ function LoginForm({ from, onClose }: { from: string; onClose: () => void }) {
             )}
           </div>
 
+          {IS_MOCK && (
           <fieldset>
             <legend className="text-[13px] font-semibold text-muted">Cuentas de demostración</legend>
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -224,6 +227,7 @@ function LoginForm({ from, onClose }: { from: string; onClose: () => void }) {
               ))}
             </div>
           </fieldset>
+          )}
 
           {errors.form && (
             <motion.p initial={ERROR_IN} animate={ERROR_SHOW} role="alert" className="rounded-xl bg-bad-tint px-3.5 py-2.5 text-[13px] font-medium text-bad">
@@ -237,7 +241,9 @@ function LoginForm({ from, onClose }: { from: string; onClose: () => void }) {
         </form>
 
         <p className="mt-6 text-center text-xs leading-relaxed text-muted">
-          Acceso de demostración: elige una cuenta y usa cualquier contraseña de 6 caracteres o más. La autenticación real llega con Supabase.
+          {IS_MOCK
+            ? "Acceso de demostración: elige una cuenta y usa cualquier contraseña de 6 caracteres o más."
+            : "Entra con tu cuenta de KeptAI. Tu rol lo asigna gerencia."}
         </p>
     </>
   );

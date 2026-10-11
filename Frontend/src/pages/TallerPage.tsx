@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { Factory, Hourglass, Truck } from "../components/ui/icons";
-import { getTaller, type TallerOrder } from "../api/client";
-import { actions } from "../api/store";
+import { commands, getTaller, type TallerOrder } from "../api/client";
+import { IS_MOCK } from "../config";
 import { useApi } from "../hooks/useApi";
 import { SCOPE_LABEL, useScope } from "../context/ScopeContext";
 import { useMe } from "../context/AuthContext";
@@ -15,7 +15,7 @@ import { Chip } from "../components/ui/Chip";
 import { Button } from "../components/ui/Button";
 import { Modal, inputClass } from "../components/ui/Modal";
 import { cx, formatDate } from "../lib/format";
-import { addDays, daysBetween } from "../api/domain";
+import { addDays, daysBetween } from "../lib/dates";
 
 // Vista mínima del Jefe de taller (decisión de Germán): solo órdenes liberadas y el despacho,
 // que fija el vencimiento. Las etapas Corte → Calidad quedan para la fase 2.
@@ -28,7 +28,7 @@ export function TallerPage() {
 
   return (
     <Stagger className="mx-auto flex max-w-[1100px] flex-col gap-6">
-      <PageHeader title="Taller" subtitle={<>Solo llegan órdenes liberadas: crédito aprobado o anticipo verificado. Vista {SCOPE_LABEL[scope]}.</>} actions={<DemoBadge />} />
+      <PageHeader title="Taller" subtitle={<>Solo llegan órdenes liberadas: crédito aprobado o anticipo verificado. Vista {SCOPE_LABEL[scope]}.</>} actions={IS_MOCK ? <DemoBadge /> : undefined} />
 
       {error ? (
         <ErrorState error={error} onRetry={reload} />
@@ -75,7 +75,7 @@ export function TallerPage() {
                   <li key={o.id} className="flex items-center justify-between gap-3 border-t border-line-soft py-3 text-sm first:border-t-0">
                     <span className="min-w-0">
                       <span className="block font-bold">
-                        {o.id} · {o.customer}
+                        {o.ref} · {o.customer}
                       </span>
                       <span className="block truncate text-[13px] text-muted">{o.description}</span>
                     </span>
@@ -95,7 +95,7 @@ export function TallerPage() {
                 <li key={o.id} className="tabular flex items-center justify-between gap-3 border-t border-line-soft py-3 text-sm first:border-t-0">
                   <span className="min-w-0">
                     <span className="block font-bold">
-                      {o.id} · {o.customer}
+                      {o.ref} · {o.customer}
                     </span>
                     <span className="block truncate text-[13px] text-muted">
                       {o.despacho?.acta} · {o.despacho?.by}
@@ -124,7 +124,7 @@ function TallerRow({ o, cutDate, onDispatch }: { o: TallerOrder; cutDate: string
     <div className="flex flex-col gap-3 rounded-[var(--radius-block)] bg-panel p-4 ring-1 ring-line/70 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
         <p className="font-bold">
-          {o.id} · {o.customer}
+          {o.ref} · {o.customer}
         </p>
         <ul className="mt-1 text-[13px] text-muted">
           {o.items.map((it, i) => (
@@ -164,13 +164,13 @@ function DispatchModal({ open, order, cutDate, onClose }: { open: boolean; order
   if (!order) return null;
   const due = order.plazoDias != null && fecha ? addDays(fecha, order.plazoDias) : null;
   return (
-    <Modal open={open} onClose={onClose} title={`Despachar ${order.id}`} subtitle={`${order.customer}. El acta fija el vencimiento: despacho + ${order.plazoDias ?? 0} días.`}>
+    <Modal open={open} onClose={onClose} title={`Despachar ${order.ref}`} subtitle={`${order.customer}. El acta fija el vencimiento: despacho + ${order.plazoDias ?? 0} días.`}>
       <form
         noValidate
         className="flex flex-col gap-4"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          const r = actions.registerDispatch(order.id, fecha, acta, me);
+          const r = await commands.registerDispatch(order.id, fecha, acta, me);
           if (!r.ok) {
             setErr(r.message);
             return;

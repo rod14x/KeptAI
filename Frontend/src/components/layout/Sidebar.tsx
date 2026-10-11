@@ -2,11 +2,11 @@ import { NavLink } from "react-router";
 import { motion } from "motion/react";
 import { spring } from "../motion/primitives";
 import { ArrowCounterClockwise, Bell, ChartPieSlice, Factory, Kanban, Receipt, SquaresFour, UploadSimple, UsersThree } from "../ui/icons";
-import type { Role } from "../../api/schemas";
+import type { Role } from "../../api/model";
 import { Logo } from "./Logo";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
-import { actions } from "../../api/store";
+import { capabilities, commands } from "../../api/client";
 import { can } from "../../lib/permissions";
 import { cx } from "../../lib/format";
 
@@ -14,8 +14,8 @@ export const NAV: Array<{ to: string; label: string; icon: typeof SquaresFour; e
   { to: "/", label: "Dashboard", icon: SquaresFour, end: true, show: (r) => can(r, "ver_comercial") },
   { to: "/pedidos", label: "Pedidos", icon: Kanban, end: false, show: (r) => can(r, "ver_comercial") },
   { to: "/clientes", label: "Clientes", icon: UsersThree, end: false, show: (r) => can(r, "ver_comercial") },
-  { to: "/conciliacion", label: "Conciliación", icon: Receipt, end: false, show: (r) => can(r, "verificar") || can(r, "ver_resultado") },
-  { to: "/cobranza", label: "Cobranza", icon: Bell, end: false, show: (r) => can(r, "gestionar_cobranza") || can(r, "ver_resultado") },
+  { to: "/conciliacion", label: "Conciliación", icon: Receipt, end: false, show: (r) => can(r, "verificar") || can(r, "ver_pagos") },
+  { to: "/cobranza", label: "Cobranza", icon: Bell, end: false, show: (r) => can(r, "ver_cobranza") },
   { to: "/taller", label: "Taller", icon: Factory, end: false, show: (r) => can(r, "registrar_despacho") || can(r, "ver_resultado") },
   { to: "/captura", label: "Carga manual", icon: UploadSimple, end: false, show: (r) => can(r, "captura") },
   { to: "/resultado", label: "Resultado", icon: ChartPieSlice, end: false, show: (r) => can(r, "ver_resultado") },
@@ -66,9 +66,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="mt-auto flex flex-col gap-3">
+        {capabilities.resetDemo && (
         <button
-          onClick={() => {
-            const r = actions.reset();
+          onClick={async () => {
+            const r = await commands.reset();
             toast(r.ok, r.message);
           }}
           className="flex h-11 items-center gap-2.5 rounded-xl px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink"
@@ -76,6 +77,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <ArrowCounterClockwise size={18} />
           Reiniciar demo
         </button>
+        )}
       </div>
     </div>
   );

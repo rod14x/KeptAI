@@ -1,26 +1,18 @@
-import {
-  DemoStateSchema,
-  PLAZO_MAX,
-  PLAZO_MIN,
-  type AuditEvent,
-  type DemoState,
-  type Evidence,
-  type FieldKey,
-  type Order,
-  type OutgoingMessage,
-  type Person,
-  type Settings,
-} from "./schemas";
+import { PLAZO_MAX, PLAZO_MIN, type AuditEvent, type Evidence, type FieldKey, type Order, type OutgoingMessage, type Person, type Settings } from "../model";
+import { DemoStateSchema, type DemoState } from "./state";
 import { createSeed } from "./seed";
-import { addDays, anticipoRequired, appliedCents, creditSnapshot, gatekeeperPasses, matchFor, orderBalance, scheduleCollection } from "./domain";
-import { can, ROLE_LABEL, type Permission } from "../lib/permissions";
-import { formatMoney } from "../lib/format";
+import { bump } from "../events";
+import { addDays, anticipoRequired, appliedCents, creditSnapshot, gatekeeperPasses, matchFor, orderBalance, orderCost, scheduleCollection } from "./domain";
 
-// Store en memoria que simula al backend (Spring) mientras no está disponible.
+const orderCostKnown = (o: Order) => orderCost(o) > 0;
+import { can, ROLE_LABEL, type Permission } from "../../lib/permissions";
+import { formatMoney } from "../../lib/format";
+
+// MOCK: backend simulado en el navegador mientras Spring no está disponible. Eliminar al integrar.
 // Se guarda en localStorage para sobrevivir a recargas y compartirse entre pestañas
 // (por ejemplo, el enlace de estado de cuenta abierto en otra pestaña).
 
-const STORAGE_KEY = "keptai-demo-v3";
+const STORAGE_KEY = "keptai-demo-v4";
 
 function load(): DemoState {
   try {
@@ -36,18 +28,15 @@ function load(): DemoState {
 }
 
 let state: DemoState = load();
-let version = 0;
-const listeners = new Set<() => void>();
 
 function commit(next: DemoState) {
   state = next;
-  version++;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
     // Sin persistencia: la demo sigue funcionando en memoria.
   }
-  listeners.forEach((l) => l());
+  bump();
 }
 
 // Otra pestaña cambió la demo: recargar y avisar a los suscriptores.
@@ -55,20 +44,12 @@ if (typeof window !== "undefined") {
   window.addEventListener("storage", (e) => {
     if (e.key !== STORAGE_KEY) return;
     state = load();
-    version++;
-    listeners.forEach((l) => l());
+    bump();
   });
 }
 
 export function getState() {
   return state;
-}
-export function getVersion() {
-  return version;
-}
-export function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
 }
 
 export type ActionResult = { ok: true; message: string } | { ok: false; message: string; code?: "aviso_mora" };
@@ -92,10 +73,10 @@ function evEvent(ev: Evidence, kind: AuditEvent["kind"], by: string, text: strin
   return event(kind, by, text, { brand: ev.brand, evidenceId: ev.id, orderId: ev.orderId, amountCents });
 }
 
-function message(customerId: string, orderId: string | null, tipo: OutgoingMessage["tipo"], texto: string): OutgoingMessage {
-  // En la demo el envío por WF3 se simula como inmediato al contacto de prueba.
+function message(customerId: string, orderId: string | null, tipo: OutgoingMessage["tipo"]): OutgoingMessage {
+  // En la demo el envío por WF3 se simula como inmediato al contacto de prueba. La BD no guarda el texto.
   const at = nowIso();
-  return { id: uid("M"), customerId, orderId, tipo, texto, estado: "enviado", programadoPara: at, intentos: 1, enviadoAt: at, error: null };
+  return { id: uid("M"), customerId, orderId, tipo, estado: "enviado", programadoPara: at, intentos: 1, enviadoAt: at, error: null };
 }
 
 function updateEvidence(id: string, fn: (ev: Evidence) => Evidence, events: AuditEvent[] = []) {
@@ -200,7 +181,7 @@ export const actions = {
       evidences: state.evidences.map((e) => (e.id === id ? { ...e, status: "aplicado", appliedAt: at } : e)),
       applications: [...state.applications, { id: uid("A"), evidenceId: id, orderId: order.id, amountCents: amount, channel: ev.fields.channel ?? "Sin canal", at, by: actor.name }],
       audit: [...state.audit, evEvent(ev, "aplicado", actor.name, "Pago aplicado")],
-      messages: [...state.messages, message(customer.id, order.id, "confirmacion_pago", `Hola ${customer.name}, registramos tu pago de ${formatMoney(amount)} para ${order.id}. Saldo: ${formatMoney(left)}.`)],
+      messages: [...state.messages, message(customer.id, order.id, "confirmacion_pago")],
     };
     const notes: string[] = [];
     if (left === 0) {
@@ -284,10 +265,10 @@ export const actions = {
     commit({
       ...state,
       orders: state.orders.map((o) => (o.id === orderId ? updated : o)),
-      messages: [...state.messages, message(customer.id, orderId, "resumen_orden", `Resumen de ${orderId}: ${order.description}, total ${formatMoney(order.saleCents)}. Condición: ${resumen}.`)],
+      messages: [...state.messages, message(customer.id, orderId, "resumen_orden")],
       audit: [
         ...state.audit,
-        event("credito_aprobado", actor.name, enMora ? "Crédito aprobado tras aviso de mora" : `Condición aprobada: ${terms.tipo}`, { brand: order.brand, orderId, customerId: customer.id, amountCents: order.saleCents }),
+        event("credito_aprobado", actor.name, enMora ? "Crédito aprobado tras aviso de mora" : `Condición aprobada: ${resumen}`, { brand: order.brand, orderId, customerId: customer.id, amountCents: order.saleCents }),
         event("orden_confirmada", actor.name, passes ? "Orden confirmada y liberada a producción" : "Orden confirmada; retenida hasta verificar el anticipo", { brand: order.brand, orderId, customerId: customer.id }),
       ],
     });
@@ -326,9 +307,9 @@ export const actions = {
     if (order.inicioProduccion && fecha < order.inicioProduccion) return fail("El despacho no puede ser anterior al inicio de producción.");
     if (acta.trim().length < 3) return fail("Indica el número de acta o guía.");
     const customer = state.customers.find((c) => c.id === order.customerId)!;
-    const updated: Order = { ...order, estado: "despachada", costOrigin: "real", despacho: { fecha, acta: acta.trim(), by: actor.name } };
+    const updated: Order = { ...order, estado: "despachada", costOrigin: "real", costComplete: orderCostKnown(order), despacho: { fecha, acta: acta.trim(), by: actor.name } };
     const balance = orderBalance(state, updated);
-    const scheduled = balance > 0 ? scheduleCollection(updated, customer, balance, uid("M")) : [];
+    const scheduled = balance > 0 ? scheduleCollection(updated, customer, uid("M")) : [];
     commit({
       ...state,
       orders: state.orders.map((o) => (o.id === orderId ? updated : o)),
@@ -373,51 +354,7 @@ export const actions = {
     return done("Reintento enviado al contacto de prueba (simulado en la demo).");
   },
 
-  createShareLink(customerId: string, actor: Person): ActionResult & { token?: string } {
-    const denied = guard(actor, "compartir_estado");
-    if (denied) return denied;
-    const c = state.customers.find((x) => x.id === customerId);
-    if (!c) return fail("Cliente no encontrado.");
-    const bytes = new Uint8Array(18);
-    crypto.getRandomValues(bytes);
-    const token = Array.from(bytes, (b) => b.toString(36).padStart(2, "0")).join("").slice(0, 28);
-    const at = nowIso();
-    commit({
-      ...state,
-      shareLinks: [...state.shareLinks, { token, customerId, createdBy: actor.name, createdAt: at, expiresAt: `${addDays(at.slice(0, 10), 7)}T23:59:59`, revokedAt: null }],
-      audit: [...state.audit, event("enlace_creado", actor.name, "Enlace de estado de cuenta creado", { brand: c.brand, customerId })],
-    });
-    return { ok: true, message: "Enlace creado. Vence en 7 días y puedes revocarlo cuando quieras.", token };
-  },
 
-  /** Envía el enlace por WhatsApp (WF3, tipo ESTADO_CUENTA) al contacto de prueba. */
-  sendStatement(customerId: string, token: string, actor: Person): ActionResult {
-    const denied = guard(actor, "compartir_estado");
-    if (denied) return denied;
-    const c = state.customers.find((x) => x.id === customerId);
-    const link = state.shareLinks.find((l) => l.token === token && !l.revokedAt);
-    if (!c || !link) return fail("Genera un enlace activo primero.");
-    commit({
-      ...state,
-      messages: [...state.messages, message(customerId, null, "estado_cuenta", `Hola ${c.name}, aquí puedes ver tu estado de cuenta actualizado: …/estado-cuenta/${token.slice(0, 8)}…`)],
-      audit: [...state.audit, event("mensaje", actor.name, "Estado de cuenta enviado por WhatsApp", { brand: c.brand, customerId })],
-    });
-    return done("Estado de cuenta enviado por WhatsApp al contacto de prueba.");
-  },
-
-  revokeShareLink(token: string, actor: Person): ActionResult {
-    const denied = guard(actor, "compartir_estado");
-    if (denied) return denied;
-    const link = state.shareLinks.find((l) => l.token === token);
-    if (!link || link.revokedAt) return fail("El enlace no existe o ya fue revocado.");
-    const c = state.customers.find((x) => x.id === link.customerId);
-    commit({
-      ...state,
-      shareLinks: state.shareLinks.map((l) => (l.token === token ? { ...l, revokedAt: nowIso() } : l)),
-      audit: [...state.audit, event("enlace_revocado", actor.name, "Enlace de estado de cuenta revocado", { brand: c?.brand ?? null, customerId: link.customerId })],
-    });
-    return done("Enlace revocado. Quien lo tenga ya no podrá abrirlo.");
-  },
 
   /* ---------- Captura manual (respaldo de WhatsApp) ---------- */
 
@@ -432,16 +369,17 @@ export const actions = {
     const id = nextId("V-", state.evidences.map((e) => e.id));
     const ev: Evidence = {
       id,
+      ref: id,
       brand: input.brand,
       kind: "voucher",
       origen: "manual",
+      evidenceIds: [],
+      dataOrigin: "manual_entry",
       receivedAt: nowIso(),
       orderId: input.orderId,
       fields: { amountCents: input.amountCents, operationRef: input.operationRef.trim(), payer: input.payer.trim() || null, paidAt: input.paidAt || null, channel: input.channel },
       declaredAmountCents: null,
       legible: true,
-      chat: [],
-      transcript: null,
       status: "recibido",
       mismatchAccepted: false,
       verifiedBy: null,
@@ -455,7 +393,7 @@ export const actions = {
   },
 
   captureOrder(
-    input: { customerId: string; description: string; cantidad: number; totalCents: number; entrega: string | null; chatText: string },
+    input: { customerId: string; description: string; cantidad: number; totalCents: number; entrega: string | null },
     actor: Person,
   ): ActionResult & { id?: string } {
     const c = state.customers.find((x) => x.id === input.customerId);
@@ -467,14 +405,11 @@ export const actions = {
     if (!Number.isInteger(input.totalCents) || input.totalCents <= 0) return fail("Indica el total.");
     const id = nextId("ORD-", state.orders.map((o) => o.id));
     const faltantes = ["costos estimados", ...(input.entrega ? [] : ["fecha de entrega"])];
-    const chat = input.chatText
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean)
-      .slice(0, 20)
-      .map((text) => ({ from: "cliente" as const, text, time: "" }));
     const o: Order = {
       id,
+      ref: id,
+      dataOrigin: "manual_entry",
+      costComplete: false,
       customerId: c.id,
       brand: c.brand,
       line: c.brand === "corpotex" ? "Profesional" : c.tipo === "colegio" ? "Escolar" : "Deportivo",
@@ -492,13 +427,18 @@ export const actions = {
       hoja: {
         version: 1,
         origen: "manual",
-        md: `Cliente: ${c.name}\nPedido: ${input.description.trim()}\nCantidad: ${input.cantidad}\nTotal: ${formatMoney(input.totalCents)}${input.entrega ? `\nEntrega solicitada: ${input.entrega.split("-").reverse().join("/")}` : ""}`,
+        campos: [
+          { campo: "Cliente", valor: c.name, estado: "present" },
+          { campo: "Producto", valor: input.description.trim(), estado: "present" },
+          { campo: "Cantidad", valor: String(input.cantidad), estado: "present" },
+          { campo: "Monto", valor: formatMoney(input.totalCents), estado: "present" },
+          { campo: "Entrega solicitada", valor: input.entrega, estado: input.entrega ? "present" : "missing" },
+        ],
         faltantes,
         confianza: null,
         estado: "borrador",
         revisadoPor: null,
         revisadoAt: null,
-        chat,
       },
       issuedOn: state.cutDate,
       fechaEntregaSolicitada: input.entrega,

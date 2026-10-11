@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { getVersion, subscribe } from "../api/store";
+import { getVersion, subscribe } from "../api/events";
 
 type ApiState<T> = { data: T | undefined; loading: boolean; error: Error | null; reload: () => void };
 

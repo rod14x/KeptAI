@@ -4,7 +4,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { useState } from "react";
 import { Link } from "react-router";
 import { ArrowRight, Bank, CaretDown, CaretRight, HandCoins, ChartLineUp, Info, MagnifyingGlass, Receipt, Sparkle, Wallet, WarningCircle } from "../components/ui/icons";
-import { getDashboard, type AssistantNote, type DashboardDTO } from "../api/client";
+import { getDashboard, type ActivityItem, type AssistantNote, type DashboardDTO, type WeekPoint } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { SCOPE_LABEL, useScope } from "../context/ScopeContext";
 import { useMe } from "../context/AuthContext";
@@ -31,7 +31,7 @@ export function DashboardPage() {
             {data && <>, corte al {formatDate(data.cutDate)}</>}.
           </>
         }
-        actions={<DemoBadge />}
+        actions={data?.demo ? <DemoBadge /> : undefined}
       />
 
       {error ? (
@@ -41,11 +41,15 @@ export function DashboardPage() {
       ) : (
         <Stagger className="flex flex-col gap-6 lg:gap-8">
           <Kpis d={data} canResult={can(me.role, "ver_resultado")} />
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
-            <CashCard d={data} />
+          {data.weeks ? (
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
+              <CashCard d={data} weeks={data.weeks} />
+              <AssistantCard notes={data.assistant} />
+            </div>
+          ) : (
             <AssistantCard notes={data.assistant} />
-          </div>
-          <ActivityCard d={data} />
+          )}
+          {data.activity && <ActivityCard activity={data.activity} />}
         </Stagger>
       )}
     </Stagger>
@@ -61,7 +65,7 @@ function Kpi({
 }: {
   icon: React.ReactNode;
   label: string;
-  value: number;
+  value: number | null;
   children: React.ReactNode;
   href: string | null;
 }) {
@@ -81,7 +85,7 @@ function Kpi({
       </div>
       <div>
         <p className="text-[13px] font-semibold text-muted">{label}</p>
-        <p className={cx("tabular mt-1 text-[clamp(1.625rem,1.35rem+0.9vw,1.875rem)] font-extrabold leading-tight tracking-tight", value < 0 && "text-bad")}>{formatMoney(value)}</p>
+        <p className={cx("tabular mt-1 text-[clamp(1.625rem,1.35rem+0.9vw,1.875rem)] font-extrabold leading-tight tracking-tight", (value ?? 0) < 0 && "text-bad")}>{formatMoney(value)}</p>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-[13px] text-muted">{children}</div>
     </Card>
@@ -104,26 +108,42 @@ function Kpis({ d, canResult }: { d: DashboardDTO; canResult: boolean }) {
           {d.pipelineCount > 0 && <>, {formatMoney(d.pipelineCents)} en {d.pipelineCount} órdenes aún sin despacho</>}
         </span>
       </Kpi>
-      <Kpi icon={<Wallet size={20} weight="bold" />} label="Caja / Saldo total" value={d.cashCents} href="/conciliacion">
-        <Chip tone="ok" icon={<Bank size={14} weight="bold" />}>
-          +<Money cents={d.collectedCents} /> cobrado
-        </Chip>
-        <span title={d.openingSource}>
-          Apertura <Money cents={d.openingCents} /> (supuesto)
-        </span>
-      </Kpi>
-      <Kpi icon={<Receipt size={20} weight="bold" />} label="Margen conjunto" value={d.marginCents} href={canResult ? "/resultado" : null}>
-        <span>
-          {d.orderCount} {d.orderCount === 1 ? "pedido" : "pedidos"}. Resultado económico, no dinero cobrado.
-        </span>
-      </Kpi>
+      {d.cashCents != null ? (
+        <Kpi icon={<Wallet size={20} weight="bold" />} label="Caja / Saldo total" value={d.cashCents} href="/conciliacion">
+          <Chip tone="ok" icon={<Bank size={14} weight="bold" />}>
+            +<Money cents={d.collectedCents} /> cobrado
+          </Chip>
+          <span title={d.openingSource}>
+            Apertura <Money cents={d.openingCents} /> (supuesto)
+          </span>
+        </Kpi>
+      ) : (
+        <Kpi icon={<Wallet size={20} weight="bold" />} label="Cobrado y aplicado" value={d.collectedCents} href={null}>
+          <span>Pagos verificados en banco y aplicados a órdenes. La caja la ve gerencia.</span>
+        </Kpi>
+      )}
+      {canResult ? (
+        <Kpi icon={<Receipt size={20} weight="bold" />} label="Margen conjunto" value={d.marginCents} href="/resultado">
+          <span>
+            {d.marginCents == null
+              ? "Costeo incompleto: no hay margen hasta cerrar los costos reales."
+              : `${d.orderCount} ${d.orderCount === 1 ? "pedido" : "pedidos"}. Resultado económico, no dinero cobrado.`}
+          </span>
+        </Kpi>
+      ) : (
+        <Kpi icon={<Receipt size={20} weight="bold" />} label="En producción" value={d.pipelineCents} href="/pedidos">
+          <span>
+            {d.pipelineCount} {d.pipelineCount === 1 ? "orden" : "órdenes"} sin despacho: el plazo empieza al despachar.
+          </span>
+        </Kpi>
+      )}
     </section>
   );
 }
 
-function CashCard({ d }: { d: DashboardDTO }) {
+function CashCard({ d, weeks }: { d: DashboardDTO; weeks: WeekPoint[] }) {
   const [table, setTable] = useState(false);
-  const negative = d.weeks.find((w) => w.balanceCents < 0);
+  const negative = weeks.find((w) => w.balanceCents < 0);
   return (
     <Card className="p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -131,9 +151,11 @@ function CashCard({ d }: { d: DashboardDTO }) {
           <h2 className="text-section font-bold">Caja a 4 semanas</h2>
           <p className="mt-0.5 text-[13px] text-muted">Cobros por vencimiento menos obligaciones fijas (planillas, terceros, alquiler).</p>
         </div>
-        <Chip tone="neutral" icon={<Info size={14} weight="bold" />}>
-          Factor de cobro {Math.round(d.factorCobro * 100)}%
-        </Chip>
+        {d.factorCobro != null && (
+          <Chip tone="neutral" icon={<Info size={14} weight="bold" />}>
+            Factor de cobro {Math.round(d.factorCobro * 100)}%
+          </Chip>
+        )}
       </div>
       {negative && (
         <p className="mt-4 flex items-start gap-2 rounded-xl bg-bad-tint px-3.5 py-2.5 text-[13px] font-medium text-bad">
@@ -142,7 +164,7 @@ function CashCard({ d }: { d: DashboardDTO }) {
         </p>
       )}
       <div className="mt-5">
-        <CashFlowChart weeks={d.weeks} />
+        <CashFlowChart weeks={weeks} />
       </div>
       <button
         onClick={() => setTable((t) => !t)}
@@ -164,7 +186,7 @@ function CashCard({ d }: { d: DashboardDTO }) {
               </tr>
             </thead>
             <tbody>
-              {d.weeks.map((w) => (
+              {weeks.map((w) => (
                 <tr key={w.label} className="border-t border-line-soft">
                   <td className="py-2">
                     <span className="font-semibold">{w.label}</span> <span className="text-muted">{w.range}</span>
@@ -247,7 +269,7 @@ function AssistantCard({ notes }: { notes: AssistantNote[] }) {
   );
 }
 
-function ActivityCard({ d }: { d: DashboardDTO }) {
+function ActivityCard({ activity }: { activity: ActivityItem[] }) {
   return (
     <Card className="p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3">
@@ -256,13 +278,13 @@ function ActivityCard({ d }: { d: DashboardDTO }) {
           Mi actividad
         </MotionLink>
       </div>
-      {d.activity.length === 0 ? (
+      {activity.length === 0 ? (
         <div className="mt-4">
           <EmptyState title="Sin movimientos todavía">Cuando registres comprobantes o pagos aparecerán aquí.</EmptyState>
         </div>
       ) : (
         <motion.ul variants={listVariants} className="mt-3 flex flex-col">
-          {d.activity.map((a) => {
+          {activity.map((a) => {
             const body = (
               <>
                 <Avatar name={a.who} />
