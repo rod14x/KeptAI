@@ -1,16 +1,16 @@
 # KeptAI — Base local y coordinación con Supabase
 
-ID: DB-LOCAL-001. Alcance: PostgreSQL del negocio V7 sobre V6, 25 tablas, sin datos reales. Esta instalación no incluye Supabase Auth, Storage ni Studio.
+ID: DB-LOCAL-001. Alcance: PostgreSQL del negocio con migraciones V1–V11, 28 tablas, sin datos reales (solo la semilla ficticia opcional). Esta instalación no incluye Supabase Auth, Storage ni Studio.
 
 ## Qué se adapta de Andrés
 El estado Running y Flyway Success acreditan infraestructura y migraciones locales. El cierre funcional exige [DB-VAL-001](../validaciones-pre-supabase.md), pruebas del motor/API y comprobaciones del entorno Supabase real.
 
 
-V7 de Andrés (6875bab) refuerza autorización de crédito, autoría, protección de padres financieros y lecturas por rol. No añade tablas ni cierra JWT/Storage/motor. V1–V6 se conservan sin cambios.
+V7 de Andrés (6875bab) refuerza autorización de crédito, autoría, protección de padres financieros y lecturas por rol. V8 hace que el despacho fije el vencimiento. V9 añade `asignacion_costo_item` y `transferencia_interna` (C-05/C-06). V10 añade `contacto` (D-011, JID de WhatsApp registrado por cliente). V11 crea la obligación de cobro al aprobar el crédito (pendiente de revisión de Andrés). V1–V6 se conservan sin cambios. V10 y V11 todavía no están en Supabase.
 
 V1–V3 se conservan byte a byte. V4–V5 corrigen vouchers/RLS/integridad/costos. **V6**, aprobada como alcance por Miguel (D-008), retira contacto y nota_cliente solo si están vacías y sin dependencias externas; de otro modo aborta. No se usa CASCADE, repair ni limpieza de datos reales.
 
-Esquema canónico: keptai. Historial único: BD/migrations/ y keptai.flyway_schema_history. Hay **25 tablas de negocio**, además de las tablas internas de Flyway/Supabase que no forman parte de ese conteo. Las extensiones para margen por línea y transferencias internas siguen definidas pero sin SQL; no son una entrega completa de C-05/C-06.
+Esquema canónico: keptai. Historial único: BD/migrations/ y keptai.flyway_schema_history. Hay **28 tablas de negocio** desde V10 (25 tras V6, más las 2 de costos de V9 y `contacto` de V10), además de las tablas internas de Flyway/Supabase que no forman parte de ese conteo.
 
 ## Requisitos
 
@@ -20,16 +20,19 @@ Herramientas: Docker Compose; postgres:17-alpine; flyway/flyway:12.4.0. La versi
 
 ## Primera ejecución en una pestaña Zellij
 
-Desde el repositorio:
+Desde la raíz del repositorio:
 ```bash
-cd /home/miguel/dev/hackaton/conocimiento
 ./BD/local/db.sh up
 ./BD/local/db.sh migrate
 ./BD/local/db.sh status
 ./BD/local/db.sh validate
+./BD/local/db.sh seed              # opcional: semilla ficticia (organizaciones DEMO)
+./BD/local/db.sh seed-escenarios   # opcional, después de seed: pedidos y vouchers para recorrer el panel (exige V11)
 ```
 
-Para actualizar una base V6 existente, ejecutar up, migrate y validate en ese orden: Flyway aplica únicamente V7 pendiente, conservando datos y volumen. El status debe mostrar Schema version: 7 y V1–V7 Success.
+Comandos de `db.sh`: `init` (solo crea `.env`), `up`, `migrate`, `seed`, `seed-escenarios`, `link-auth <ROL> <sub>` (vincula una cuenta real de Supabase Auth a un usuario DEMO: `VENDEDOR`, `ADMIN`, `GERENTE`, `JEFE_TALLER` o `VENDEDOR2`), `status`, `validate`, `psql`, `app-psql` y `down`.
+
+Para actualizar una base existente, ejecutar up, migrate y validate en ese orden: Flyway aplica solo las migraciones pendientes, conservando datos y volumen. El status debe mostrar Schema version: 11 y V1–V11 Success.
 
 up crea BD/local/.env si falta, con dos contraseñas aleatorias, permisos 0600 y valores locales; conserva cualquier archivo existente. .env está ignorado por Git. No copiar secretos remotos aquí ni publicar el archivo. .env.example sí se comparte.
 
@@ -58,28 +61,27 @@ Salir con \q. Para probar los permisos de la app:
 ./BD/local/db.sh app-psql
 ```
 
-Sin identidad/contexto, SELECT a negocio debe devolver cero filas. La base inicial está vacía: no confundir cero clientes con fallo. Semilla ficticia financiera/motor sigue siendo entrega de Andrés; no se copian registros de Corpotex.
+Sin identidad/contexto, SELECT a negocio debe devolver cero filas. La base inicial está vacía: no confundir cero clientes con fallo. `db.sh seed` carga la semilla ficticia de Andrés ([semilla_demo.sql](../semilla/semilla_demo.sql)); no se copian registros de Corpotex.
 
 El rol migrador local tiene privilegios administrativos para crear roles y objetos. No usarlo en Spring ni como credencial productiva.
 
 ## Conectar Spring en otra pestaña
 
 ```bash
-cd /home/miguel/dev/hackaton/conocimiento/Backend
-export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+cd Backend
+./scripts/run-local.sh     # equivale a ./mvnw spring-boot:run con perfil local
 ```
 
 application-local.yml lee ../BD/local/.env como properties, conecta a keptai con el usuario runtime y conserva Hibernate validate/Flyway desactivado. El perfil dev anterior sigue arrancando sin DB. Mantener .env en formato generado: pares CLAVE=valor, sin export ni comillas añadidas.
 
-El perfil local acredita conexión, no motor financiero/JWT/API terminados. MIG-03 debe resolver identidad y establecer GUC LOCAL en cada transacción; JWT no fija automáticamente contexto JDBC. Los endpoints de negocio continúan pendientes.
+El perfil local acredita conexión. La identidad (JWT o API key) y el contexto por transacción (`app.organizacion_id`, `app.usuario_id`) ya los fija el backend (`tenancy/`, MIG-03-C). Los endpoints de negocio que expongan los motores siguen pendientes.
 
 En tercera pestaña:
 ```bash
 curl -i http://localhost:8080/actuator/health
-curl -i http://localhost:8080/api/v1/x
+curl -i http://localhost:8080/api/v1/me
 ```
-Esperar 200 health y 401 JSON para ruta sin autenticación. El health no revela credenciales.
+Esperar 200 en health y 401 JSON en `/api/v1/me` sin token. El health no revela credenciales.
 
 ## Trabajo diario
 
@@ -103,6 +105,8 @@ Si el remoto fue construido manualmente y no tiene historial, primero definir re
 ### Prompt de traspaso para Andrés
 
 > Usa keptai-conocimiento y lee D-008, BD/definicion-base-datos.md, BD/local/README.md y decisiones/trazabilidad-tablas-mvp.md. Miguel aprobó 25 tablas de base, excluyendo contacto/nota_cliente; V1–V3 originales siguen intactas, V4–V6 adaptan el esquema. Con tu MCP inspecciona el proyecto Supabase correcto, versión, schema/historial/checksums, roles/RLS, funciones, policies Storage y datos que bloquean V4/V6. Entrega un informe de diferencias y el procedimiento reproducible Flyway para igualarlo al local. No borres datos, no uses repair ni declares aplicada una migración sin evidencia. Coordina semilla/motor y credenciales por canal privado; no publiques secretos. C-05/C-06 tienen extensiones definidas pero aún sin SQL.
+>
+> *(Prompt histórico del 10/10/2026: hoy el alcance es V1–V11 con 28 tablas y C-05/C-06 ya tienen SQL en V9.)*
 
 ## Si se necesitan también Auth y Storage locales
 

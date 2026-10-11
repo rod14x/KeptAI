@@ -3,6 +3,12 @@
 
 > Actualización 11/10/2026: Isabella mantiene los workflows en su propio entorno según Miguel. Los JSON de esta carpeta no se han contrastado con su export actual. Ver [muestra WF1 y acuerdos de integración](../../Backend/docs/integracion-n8n-isabella.md) y el contrato vigente en Backend/docs/openapi.yaml. Los ejemplos y reglas históricos de abajo no sustituyen D-005/D-007/D-010; no activarlos automáticamente.
 
+> **Estado frente al backend real (11/10/2026).** Los cuatro JSON están `active: false` y no se han ejecutado contra un n8n ni una Evolution API reales.
+> - Implementadas en Spring con `X-Api-Key` INGESTA: `POST /api/v1/ordenes/ingesta` (WF1, crea pedido y hoja BORRADOR para un contacto registrado) y `POST /api/v1/pagos/voucher` (WF2, pago RECIBIDO y voucher en Storage privado). Detalle en la sección **Contratos**.
+> - `POST /ordenes/confirmar` (WF0) y el callback `POST /mensajes/{id}/estado` (WF3) **siguen cerradas** (403).
+> - El plazo de crédito vigente es de 15 a 30 días desde el despacho (D-005 y restricción de V5), no 30/45.
+> - El envío programado con `@Scheduled` + ShedLock no está implementado. La lógica de cobranza existe como `MotorCobranza` (sin programador ni webhook saliente).
+
 Principio: **n8n solo mueve datos y llama a la IA. Toda regla de negocio (fechas, crédito, conciliación, cadencia de recordatorios) vive en Spring.**
 
 ## Flujos

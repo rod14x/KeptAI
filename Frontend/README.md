@@ -1,7 +1,7 @@
 # KeptAI · Frontend
 
 React + TypeScript + Vite, Tailwind v4, Framer Motion (`motion`), Recharts, Phosphor Icons, React Router, Zod y Supabase Auth.
-Alineado con D-005, la BD V6 (`BD/`) y el contrato de la API (`Backend/docs/openapi.yaml`).
+Alineado con D-005, la BD V11 (`BD/`) y el contrato de la API (`Backend/docs/openapi.yaml`).
 
 ```bash
 npm install
@@ -9,11 +9,25 @@ npm run dev        # http://localhost:5173
 npm run build      # typecheck + build a dist/
 npm test           # valida los esquemas del frontend contra los ejemplos de openapi.yaml
 npm run e2e        # recorrido de aceptación en modo mock (requiere `npm run dev` y Chrome; SHOTS=1 guarda capturas)
+npm run e2e:api       # identidad del modo api con Supabase y Spring simulados (Chrome)
+npm run e2e:conectado # recorrido del panel contra Spring + PostgreSQL reales (Vite en modo api, semilla + escenarios)
+npm run e2e:real      # login real: Supabase Auth → JWT → Spring /api/v1/me (requiere una cuenta real)
+npm run e2e:diseno    # comprobaciones visuales del diseño (Chrome)
 ```
+
+Requiere Node 22 o superior.
 
 ## Fuente de datos: mock o API
 `VITE_API_MODE=mock` (por defecto) usa la semilla de demostración. `VITE_API_MODE=api` usa Spring con login de
 Supabase (`VITE_API_BASE_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`; ver `.env.example`).
+
+**Estado del modo api (11/10/2026):** el panel está conectado a Spring + PostgreSQL. Tras el login con Supabase Auth,
+todos los módulos leen de la API según el rol, y las acciones de crédito, verificación, aplicación y duplicado de
+pagos, resolución de alertas y despacho llaman a los motores del backend. Solo **Carga manual** (`/captura`) sigue
+como "no disponible": subir un voucher desde el panel requiere el uploader privado de Storage (MIG-04). No hay respaldo
+mock ante errores. Verificado con `e2e:conectado` contra Spring y PostgreSQL locales con la semilla demo
+(`BD/local/db.sh seed && seed-escenarios`). El login real pasó una aceptación básica con una cuenta; las cuentas
+por rol se vinculan con `BD/local/db.sh link-auth`.
 Mapa de endpoints, brechas del contrato, supuestos y la lista de archivos mock a eliminar:
 [docs/integracion-api.md](docs/integracion-api.md).
 
@@ -53,7 +67,7 @@ La matriz está en `src/lib/permissions.ts` y sigue los roles de `contrato-api.m
 - Cobranza −3, 0 y +3 días por WhatsApp al contacto de prueba; en +3 se abre una alerta interna. Todo se cancela al aplicar el pago completo.
 
 ## Datos
-V6 no guarda chats, transcripciones ni el texto de los mensajes salientes: la UI muestra solo la extracción estructurada,
+La base (V6 en adelante, hoy V11) no guarda chats, transcripciones ni el texto de los mensajes salientes: la UI muestra solo la extracción estructurada,
 el voucher y la bitácora de envíos (tipo, estado, fechas).
 
 En modo mock, `src/api/mock/` (marcado `MOCK`) simula a Spring con una semilla ficticia: 6 clientes, 16 órdenes y

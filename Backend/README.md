@@ -1,12 +1,86 @@
-> Actualización vigente MIG-02/D-007 (10/10/2026): contrato alineado en [docs/contrato-api.md](docs/contrato-api.md) y [docs/alineacion-bd-n8n.md](docs/alineacion-bd-n8n.md). SQL correctivo en BD/V4–V5; solo vouchers y datos de negocio persistentes, sin chat/audio/texto saliente. Los endpoints no están implementados; MIG-03 será JWT/API key y contexto RLS. Las secciones anteriores de propuestas se conservan como historial cuando difieran.
+# Backend KeptAI
 
-# Backend KeptAI — desarrollo compartido
+Servicio Spring Boot 4.1.1 / Java 21 (Maven Wrapper). Es el único dueño de las reglas de negocio: seguridad,
+contexto multi-organización, fechas, saldos y cálculos financieros. Miguel construye la API, la captura y la
+integración; Andrés define los datos, las migraciones y el motor financiero.
 
-Servicio Spring Boot 4.1.1 / Java 21 (Maven Wrapper). Estado MIG-01: solo arranque, perfiles, health mínimo y errores básicos; sin base de datos, captura, pagos ni JWT todavía. Miguel construye API/captura/IA; Andrés define datos/migraciones y motor financiero. No iniciar dos scaffolds independientes.
+## Estado actual (11/10/2026)
 
-Plan de Miguel: [MIG-GENERAL](../cerebro/conocimientos/desarrollo/miguel/tarea-general.md), [tareas](../cerebro/conocimientos/desarrollo/miguel/tareas.md), [prompt Claude](../cerebro/conocimientos/desarrollo/miguel/prompt-claude.md).
+| Área | Qué hay | Dónde |
+|---|---|---|
+| Panel (JWT de Supabase Auth) | `GET /api/v1/me`; pedidos (`/orders`, detalle, decisión de crédito `GET/POST`, despacho `POST`); pagos (`/payments`, detalle, conciliación, verificación, aplicación y marcar duplicado); cobranza (`/receivables`, alertas y su resolución, envíos, estado de cuenta, auditoría); resultados (resumen, márgenes, centro productivo, caja a 4 semanas y `reports/orders.csv`). Las acciones llaman a los motores financieros | `web/`, `panel/` |
+| n8n (`X-Api-Key` INGESTA) | `POST /api/v1/ordenes/ingesta` crea pedido y hoja de resumen en BORRADOR para un contacto registrado (V10), con idempotencia. `POST /api/v1/pagos/voucher` registra el pago en fase RECIBIDO y guarda el voucher en Supabase Storage privado (valida JPEG/PNG/PDF, SHA-256, compensación si falla). Ninguna de las dos verifica ni aplica dinero | `web/`, `n8n/`, [docs/integracion-n8n-isabella.md](docs/integracion-n8n-isabella.md) |
+| Contrato | 41 operaciones con ejemplos y casos negativos; 26 rutas `/api/v1` implementadas más el health público | [docs/openapi.yaml](docs/openapi.yaml), [docs/contrato-api.md](docs/contrato-api.md) |
+| Seguridad | JWT de Supabase (RS256/ES256, issuer, audiencia), membresía resuelta en BD, API key de servicio comparada por hash SHA-256, autorización por método y ruta exacta con denegación por defecto. Errores JSON `{code, message, request_id}`: 401, 403, 404 (ruta autorizada sin controlador) y 503 | `config/`, `security/`, [docs/matriz-acceso.md](docs/matriz-acceso.md) |
+| Multi-organización | Cada transacción fija `app.organizacion_id`, `app.usuario_id` o el servicio con `set_config(..., true)`; RLS filtra por ellos | `tenancy/` |
+| Motores financieros (Andrés) | `MotorPagos` (verificar, duplicado, aplicar, anular, saldo), `MotorCobranza` (despacho y evaluación −3/0/+3), `MotorCostos` (costos, reparto a ítems, cargo interno), `MotorResultados` (margen, centro taller, CSV) y `MotorCaja` (caja a 4 semanas) | `finanzas/`, [docs/motor-pagos.md](docs/motor-pagos.md) |
+| DTOs | Records con Bean Validation y JSON estricto, alineados con el contrato | `contract/` |
+| Pruebas | **335 pruebas** sin fallos: contrato, seguridad, tenancy, migraciones V1–V11 con RLS, motores, n8n con Storage simulado, semilla y recorrido demo. Usan PostgreSQL real con Testcontainers (requieren Docker) | `src/test/` |
+| Docker | Imagen multietapa JRE 21, usuario sin privilegios, perfil `prod`; no migra la base al arrancar | `Dockerfile`, [docs/despliegue-n8n.md](docs/despliegue-n8n.md) |
 
-Modelo DB: [PROP-DB-001](../cerebro/conocimientos/decisiones/modelo-base-datos-mvp.md). Andres es dueño de Flyway; migraciones ejecutables viven dentro del servicio Spring, BD/ conserva diseño/acuerdos. Coordinación de contratos antes de código, sin ERP/CRM ni fórmulas duplicadas. 
+**Pendiente:** confirmación del pedido por el vendedor desde WhatsApp y callback de WF3, programador de cobranza y
+webhooks salientes reales, carga manual de vouchers desde el panel (MIG-04), prueba con n8n y Storage reales de punta a
+punta, despliegue público y revisión de Andrés de V10/V11 antes de llevarlas a Supabase. El login real con Supabase
+Auth pasó una aceptación básica local con una cuenta ([detalle](docs/prueba-auth-real-local.md)); falta probarlo con
+cuentas por rol.
+
+## Ejecutar
+
+```bash
+cd Backend
+./mvnw test                     # 335 pruebas (Docker obligatorio)
+./mvnw spring-boot:run          # perfil dev: sin base de datos, solo health
+./scripts/run-local.sh          # perfil local: PostgreSQL de BD/local (5433) con el rol runtime
+curl -i localhost:8080/actuator/health
+```
+
+En WSL usar siempre `./mvnw` (el `mvn` del PATH puede ser el de Windows). `run-local.sh` deduce `JAVA_HOME` desde
+`javac` y carga `Backend/.env` como properties (sin `source` ni mostrar secretos). Antes hay que levantar la base:
+`./BD/local/db.sh up && ./BD/local/db.sh migrate` ([guía](../BD/local/README.md)).
+
+| Perfil | Base de datos | Uso |
+|---|---|---|
+| `dev` (por defecto) | Ninguna (excluye DataSource, JPA y Flyway) | Arrancar sin credenciales |
+| `test` | Ninguna; las pruebas de BD usan Testcontainers | Suite automática |
+| `local` | `127.0.0.1:5433/keptai` con el login runtime de `BD/local/.env` | Desarrollo con datos locales |
+| `prod` | `SPRING_DATASOURCE_*` obligatorias; sin mensajes ni stack traces en errores | Despliegue |
+
+Flyway no se ejecuta al arrancar la aplicación. Las migraciones viven en [`../BD/migrations/`](../BD/migrations/) y se
+aplican como paso aparte con el rol migrador; las pruebas las leen desde `filesystem:../BD/migrations`.
+
+### Variables (`.env.example`)
+
+| Variable | Para qué |
+|---|---|
+| `PORT`, `SPRING_PROFILES_ACTIVE` | Puerto (8080) y perfil |
+| `SPRING_DATASOURCE_URL/USERNAME/PASSWORD` | Solo `prod` |
+| `KEPTAI_JWT_ISSUER_URI`, `KEPTAI_JWT_JWK_SET_URI`, `KEPTAI_JWT_AUDIENCES` | JWT del panel (Supabase Auth); las tres juntas |
+| `KEPTAI_CORS_ALLOWED_ORIGINS` | Orígenes exactos del navegador (`local` ya admite `localhost:5173`) |
+| `KEPTAI_N8N_WEBHOOK_URL`, `KEPTAI_N8N_WEBHOOK_SECRET` | Webhook saliente a WF3; el secreto debe tener 32 caracteres o más |
+| `SUPABASE_URL`, `SUPABASE_STORAGE_BUCKET`, `SUPABASE_SECRET_KEY` | Storage privado de vouchers (usado por `POST /api/v1/pagos/voucher`). Solo en el entorno del backend, nunca en `VITE_*` |
+
+La API key de n8n **no** va en variables: solo se guarda su hash en `integracion_servicio`.
+`scripts/generar-clave-servicio.sh <archivo-fuera-del-repo>` genera la clave, la escribe solo en ese archivo y muestra
+únicamente el hash que se registra en la base ([guía](docs/provision-servicios-local.md)).
+
+### Scripts (`scripts/`)
+
+| Script | Qué hace |
+|---|---|
+| `run-local.sh` | Arranca Spring con el perfil `local` |
+| `generar-clave-servicio.sh` | Genera una API key de servicio fuera del repo y muestra solo su hash |
+| `servicio-local.sh` | Alta, listado, revocación y rotación de credenciales de servicio (vista previa por defecto, `--apply` explícito) |
+| `provisionar-contacto-local.sh` | Registra un cliente y su contacto de WhatsApp (JID) en la base local (vista previa / `--apply`) |
+| `provisionar-membresia-local.sh` | Vincula una cuenta de Supabase Auth a una organización y un rol en la base local |
+| `verificar-n8n-local.sh` | Recorrido HTTP de las rutas de n8n con PostgreSQL y Storage simulado desechables |
+
+## Historial de etapas
+
+> Las secciones siguientes describen cada etapa en su momento y se conservan como registro. Donde difieran del
+> **Estado actual**, prevalece este último (por ejemplo, los conteos de pruebas, «sin endpoints» o «V6, 25 tablas»).
+
+Plan de Miguel: [MIG-GENERAL](../cerebro/conocimientos/desarrollo/miguel/tarea-general.md), [tareas](../cerebro/conocimientos/desarrollo/miguel/tareas.md), [estado](../cerebro/conocimientos/desarrollo/miguel/estado.md). Modelo DB: [PROP-DB-001](../cerebro/conocimientos/decisiones/modelo-base-datos-mvp.md).
+
 ## Comandos verificados (MIG-01, 10/10/2026, WSL Ubuntu)
 
 ```bash
