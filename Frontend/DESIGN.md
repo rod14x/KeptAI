@@ -53,9 +53,9 @@ Enfoque en claridad operativa, densidad controlada y leyes de la Gestalt (proxim
   ```css
   font-family: 'Inter', 'Source Sans Pro', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   ```
-  - `Inter`: Con soporte óptico (`opsz: 14..32`) importado vía Google Fonts.
-  - Fallback secundario: `'Source Sans Pro'`.
-- **Monospace (Terminal, Métricas NIST, Códigos, Logs):**
+  - `Inter`: con soporte óptico (`opsz: 14..32`), única familia cargada (Google Fonts en `index.html`).
+  - Las demás familias del stack son de sistema; no se descargan.
+- **Monospace (códigos de pedido y pago, referencias de operación):**
   ```css
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   ```
@@ -118,8 +118,6 @@ Enfoque en claridad operativa, densidad controlada y leyes de la Gestalt (proxim
   - `xl`: 1280px
   - `2xl`: 1400px
 - **Columnas Especiales:**
-  - `grid-cols-15`: 15 columnas para matrices de subcategorías NIST.
-  - `grid-cols-20`: 20 columnas para visualizaciones de cobertura.
 - **Viewport Móvil:** Altura con soporte dinámico `min-height: 100svh` (fallback a `100vh`).
 
 ### 4.4. Ergonomía de Componentes (Dimensiones de Interfaz)

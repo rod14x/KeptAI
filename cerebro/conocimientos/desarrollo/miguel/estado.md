@@ -532,3 +532,6 @@ Solicitud de Germán: traer todo de nuevo, integrar sobre todo `backend-partefin
 - **Conflictos resueltos:** AGENTS.md, estado.md y BD/README conservan ambas historias; `contrato-api.md` toma el estado implementado del panel (develop) y de n8n (partefinal); `package.json` conserva `e2e:conectado` y `e2e:real`.
 - **Pruebas (Windows, JDK 26 release 21, Docker):** `./mvnw -B test` 335/335 BUILD SUCCESS; OpenAPI 41 operaciones, 232 ejemplos, 25 negativos; `npm test` 108 + 7 omitidas y build OK; con Spring reempaquetado en 8081: contrato en vivo 7/7 y `e2e:conectado` 44/44.
 - **Pendiente:** revisión de Andrés de V10/V11 antes de Supabase; `backend-partefinal` advierte que `develop` abre operaciones financieras del panel que esa rama mantenía cerradas: revisar autorización y segregación financiera antes de producción. Auth real con las cuentas demo, Storage y n8n reales siguen pendientes.
+
+## Cierre visual — 11/10/2026
+`develop` al día con `main` (PR #8 y #9). Login sin la franja de 10 px (`scrollbar-gutter` reservado), fondos del login en WebP (5,5 MB → 138 KB, nombres descriptivos), solo Inter cargada (se quitaron la carga duplicada en CSS, Merriweather, Source Sans Pro, JetBrains Mono y Manrope), botones de 44 px en pantallas táctiles y DESIGN.md sin referencias NIST de otro proyecto. Build y `npm test` 108 OK.
