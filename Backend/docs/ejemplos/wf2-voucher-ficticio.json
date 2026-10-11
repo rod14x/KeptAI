@@ -1,0 +1,22 @@
+{
+  "instancia": "isabel",
+  "chatId": "51900000001@s.whatsapp.net",
+  "clienteJid": "51900000001@s.whatsapp.net",
+  "mensajeId": "3EB0C767D0A5C7F2A9B1",
+  "pushName": "Cliente ficticio",
+  "recibidoEn": "2026-10-11T15:04:05Z",
+  "extraccion": {
+    "es_voucher": true,
+    "tipo": "YAPE",
+    "banco": null,
+    "monto": 3.5,
+    "moneda": "PEN",
+    "fecha": "2026-10-11",
+    "hora": "10:04",
+    "codigo_operacion": "DEMO-000001",
+    "remitente": null,
+    "destinatario": null,
+    "confianza": 0.9
+  },
+  "imagen_base64": "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAHUlEQVR42mNgiPqPQCJR/+GIQSPqPxwx2ET9hyMAP1IXcWid5YsAAAAASUVORK5CYII="
+}

@@ -17,6 +17,12 @@ public class GlobalExceptionHandler {
 	/** Body ausente o ilegible: no exponer fragmentos de JSON ni causas de Jackson. */
 	@ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
 	ResponseEntity<ApiError> handleUnreadableBody(org.springframework.http.converter.HttpMessageNotReadableException ex) {
+		// Un cuerpo cortado por el límite configurado de las rutas de n8n es 413, no 400.
+		for (Throwable t = ex; t != null; t = t.getCause()) {
+			if (t instanceof pe.keptai.backend.n8n.PayloadTooLargeException) {
+				return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(ApiError.of("PAYLOAD_TOO_LARGE", "Cuerpo demasiado grande"));
+			}
+		}
 		return ResponseEntity.badRequest().body(ApiError.of("BAD_REQUEST", "Solicitud no valida"));
 	}
 
@@ -46,6 +52,12 @@ public class GlobalExceptionHandler {
 	ResponseEntity<ApiError> handleAuthentication(org.springframework.security.core.AuthenticationException ex) {
 		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).header("WWW-Authenticate", "Bearer")
 			.body(ApiError.of("UNAUTHORIZED", "No autenticado"));
+	}
+
+	/** Error de negocio explícito: código estable y mensaje fijo, sin datos del cuerpo ni causas internas. */
+	@ExceptionHandler(BusinessException.class)
+	ResponseEntity<ApiError> handleBusiness(BusinessException ex) {
+		return ResponseEntity.status(ex.status()).body(ApiError.of(ex.code(), ex.getMessage()));
 	}
 
 	@ExceptionHandler(Exception.class)

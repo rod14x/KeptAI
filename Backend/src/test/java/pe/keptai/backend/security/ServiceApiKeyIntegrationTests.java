@@ -327,7 +327,7 @@ class ServiceApiKeyIntegrationTests {
 	}
 
 	@Test
-	void realApiKeyCanValidateAnOrderPayloadWithoutCreatingAnOrder() throws Exception {
+	void realApiKeyPersistsAValidOrderPayloadAsADraftOnly() throws Exception {
 		var spec = new org.yaml.snakeyaml.Yaml(new org.yaml.snakeyaml.constructor.SafeConstructor(new org.yaml.snakeyaml.LoaderOptions()));
 		java.util.Map<?, ?> root = spec.load(java.nio.file.Files.readString(java.nio.file.Path.of("docs/openapi.yaml")));
 		var components = (java.util.Map<?, ?>) root.get("components");
@@ -343,18 +343,21 @@ class ServiceApiKeyIntegrationTests {
 		}
 		mvc.perform(post("/api/v1/ordenes/ingesta").header("X-Api-Key", KEY_ING_A)
 			.contentType("application/json").content(body))
-			.andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("VALIDADO_SIN_PERSISTIR"))
-			.andExpect(jsonPath("$.persistido").value(false)).andExpect(jsonPath("$.procesado").value(false));
-		try (Connection c = owner(); Statement s = c.createStatement(); var rs = s.executeQuery("SELECT count(*) FROM keptai.orden")) {
-			rs.next(); assertThat(rs.getLong(1)).isEqualTo(before);
+			.andExpect(status().isCreated()).andExpect(jsonPath("$.estado").value("BORRADOR")).andExpect(jsonPath("$.ref").isNotEmpty())
+			.andExpect(jsonPath("$.hojaResumenVersion").value(1)).andExpect(jsonPath("$.persistido").doesNotExist());
+		try (Connection c = owner(); Statement s = c.createStatement(); var rs = s.executeQuery("SELECT count(*) FILTER (WHERE estado = 'BORRADOR'), count(*) FROM keptai.orden")) {
+			rs.next();
+			// Se persiste un único BORRADOR; nada se confirma ni se libera.
+			assertThat(rs.getLong(2)).isEqualTo(before + 1);
+			assertThat(rs.getLong(1)).isEqualTo(rs.getLong(2));
 		}
 	}
 
 	@Test
 	void anAuthenticatedServiceIsAuthorizedOnlyWhereThePolicyOpensItAndNothingIsImplementedThere() throws Exception {
-		// Ingesta tiene recepción validada ({} -> 400); voucher todavía no tiene controlador (404).
+		// Ingesta y voucher están implementadas para INGESTA: un cuerpo vacío es 400 (antes el voucher daba 404 por ausencia).
 		for (String path : new String[] { "/api/v1/ordenes/ingesta", "/api/v1/pagos/voucher" }) {
-			mvc.perform(post(path).header("X-Api-Key", KEY_ING_A).contentType("application/json").content("{}")).andExpect(path.equals("/api/v1/ordenes/ingesta") ? status().isBadRequest() : status().isNotFound());
+			mvc.perform(post(path).header("X-Api-Key", KEY_ING_A).contentType("application/json").content("{}")).andExpect(status().isBadRequest());
 			mvc.perform(post(path).header("X-Api-Key", KEY_SCH_A).contentType("application/json").content("{}"))
 				.andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("FORBIDDEN"));
 		}

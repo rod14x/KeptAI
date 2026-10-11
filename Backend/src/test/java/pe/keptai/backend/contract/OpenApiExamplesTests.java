@@ -119,6 +119,7 @@ put("CreditDecisionApproved", pe.keptai.backend.contract.ReceivableDtos.CreditAu
 		put("ErrorIdempotencyConflict", ApiErrorExtended.class);
 		put("ErrorDuplicatePayment", ApiErrorExtended.class);
 		put("ErrorPayloadTooLarge", ApiError.class);
+		put("ErrorServiceUnavailable", ApiError.class);
 		put("ErrorUnsupportedMedia", ApiError.class);
 	}
 

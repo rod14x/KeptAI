@@ -14,7 +14,7 @@ import tools.jackson.databind.JsonNode;
 
 /**
  * MIG-03-D3: la documentación de conexión con n8n debe coincidir con lo implementado (recepción de ingesta; voucher
- * autorizado pero ausente; confirmación y callback cerrados), nombrar los nodos y cabeceras exactos, y no contener secretos.
+ * persistente con evidencia privada; confirmación y callback cerrados), nombrar los nodos y cabeceras exactos, y no contener secretos.
  */
 class N8nIntegrationDocsTests {
 
@@ -23,27 +23,43 @@ class N8nIntegrationDocsTests {
 	}
 
 	@Test
-	void openApiStatesWhatIsImplementedAndWhatIsOnlyPlanned() {
+	void openApiDescribesTheTwoImplementedRoutesAndKeepsTheClosedOnesClosed() {
 		JsonNode paths = OpenApiSpec.load().root().path("paths");
 		String ingest = paths.path("/api/v1/ordenes/ingesta").path("post").path("description").asString();
-		assertThat(ingest).contains("IMPLEMENTADO SOLO COMO RECEPCION", "VALIDADO_SIN_PERSISTIR", "PREVISTOS (MIG-05)").contains("NO se verifican");
-		assertThat(paths.path("/api/v1/ordenes/ingesta").path("post").path("responses").path("201").path("description").asString()).startsWith("PREVISTO (MIG-05)");
-		assertThat(paths.path("/api/v1/pagos/voucher").path("post").path("description").asString()).contains("ESTADO ACTUAL", "NO existe controlador", "404");
+		assertThat(ingest).contains("IMPLEMENTADO (MIG-05", "BORRADOR", "NO guarda `transcript`", "Idempotencia", "409", "413");
+		assertThat(paths.path("/api/v1/ordenes/ingesta").path("post").path("responses").has("200")).as("la recepción sin persistencia ya no existe").isFalse();
+		assertThat(paths.path("/api/v1/ordenes/ingesta").path("post").path("responses").has("201")).isTrue();
+		String voucher = paths.path("/api/v1/pagos/voucher").path("post").path("description").asString();
+		assertThat(voucher).contains("IMPLEMENTADO (MIG-04/05", "imagen_base64", "SHA-256", "bucket privado", "RECIBIDO", "mensajeId", "3.5", "3.50");
+		assertThat(paths.path("/api/v1/pagos/voucher").path("post").path("responses").has("413")).isTrue();
+		assertThat(paths.path("/api/v1/pagos/voucher").path("post").path("responses").has("503")).isTrue();
+		JsonNode req = OpenApiSpec.load().root().path("components").path("schemas").path("N8nPagoVoucherRequest");
+		assertThat(req.path("properties").has("imagen_base64")).isTrue();
+		assertThat(req.path("properties").path("imagen_base64").path("description").asString()).contains("Base64 PURO", "data:", "13981016");
 		assertThat(paths.path("/api/v1/ordenes/confirmar").path("post").path("description").asString()).contains("ESTADO ACTUAL", "CERRADA");
 		assertThat(paths.path("/api/v1/mensajes/{id}/estado").path("post").path("description").asString()).contains("ESTADO ACTUAL", "CERRADA");
 	}
 
 	@Test
-	void theConnectionGuideNamesTheNodesHeadersAndTheFourSeparateAuthentications() throws IOException {
+	void theConnectionGuideGivesTheExactNodeInstructionsAndAFullExample() throws IOException {
 		String doc = read("docs", "integracion-n8n-isabella.md");
 		assertThat(doc).contains("«Enviar pedido al backend»", "«Enviar pago al backend»", "`X-Api-Key`", "`X-Api-Secret`", "`Content-Type: application/json`",
-				"POST {apiUrl}/api/v1/ordenes/ingesta", "POST {apiUrl}/api/v1/pagos/voucher", "VALIDADO_SIN_PERSISTIR", "persistido:false",
-				"Evolution → WF0", "WF0 → WF1", "Spring → WF3", "Respuesta actual: 404", "MIG-05", "Retención", "Datos exactos que necesitamos de Isabella");
-		assertThat(doc).doesNotContain("no existe controller de negocio todavía (MIG-05)");
+				"POST {apiUrl}/api/v1/ordenes/ingesta", "POST {apiUrl}/api/v1/pagos/voucher", "imagen_base64", "Base64 puro", "sin prefijo `data:`",
+				"Evolution → WF0", "WF0 → WF1", "Spring → WF3", "`key.id`", "generadoEn", "Idempotency-Replayed", "getBinaryDataBuffer",
+				"https://keptai.ejesxyz.com", "https://n8n.ejesxyz.com", "NO desplegados", "10 485 760", "Supabase Storage real", "Datos que aún necesitamos de Isabella");
+		assertThat(doc).doesNotContain("Respuesta actual: 404").doesNotContain("no existe controller de negocio todavía (MIG-05)");
+		// El ejemplo de la guía es el archivo reproducible completo (no una muestra truncada).
+		String example = read("docs", "ejemplos", "wf2-voucher-ficticio.json").strip();
+		assertThat(doc).contains(example).doesNotContain("...\"");
+		JsonNode j = new tools.jackson.databind.json.JsonMapper().readTree(example);
+		byte[] file = java.util.Base64.getDecoder().decode(j.path("imagen_base64").asString());
+		assertThat(file).hasSize(86);
+		assertThat(file[0] & 0xFF).isEqualTo(0x89);
 		String prov = read("docs", "provision-servicios-local.md");
-		assertThat(prov).contains("--apply", "vista previa", "alta", "revocar", "rotar", "listar", "KEPTAI_PSQL_EXEC").doesNotContain("etapa D3, no hecha");
+		assertThat(prov).contains("--apply", "vista previa", "alta", "revocar", "rotar", "listar", "KEPTAI_PSQL_EXEC", "87d1132c-5b6d-4aa3-9c93-e7355dcd99cb",
+				"APLICADA SOLO LOCAL", "No se creó otra Corpotex ni SCHEDULER").doesNotContain("etapa D3, no hecha");
 		String matrix = read("docs", "matriz-acceso.md");
-		assertThat(matrix).contains("MIG-03-D3", "Autorizada pero ausente", "Implementada solo como recepción");
+		assertThat(matrix).contains("MIG-03-D3", "MIG-04/05", "Implementada", "Storage real comprobado con archivo temporal; flujo completo pendiente");
 	}
 
 	@Test
@@ -61,7 +77,7 @@ class N8nIntegrationDocsTests {
 
 	@Test
 	void theLocalScriptsExistAreExecutableAndPreviewByDefault() throws IOException {
-		for (String s : new String[] { "servicio-local.sh", "verificar-n8n-local.sh", "generar-clave-servicio.sh", "provisionar-membresia-local.sh" }) {
+		for (String s : new String[] { "servicio-local.sh", "verificar-n8n-local.sh", "generar-clave-servicio.sh", "provisionar-membresia-local.sh", "storage_simulado.py", "generar-ejemplo-voucher.py", "verificar-ingesta-local.py" }) {
 			assertThat(Files.isExecutable(Path.of("scripts", s))).as(s).isTrue();
 		}
 		String svc = read("scripts", "servicio-local.sh");

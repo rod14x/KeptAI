@@ -38,3 +38,14 @@ keptai:
     webhook:
       url: ${KEPTAI_N8N_WEBHOOK_URL:}
       secret: ${KEPTAI_N8N_WEBHOOK_SECRET:}
+  n8n:
+    # Límites en BYTES. El archivo del voucher coincide con el bucket keptai-vouchers (10485760 = 10 MiB); el cuerpo HTTP
+    # se deriva (Base64 = 4/3 del archivo + holgura de metadatos). Storage: solo por entorno, sin secretos en Git.
+    ingesta:
+      max-body-bytes: ${KEPTAI_N8N_INGESTA_MAX_BODY_BYTES:524288}
+    voucher:
+      max-file-bytes: ${KEPTAI_N8N_VOUCHER_MAX_FILE_BYTES:10485760}
+    storage:
+      url: ${SUPABASE_URL:}
+      bucket: ${SUPABASE_STORAGE_BUCKET:keptai-vouchers}
+      secret-key: ${SUPABASE_SECRET_KEY:}

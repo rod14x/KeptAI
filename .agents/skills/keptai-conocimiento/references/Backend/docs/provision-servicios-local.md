@@ -1,6 +1,6 @@
 # Provisión local de claves de servicio (MIG-03-D1)
 
-Fecha: 11/10/2026 (actualizada en MIG-03-D3). **Guía y scripts preparados; NO ejecutados sobre la base local activa ni sobre Supabase.** Los scripts se validaron únicamente en un PostgreSQL desechable (`Backend/scripts/verificar-n8n-local.sh`). Aplica a las claves `X-Api-Key` con las que n8n se autentica ante Spring. Elección técnica de D1 (no una regla empresarial aprobada): la clave es un secreto aleatorio de 256 bits; en PostgreSQL solo se guarda su **SHA-256 en hex minúsculas** (`integracion_servicio.clave_hash`, 64 hex), calculado sobre la clave exacta en UTF-8.
+Fecha: 11/10/2026 (actualizada en MIG-03-D3). **Credencial isabel/INGESTA aplicada en Corpotex local; no provisionada en Supabase.** Los scripts también se validaron en un PostgreSQL desechable (`Backend/scripts/verificar-n8n-local.sh`). Aplica a las claves `X-Api-Key` con las que n8n se autentica ante Spring. Elección técnica de D1 (no una regla empresarial aprobada): la clave es un secreto aleatorio de 256 bits; en PostgreSQL solo se guarda su **SHA-256 en hex minúsculas** (`integracion_servicio.clave_hash`, 64 hex), calculado sobre la clave exacta en UTF-8.
 
 ## Reglas
 - Una clave por organización, instancia y alcance: **dos claves independientes**, una `INGESTA` (WF1/WF2) y otra `SCHEDULER` (callback de WF3/alertas). Nunca reutilizar la misma para ambos alcances.
@@ -38,12 +38,29 @@ $S rotar   --org-id <uuid> --servicio-id <uuid> --old-key-file <actual> --new-ke
 - Reactivar un servicio revocado (`activo=true`) es un `UPDATE` manual con el migrador y solo si está autorizado; no hay comando.
 - Nunca ejecutar esto contra la base activa para credenciales de Isabella antes de confirmar su instancia, y nunca imprimir ni pegar claves en chats o tickets.
 
+## 2.1 Credencial de Corpotex · instancia `isabel` · alcance INGESTA (APLICADA SOLO LOCAL)
+La organización local existente es `Corpotex`, id `87d1132c-5b6d-4aa3-9c93-e7355dcd99cb`. Codex provisionó un servicio activo para `isabel`/`INGESTA`, según la solicitud previa de Miguel de generar y guardar la API key. Antes había0 servicios; ahora hay1. Clave original: `/home/miguel/.config/keptai/n8n-ingesta-corpotex.key`. Copia en entorno de integración: `/home/miguel/.config/keptai/n8n-ingesta-corpotex.env`, campo `N8N_API_KEY`; ambos fuera de Git, permisos600, directorio700. PostgreSQL solo conserva SHA-256. No se creó otra Corpotex ni SCHEDULER. La credencial está registrada SOLO en Docker local, no en Supabase remoto ni en el servidor del dominio. No ejecutar nuevamente los comandos de alta siguientes: son el procedimiento utilizado; para cambiar la clave usar rotación explícita.
+```bash
+# 1) Generar la clave real FUERA del repositorio (permisos 600; solo se imprime el hash):
+mkdir -p "$HOME/.config/keptai" && chmod 700 "$HOME/.config/keptai"
+Backend/scripts/generar-clave-servicio.sh "$HOME/.config/keptai/n8n-ingesta-corpotex-isabel.key"
+# 2) Vista previa (no toca ninguna base; muestra el SQL y solo 8 caracteres del hash):
+Backend/scripts/servicio-local.sh alta --org-id 87d1132c-5b6d-4aa3-9c93-e7355dcd99cb --instancia isabel --alcance INGESTA \
+    --key-file "$HOME/.config/keptai/n8n-ingesta-corpotex-isabel.key"
+# 3) Aplicar al PostgreSQL local activo SOLO tras revisar la vista previa:
+sg docker -c 'Backend/scripts/servicio-local.sh alta --org-id 87d1132c-5b6d-4aa3-9c93-e7355dcd99cb --instancia isabel --alcance INGESTA \
+    --key-file "$HOME/.config/keptai/n8n-ingesta-corpotex-isabel.key" --apply'
+# 4) Comprobar sin secretos:
+sg docker -c 'Backend/scripts/servicio-local.sh listar --org-id 87d1132c-5b6d-4aa3-9c93-e7355dcd99cb --apply'
+```
+Entrega: el contenido del archivo `.key` se pasa a Isabella por un canal privado y se pega en una credencial de n8n tipo Header Auth (`X-Api-Key`); nunca en un chat, ticket, workflow ni `VITE_*`. En PostgreSQL queda solo su SHA-256. Para rotar o revocar usar `rotar`/`revocar`. Esta clave no es la de Supabase ni un JWT. Para que Spring suba vouchers, el backend (no n8n) necesita `SUPABASE_URL`, `SUPABASE_STORAGE_BUCKET=keptai-vouchers` y `SUPABASE_SECRET_KEY` en su entorno ya existente (`Backend/.env`); su uso real contra Supabase Storage está pendiente de probar.
+
 ## 3. Configurar n8n (lado Spring listo; los workflows de Isabella no se tocan)
 Cada instancia enviará su clave en la cabecera `X-Api-Key` desde una credencial de n8n (nunca en el JSON del workflow ni en el nodo Config). La configuración exacta de los nodos finales de WF1 y WF2, la separación de las cuatro autenticaciones y los datos pendientes de Isabella están en [integracion-n8n-isabella.md](integracion-n8n-isabella.md) (sección MIG-03-D3). Brecha vigente en los antecedentes versionados: WF0–WF2 usan una sola `apiKey` y sus webhooks de entrada no exigen cabecera en los JSON del repo; la configuración real es de Isabella.
 
 ## 4. Qué demuestra y qué no
-Demuestra (PostgreSQL desechable + login runtime): clave → hash → `resolver_servicio` → principal de servicio → contexto `org + servicio`; y, desde D3, la recepción HTTP de `/api/v1/ordenes/ingesta` con claves reales de prueba, rotación y revocación. No demuestra n8n real, persistencia, el voucher (la ruta no existe: 404) ni la confirmación/callback (cerradas: 403).
+Demuestra (PostgreSQL desechable + login runtime): clave → hash → `resolver_servicio` → principal de servicio → contexto `org + servicio`; la ingesta (`201` BORRADOR) y el voucher (`201` pago RECIBIDO con comprobante en un Storage simulado) con claves de prueba, más rotación y revocación. No demuestra n8n real ni Supabase Storage real; la confirmación y el callback siguen cerrados (403).
 
 
 ### Revisión de provisión (11/10/2026)
-Resultados de set_config descartados para no mostrar hash completo; verificador ejecutable comprueba ausencia de64 hex en stdout de alta. Rotación/revocación bloquean la fila antes de validar el estado para serializar cambios concurrentes. Alta, duplicados, rotación y revocación verificados en PostgreSQL desechable; no aprovisionados servicios reales.
+Resultados de set_config descartados para no mostrar hash completo; verificador ejecutable comprueba ausencia de64 hex en stdout de alta. Rotación/revocación bloquean la fila antes de validar el estado para serializar cambios concurrentes. Alta, duplicados, rotación y revocación verificados en PostgreSQL desechable; en esa revisión D3 todavía no se habían aprovisionado servicios reales; la provisión local posterior está en §2.1.

@@ -34,8 +34,8 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
  * MIG-03-D3 (lado Spring): X-Api-Key real -> SHA-256 -> resolver_servicio (login runtime NOSUPERUSER NOBYPASSRLS no
- * propietario, PostgreSQL desechable V1–V9) -> política por ruta -> recepción de /api/v1/ordenes/ingesta.
- * Claves aleatorias por ejecución, datos ficticios. Es un FIXTURE: no prueba n8n real ni persiste nada.
+ * propietario, PostgreSQL desechable V1–V9) -> política por ruta -> ingesta BORRADOR de /api/v1/ordenes/ingesta.
+ * Claves aleatorias por ejecución, datos ficticios. Es un FIXTURE: no prueba n8n real. Desde MIG-05 la ingesta SÍ persiste el BORRADOR.
  */
 @SpringBootTest(properties = "spring.autoconfigure.exclude=")
 @AutoConfigureMockMvc
@@ -124,16 +124,23 @@ class N8nIngestaServiceKeyIntegrationTests {
 	}
 
 	@Test
-	void realKeyResolvedFromPostgresIsAcknowledgedHonestlyWithoutPersistence(CapturedOutput output) throws Exception {
+	void realKeyResolvedFromPostgresCreatesADraftOnlyForItsOwnOrganization(CapturedOutput output) throws Exception {
+		long before = businessRows();
 		for (String k : new String[] { KEY_ING_A, KEY_ING_B }) { // dos empresas con el mismo nombre de instancia
-			String bodyText = send(k, BODY).andExpect(status().isOk()).andExpect(header().exists("X-Request-Id"))
-				.andExpect(jsonPath("$.estado").value("VALIDADO_SIN_PERSISTIR")).andExpect(jsonPath("$.persistido").value(false))
-				.andExpect(jsonPath("$.procesado").value(false)).andExpect(jsonPath("$.request_id").isNotEmpty())
-				.andExpect(jsonPath("$.length()").value(4)).andReturn().getResponse().getContentAsString();
+			String bodyText = send(k, BODY).andExpect(status().isCreated()).andExpect(header().exists("X-Request-Id"))
+				.andExpect(jsonPath("$.estado").value("BORRADOR")).andExpect(jsonPath("$.ref").isNotEmpty())
+				.andExpect(jsonPath("$.hojaResumenVersion").value(1)).andExpect(jsonPath("$.camposAusentes").isArray())
+				.andReturn().getResponse().getContentAsString();
 			assertThat(bodyText).doesNotContain(SENTINEL).doesNotContain(k);
 		}
 		assertThat(output.getAll()).doesNotContain(SENTINEL).doesNotContain(KEY_ING_A).doesNotContain(KEY_ING_B);
-		assertThat(businessRows()).as("la recepción no persiste nada").isZero();
+		assertThat(businessRows()).as("cada empresa obtiene su propio BORRADOR (pedido, hoja, canal, clave idempotente y auditoría)").isGreaterThan(before);
+		try (Connection c = owner(); Statement s = c.createStatement(); ResultSet r = s.executeQuery(
+				"SELECT count(DISTINCT organizacion_id), count(*) FILTER (WHERE estado <> 'BORRADOR') FROM keptai.orden")) {
+			r.next();
+			assertThat(r.getLong(1)).isGreaterThanOrEqualTo(2);
+			assertThat(r.getLong(2)).isZero();
+		}
 	}
 
 	@Test
@@ -157,6 +164,7 @@ class N8nIngestaServiceKeyIntegrationTests {
 
 	@Test
 	void invalidJsonArraysAndForgedFieldsAreBadRequestsThatDoNotLeakTheBody(CapturedOutput output) throws Exception {
+		long before = businessRows();
 		send(KEY_ING_A, BODY.substring(0, BODY.length() - 8)).andExpect(status().isBadRequest());
 		send(KEY_ING_A, "[" + BODY + "]").andExpect(status().isBadRequest()); // la vista de items de n8n no es el body
 		send(KEY_ING_A, BODY.replace("{\"faltantes\":[\"datos_pedido\"],\"confianza\":0}", "{}")).andExpect(status().isBadRequest());
@@ -165,7 +173,7 @@ class N8nIngestaServiceKeyIntegrationTests {
 		mvc.perform(post("/api/v1/ordenes/ingesta").contentType("text/plain").content(BODY).header("X-Api-Key", KEY_ING_A))
 			.andExpect(status().isUnsupportedMediaType());
 		assertThat(output.getAll()).doesNotContain(SENTINEL);
-		assertThat(businessRows()).isZero();
+		assertThat(businessRows()).as("ninguna solicitud inválida deja filas").isEqualTo(before);
 	}
 
 	@Test
@@ -175,7 +183,7 @@ class N8nIngestaServiceKeyIntegrationTests {
 			s.execute("INSERT INTO keptai.integracion_servicio(organizacion_id,instancia,alcance,clave_hash) VALUES "
 					+ svc(ORG_A, "temporal", "INGESTA", revocable));
 		}
-		send(revocable, BODY.replace("\"isabel\"", "\"temporal\"")).andExpect(status().isOk());
+		send(revocable, BODY.replace("\"isabel\"", "\"temporal\"")).andExpect(status().isCreated());
 		try (Connection c = owner(); Statement s = c.createStatement()) {
 			s.execute("UPDATE keptai.integracion_servicio SET activo=false WHERE instancia='temporal'");
 		}
@@ -186,7 +194,7 @@ class N8nIngestaServiceKeyIntegrationTests {
 			s.execute("UPDATE keptai.integracion_servicio SET activo=true, clave_hash='" + ApiKeyAuthenticationFilter.sha256(nueva) + "' WHERE instancia='temporal'");
 		}
 		send(revocable, BODY.replace("\"isabel\"", "\"temporal\"")).andExpect(status().isUnauthorized());
-		send(nueva, BODY.replace("\"isabel\"", "\"temporal\"")).andExpect(status().isOk());
+		send(nueva, BODY.replace("\"isabel\"", "\"temporal\"")).andExpect(status().isCreated()).andExpect(header().string("Idempotency-Replayed", "true"));
 	}
 
 	private long businessRows() throws Exception {

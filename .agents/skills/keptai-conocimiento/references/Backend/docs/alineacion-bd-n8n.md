@@ -10,9 +10,9 @@ D-008/V6: 25 tablas; sin entidades contacto/nota_cliente ni endpoints nuevos de 
 
 Spring es dueño de crédito, fechas, seguridad y saldo; Andrés del motor/DB. n8n extrae transitoriamente y envía propuestas. Ninguna confianza del modelo acredita un pago. La app conserva solo vouchers como evidencia documental y datos estructurados del negocio; no conversaciones.
 
-- WF1 → POST /api/v1/ordenes/ingesta: origen, instancia, chatId, vendedorJid, clienteNombreChat, extraccion, hojaResumenMd, transcript, mensajesProcesados, generadoEn. Transcript y crudo se descartan tras validación; guardar proyección de campos de negocio y resumen, no cuerpo entero.
+- WF1 → POST /api/v1/ordenes/ingesta (IMPLEMENTADO en MIG-05): origen, instancia, chatId, vendedorJid, clienteNombreChat, extraccion, hojaResumenMd, transcript, mensajesProcesados, generadoEn. Se guarda solo la proyección estructurada (orden y hoja BORRADOR, canal, auditoría, idempotencia); transcript, crudo y resumen entrante se descartan tras validar; el resumen guardado lo construye el servidor. V4 ya admite orden BORRADOR sin cliente, total ni condición, así que la «brecha de NOT NULL» de antecedentes quedó resuelta.
 - WF0 /ok → POST /api/v1/ordenes/confirmar: ref, instancia, chatId, vendedorJid, mensajeId. No aprobar crédito ni verificar fondos implícitamente.
-- WF2 → POST /api/v1/pagos/voucher: instancia, chatId, clienteJid, mensajeId, pushName, recibidoEn, extraccion. Fase RECIBIDO; no cambia saldo. Falta transporte de imagen/hash/path.
+- WF2 → POST /api/v1/pagos/voucher (IMPLEMENTADO en MIG-04/05): instancia, chatId, clienteJid, mensajeId, pushName, recibidoEn, extraccion e imagen_base64 (Base64 puro dentro del JSON; sin multipart). Fase RECIBIDO; no cambia saldo. El backend decodifica, valida el tipo real, calcula el SHA-256 y genera `archivo_storage_path`; n8n no aporta hash ni ruta.
 - WF3 → POST /api/v1/mensajes/{id}/estado: callback de metadatos. UUID ruta/cuerpo deben coincidir. Persiste en envio_notificacion, sin texto. Estados terminales repetidos idempotentes, distintos en conflicto.
 - Spring → webhook enviar-mensaje de WF3: texto generado al vuelo, no almacenado. 202 significa aceptado; resultado por callback. El callback no verifica entrega al cliente, solo respuesta del proveedor.
 

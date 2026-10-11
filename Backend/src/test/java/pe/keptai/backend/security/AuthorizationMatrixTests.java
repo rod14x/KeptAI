@@ -111,7 +111,7 @@ class AuthorizationMatrixTests {
 				checks++;
 			}
 			for (AccessRole scope : List.of(AccessRole.INGESTA, AccessRole.SCHEDULER)) {
-				int expected = serviceOp && !closed && SERVICE_SCOPE.get(op.id()) == scope ? (op.id().equals("n8nIngestOrder") ? 400 : 404) : 403;
+				int expected = serviceOp && !closed && SERVICE_SCOPE.get(op.id()) == scope ? 400 : 403; // ingesta y voucher: autorizadas e implementadas (cuerpo vacío = 400)
 				assertThat(statusOf(op.method(), path, service(scope))).as(op.id() + " como servicio " + scope).isEqualTo(expected);
 				checks++;
 			}

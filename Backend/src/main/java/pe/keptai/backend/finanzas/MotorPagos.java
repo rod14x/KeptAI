@@ -51,6 +51,18 @@ public class MotorPagos extends TransaccionFinanciera {
 		return enTransaccion(ctx, LECTURA_PAGOS, () -> buscarOriginal(leerPago(pagoId, false)));
 	}
 
+	/**
+	 * Pago anterior de la organizacion con la misma referencia de operacion, monto y fecha (misma regla que
+	 * {@link #detectarDuplicado}) para un pago que todavia no existe. Solo lectura: clasifica, no verifica ni aplica.
+	 */
+	public Optional<UUID> buscarOriginalPorReferencia(ContextoFinanciero ctx, String codigoOperacion, BigDecimal monto, LocalDate fecha) {
+		return enTransaccion(ctx, LECTURA_PAGOS, () -> jdbc.queryForList("""
+				SELECT id FROM keptai.pago
+				 WHERE organizacion_id = keptai.app_organizacion_actual()
+				   AND codigo_operacion = ? AND monto = ? AND fecha_pago = ? AND estado_conciliacion <> 'DUPLICADO'
+				 ORDER BY creado_en, id LIMIT 1""", UUID.class, codigoOperacion, monto, fecha).stream().findFirst());
+	}
+
 	public Duplicado marcarDuplicado(ContextoFinanciero ctx, UUID pagoId) {
 		return enTransaccion(ctx, ESCRITURA, () -> {
 			PagoFila p = bloquearPago(pagoId);
