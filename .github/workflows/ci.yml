@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Spring + PostgreSQL real)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: Backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      # Incluye migraciones V1..Vn reales (Flyway), RLS con login runtime y motores financieros via Testcontainers.
+      - name: Pruebas
+        run: ./mvnw -B -ntp test
+      - name: Reportes de pruebas
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: Backend/target/surefire-reports/
+          retention-days: 7
+
+  frontend:
+    name: Frontend (tipos, pruebas y build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: Frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: Frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Pruebas (esquemas contra openapi.yaml)
+        run: npm test
+      - name: Build (incluye typecheck)
+        run: npm run build

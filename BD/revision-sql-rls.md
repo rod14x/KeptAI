@@ -2,7 +2,7 @@
 
 D-009: aplicar las [seis validaciones de cierre](validaciones-pre-supabase.md). La revisión y el diccionario describen la base; no acreditan aceptación integral ni aislamiento remoto.
 
-DER visible del SQL local: [tres láminas PNG y fuente editable](../cerebro/diagramas/keptai-der-v6.md).
+DER visible del SQL vigente V9: [tres láminas PNG y fuente editable](../cerebro/diagramas/keptai-der-v9.md) (V6 conservado como antecedente).
 
 ## Actualización V7 — DB-REV-003 (Andrés, 10/10/2026)
 

@@ -1,4 +1,4 @@
-# KeptAI — Base de datos vigente (V6)
+# KeptAI — Base de datos vigente (V9)
 
 **Punto de entrada para desarrollar:** [Definicion canonica DB-DEF-001](definicion-base-datos.md). Alcance, 27 tablas V5, RLS, transacciones, vouchers y extensiones pendientes para margen por linea/centro.
 
@@ -27,19 +27,19 @@ V4 requiere permiso CREATE ROLE para crear keptai_runtime NOLOGIN (sin contrase�
 
 ## DER visible
 
-Las imágenes se ven sin soporte Mermaid. [Abrir las tres láminas y la fuente editable](../cerebro/diagramas/keptai-der-v6.md).
+Las imágenes se ven sin soporte Mermaid. [Abrir las tres láminas y la fuente editable (V9, 27 tablas)](../cerebro/diagramas/keptai-der-v9.md). El [DER V6](../cerebro/diagramas/keptai-der-v6.md) se conserva como antecedente.
 
 ### Pedidos, vouchers y cobranza
 
-![DER V6: Pedidos, vouchers y cobranza](../cerebro/diagramas/keptai-der-v6-01.png)
+![DER V9: Pedidos, vouchers y cobranza](../cerebro/diagramas/keptai-der-v9-01.png)
 
 ### Catalogo, produccion y costos
 
-![DER V6: Catalogo, produccion y costos](../cerebro/diagramas/keptai-der-v6-02.png)
+![DER V9: Catalogo, produccion y costos](../cerebro/diagramas/keptai-der-v9-02.png)
 
 ### Organizacion, identidad y soporte
 
-![DER V6: Organizacion, identidad y soporte](../cerebro/diagramas/keptai-der-v6-03.png)
+![DER V9: Organizacion, identidad y soporte](../cerebro/diagramas/keptai-der-v9-03.png)
 
 ## Modelo vigente
 

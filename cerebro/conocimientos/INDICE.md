@@ -6,7 +6,7 @@ Lectura inicial: [Idea de negocio vigente](empresa/idea-negocio-replanteada.md),
 - D-009 / [validaciones obligatorias antes de Supabase](../../BD/validaciones-pre-supabase.md): integridad, idempotencia, aislamiento, reversión, concurrencia y aceptación. Fuente: nueva instrucción de Miguel; condiciones adoptadas, pruebas integradas pendientes.
 
 
-**D-008 vigente:** base inicial de 25 tablas aprobada por Miguel, [DER V6](../diagramas/keptai-der-v6.md) y [guia local Docker/Flyway](../../BD/local/README.md). V5 de 27 tablas y su mapeo se conservan como antecedentes.
+**D-008 vigente:** base inicial de 25 tablas aprobada por Miguel, [DER V6](../diagramas/keptai-der-v6.md) (antecedente; vigente: [DER V9, 27 tablas](../diagramas/keptai-der-v9.md)) y [guia local Docker/Flyway](../../BD/local/README.md). V5 de 27 tablas y su mapeo se conservan como antecedentes.
 
 [Trazabilidad y necesidad por tabla](decisiones/trazabilidad-tablas-mvp.md): fuente original -> requisito/decision -> dato -> tabla; distingue conocimiento empresarial de elecciones tecnicas. 27 actuales no es minimo obligatorio; 25 recomendadas y 2 opcionales. C-05/C-06 aun tienen extensiones pendientes.
 
