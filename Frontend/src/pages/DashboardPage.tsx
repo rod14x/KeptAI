@@ -1,3 +1,6 @@
+import { motion } from "motion/react";
+import { MotionLink, Stagger, itemVariants, listVariants, press } from "../components/motion/primitives";
+import { PageHeader } from "../components/ui/PageHeader";
 import { useState } from "react";
 import { Link } from "react-router";
 import { ArrowRight, Bank, CaretDown, CaretRight, HandCoins, ChartLineUp, Info, MagnifyingGlass, Receipt, Sparkle, Wallet, WarningCircle } from "@phosphor-icons/react";
@@ -6,7 +9,7 @@ import { useApi } from "../hooks/useApi";
 import { SCOPE_LABEL, useScope } from "../context/ScopeContext";
 import { useMe } from "../context/AuthContext";
 import { readPrefs } from "../lib/preferences";
-import { ROLE_LABEL } from "../lib/permissions";
+import { ROLE_LABEL, can } from "../lib/permissions";
 import { Card, DemoBadge, EmptyState, ErrorState, Money, Skeleton } from "../components/ui/States";
 import { ActivityChip, Chip } from "../components/ui/Chip";
 import { Avatar } from "../components/ui/Avatar";
@@ -19,33 +22,33 @@ export function DashboardPage() {
   const { data, loading, error, reload } = useApi(() => getDashboard(scope, me.role, readPrefs(me.id).notify), [scope, me.id, me.role]);
 
   return (
-    <div className="mx-auto flex max-w-[1320px] flex-col gap-6">
-      <header className="animate-rise flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-[28px]">Hola, {me.name.split(" ")[0]}</h1>
-          <p className="mt-1 text-[15px] text-muted">
+    <Stagger className="mx-auto flex max-w-[1320px] flex-col gap-6 lg:gap-8">
+      <PageHeader
+        title={`Hola, ${me.name.split(" ")[0]}`}
+        subtitle={
+          <>
             {ROLE_LABEL[me.role]}. Vista {SCOPE_LABEL[scope]}
             {data && <>, corte al {formatDate(data.cutDate)}</>}.
-          </p>
-        </div>
-        <DemoBadge />
-      </header>
+          </>
+        }
+        actions={<DemoBadge />}
+      />
 
       {error ? (
         <ErrorState error={error} onRetry={reload} />
       ) : loading || !data ? (
         <DashboardSkeleton />
       ) : (
-        <>
-          <Kpis d={data} />
+        <Stagger className="flex flex-col gap-6 lg:gap-8">
+          <Kpis d={data} canResult={can(me.role, "ver_resultado")} />
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
             <CashCard d={data} />
             <AssistantCard notes={data.assistant} />
           </div>
           <ActivityCard d={data} />
-        </>
+        </Stagger>
       )}
-    </div>
+    </Stagger>
   );
 }
 
@@ -54,37 +57,41 @@ function Kpi({
   label,
   value,
   children,
-  delay,
   href,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number;
   children: React.ReactNode;
-  delay: number;
-  href: string;
+  href: string | null;
 }) {
   return (
-    <Card className="animate-rise flex flex-col gap-4 p-5" style={{ animationDelay: `${delay}ms` }}>
+    <Card className="flex flex-col gap-4 p-5">
       <div className="flex items-center justify-between">
         <span className="flex size-10 items-center justify-center rounded-xl bg-ink text-white">{icon}</span>
-        <Link to={href} className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[13px] font-semibold text-muted hover:bg-line-soft hover:text-ink">
-          Ver detalle <CaretRight size={14} weight="bold" />
-        </Link>
+        {href && (
+          <MotionLink
+            to={href}
+            {...press}
+            className="inline-flex min-h-10 items-center gap-1 rounded-full px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink"
+          >
+            Ver detalle <CaretRight size={14} weight="bold" />
+          </MotionLink>
+        )}
       </div>
       <div>
         <p className="text-[13px] font-semibold text-muted">{label}</p>
-        <p className={cx("tabular mt-1 text-[30px] font-extrabold leading-tight tracking-tight", value < 0 && "text-bad")}>{formatMoney(value)}</p>
+        <p className={cx("tabular mt-1 text-[clamp(1.625rem,1.35rem+0.9vw,1.875rem)] font-extrabold leading-tight tracking-tight", value < 0 && "text-bad")}>{formatMoney(value)}</p>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-[13px] text-muted">{children}</div>
     </Card>
   );
 }
 
-function Kpis({ d }: { d: DashboardDTO }) {
+function Kpis({ d, canResult }: { d: DashboardDTO; canResult: boolean }) {
   return (
     <section aria-label="Indicadores" className="grid gap-4 md:grid-cols-3">
-      <Kpi icon={<ChartLineUp size={20} weight="bold" />} label="Ingresos esperados" value={d.expectedCents} delay={0} href="/pedidos">
+      <Kpi icon={<ChartLineUp size={20} weight="bold" />} label="Ingresos esperados" value={d.expectedCents} href="/pedidos">
         {d.overdueCents > 0 ? (
           <Chip tone="bad" icon={<WarningCircle size={14} weight="bold" />}>
             <Money cents={d.overdueCents} /> vencido
@@ -97,7 +104,7 @@ function Kpis({ d }: { d: DashboardDTO }) {
           {d.disputedCents > 0 && <>, {formatMoney(d.disputedCents)} en disputa fuera de la proyección</>}
         </span>
       </Kpi>
-      <Kpi icon={<Wallet size={20} weight="bold" />} label="Caja / Saldo total" value={d.cashCents} delay={60} href="/conciliacion">
+      <Kpi icon={<Wallet size={20} weight="bold" />} label="Caja / Saldo total" value={d.cashCents} href="/conciliacion">
         <Chip tone="ok" icon={<Bank size={14} weight="bold" />}>
           +<Money cents={d.collectedCents} /> cobrado
         </Chip>
@@ -105,7 +112,7 @@ function Kpis({ d }: { d: DashboardDTO }) {
           Apertura <Money cents={d.openingCents} /> (supuesto)
         </span>
       </Kpi>
-      <Kpi icon={<Receipt size={20} weight="bold" />} label="Margen conjunto" value={d.marginCents} delay={120} href="/resultado">
+      <Kpi icon={<Receipt size={20} weight="bold" />} label="Margen conjunto" value={d.marginCents} href={canResult ? "/resultado" : null}>
         <span>
           {d.orderCount} {d.orderCount === 1 ? "pedido" : "pedidos"}. Resultado económico, no dinero cobrado.
         </span>
@@ -118,10 +125,10 @@ function CashCard({ d }: { d: DashboardDTO }) {
   const [table, setTable] = useState(false);
   const negative = d.weeks.find((w) => w.balanceCents < 0);
   return (
-    <Card className="animate-rise p-5 sm:p-6" style={{ animationDelay: "160ms" }}>
+    <Card className="p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold tracking-tight">Caja a 4 semanas</h2>
+          <h2 className="text-section font-bold">Caja a 4 semanas</h2>
           <p className="mt-0.5 text-[13px] text-muted">Cobros por vencimiento menos obligaciones fijas (planillas, terceros, alquiler).</p>
         </div>
         <Chip tone="neutral" icon={<Info size={14} weight="bold" />}>
@@ -140,13 +147,13 @@ function CashCard({ d }: { d: DashboardDTO }) {
       <button
         onClick={() => setTable((t) => !t)}
         aria-expanded={table}
-        className="mt-3 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[13px] font-semibold text-muted hover:text-ink"
+        className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink"
       >
         <CaretDown size={14} weight="bold" className={cx("transition-transform", table && "rotate-180")} />
         {table ? "Ocultar tabla" : "Ver como tabla"}
       </button>
       {table && (
-        <div className="animate-fade mt-2 overflow-x-auto">
+        <motion.div variants={itemVariants} className="mt-2 overflow-x-auto">
           <table className="tabular w-full min-w-[460px] text-[13px]">
             <thead>
               <tr className="text-left text-muted">
@@ -169,7 +176,7 @@ function CashCard({ d }: { d: DashboardDTO }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </motion.div>
       )}
       <p className="mt-4 text-xs text-muted">
         Fuente: semilla de demostración. Saldo inicial = apertura supuesta + pagos aplicados. Un pago aplicado deja de contar como cobro futuro.
@@ -193,10 +200,9 @@ const NOTE_TONE: Record<AssistantNote["tone"], string> = {
 
 function AssistantCard({ notes }: { notes: AssistantNote[] }) {
   return (
-    <section
+    <motion.section variants={itemVariants}
       aria-labelledby="assistant-title"
-      className="animate-rise relative isolate overflow-hidden rounded-[var(--radius-card)] bg-violet-tint p-5 ring-1 ring-[#e0d8f7] sm:p-6"
-      style={{ animationDelay: "220ms" }}
+      className="relative isolate overflow-hidden rounded-[var(--radius-card)] bg-violet-tint p-5 ring-1 ring-[#e0d8f7] sm:p-6"
     >
       {/* Volúmenes abstractos: marcan la tarjeta como zona del asistente sin competir con los datos. */}
       <div aria-hidden="true" className="pointer-events-none absolute -right-14 -top-16 -z-10 size-52 rounded-full bg-[radial-gradient(circle_at_30%_30%,#ffffff_0%,#d9cdf8_45%,#b9a6f0_100%)] opacity-80" />
@@ -207,21 +213,22 @@ function AssistantCard({ notes }: { notes: AssistantNote[] }) {
           <Sparkle size={20} weight="fill" />
         </span>
         <div>
-          <h2 id="assistant-title" className="text-lg font-bold tracking-tight">
+          <h2 id="assistant-title" className="text-section font-bold">
             Asistente KeptAI
           </h2>
           <p className="text-[13px] text-violet-ink">{notes.length ? `${notes.length} asuntos por revisar` : "Todo al día"}</p>
         </div>
       </div>
 
-      <ul className="mt-5 flex flex-col gap-2.5">
+      <motion.ul variants={listVariants} className="mt-5 flex flex-col gap-2.5">
         {notes.length === 0 && (
           <li className="rounded-2xl bg-card/80 p-4 text-sm text-muted">No hay duplicados, vencimientos ni comprobantes sin pedido en esta vista.</li>
         )}
         {notes.slice(0, 5).map((n) => (
-          <li key={n.id}>
-            <Link
+          <motion.li key={n.id} variants={itemVariants}>
+            <MotionLink
               to={n.href}
+              {...press}
               className="group flex items-start gap-3 rounded-2xl bg-card/90 p-3.5 ring-1 ring-white transition-[background-color,box-shadow] hover:bg-card hover:shadow-[var(--shadow-card)]"
             >
               <span className={cx("mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full", NOTE_TONE[n.tone])}>{NOTE_ICON[n.tone]}</span>
@@ -231,30 +238,30 @@ function AssistantCard({ notes }: { notes: AssistantNote[] }) {
                 {n.date && <span className="tabular mt-1 block text-[11px] font-semibold text-faint">{n.date.length > 10 ? formatDateTime(n.date) : formatDate(n.date)}</span>}
               </span>
               <ArrowRight size={16} className="mt-1 shrink-0 text-faint transition-transform group-hover:translate-x-0.5 group-hover:text-ink" />
-            </Link>
-          </li>
+            </MotionLink>
+          </motion.li>
         ))}
-      </ul>
+      </motion.ul>
       <p className="mt-4 text-xs text-violet-ink">Alertas generadas con reglas sobre la evidencia registrada. Nada se aplica sin revisión humana.</p>
-    </section>
+    </motion.section>
   );
 }
 
 function ActivityCard({ d }: { d: DashboardDTO }) {
   return (
-    <Card className="animate-rise p-5 sm:p-6" style={{ animationDelay: "280ms" }}>
+    <Card className="p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-bold tracking-tight">Actividad reciente</h2>
-        <Link to="/perfil?tab=actividad" className="rounded-full px-3 py-1.5 text-[13px] font-semibold text-muted hover:bg-line-soft hover:text-ink">
+        <h2 className="text-section font-bold">Actividad reciente</h2>
+        <MotionLink to="/perfil?tab=actividad" {...press} className="inline-flex min-h-10 items-center rounded-full px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink">
           Mi actividad
-        </Link>
+        </MotionLink>
       </div>
       {d.activity.length === 0 ? (
         <div className="mt-4">
           <EmptyState title="Sin movimientos todavía">Cuando registres comprobantes o pagos aparecerán aquí.</EmptyState>
         </div>
       ) : (
-        <ul className="mt-3 flex flex-col">
+        <motion.ul variants={listVariants} className="mt-3 flex flex-col">
           {d.activity.map((a) => {
             const body = (
               <>
@@ -274,7 +281,7 @@ function ActivityCard({ d }: { d: DashboardDTO }) {
               </>
             );
             return (
-              <li key={a.id} className="border-t border-line-soft first:border-t-0">
+              <motion.li key={a.id} variants={itemVariants} className="border-t border-line-soft first:border-t-0">
                 {a.href ? (
                   <Link to={a.href} className="-mx-2 flex items-center gap-3 rounded-xl px-2 py-3 hover:bg-panel">
                     {body}
@@ -282,10 +289,10 @@ function ActivityCard({ d }: { d: DashboardDTO }) {
                 ) : (
                   <div className="flex items-center gap-3 py-3">{body}</div>
                 )}
-              </li>
+              </motion.li>
             );
           })}
-        </ul>
+        </motion.ul>
       )}
     </Card>
   );

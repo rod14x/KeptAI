@@ -1,19 +1,31 @@
-import type { ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { BrowserRouter, Link, Navigate, Outlet, Route, Routes, useLocation } from "react-router";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ScopeProvider } from "./context/ScopeContext";
 import { ToastProvider } from "./context/ToastContext";
 import { AppLayout } from "./components/layout/AppLayout";
-import { LoginPage } from "./pages/LoginPage";
-import { DashboardPage } from "./pages/DashboardPage";
-import { PedidosPage } from "./pages/PedidosPage";
-import { ConciliacionPage } from "./pages/ConciliacionPage";
-import { ResultadoPage } from "./pages/ResultadoPage";
-import { ClientesPage } from "./pages/ClientesPage";
-import { ClienteDetailPage } from "./pages/ClienteDetailPage";
-import { PerfilPage } from "./pages/PerfilPage";
-import { EstadoCuentaPage } from "./pages/EstadoCuentaPage";
-import { EmptyState } from "./components/ui/States";
+import { EmptyState, Skeleton } from "./components/ui/States";
+
+// Cada pantalla se descarga al abrirla: el primer render no paga Recharts ni páginas que el rol no usa.
+const page = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, name: K) => lazy(() => load().then((m) => ({ default: m[name] })));
+const LoginPage = page(() => import("./pages/LoginPage"), "LoginPage");
+const DashboardPage = page(() => import("./pages/DashboardPage"), "DashboardPage");
+const PedidosPage = page(() => import("./pages/PedidosPage"), "PedidosPage");
+const ConciliacionPage = page(() => import("./pages/ConciliacionPage"), "ConciliacionPage");
+const ResultadoPage = page(() => import("./pages/ResultadoPage"), "ResultadoPage");
+const ClientesPage = page(() => import("./pages/ClientesPage"), "ClientesPage");
+const ClienteDetailPage = page(() => import("./pages/ClienteDetailPage"), "ClienteDetailPage");
+const PerfilPage = page(() => import("./pages/PerfilPage"), "PerfilPage");
+const EstadoCuentaPage = page(() => import("./pages/EstadoCuentaPage"), "EstadoCuentaPage");
+
+function PageFallback() {
+  return (
+    <div className="mx-auto flex max-w-[1320px] flex-col gap-6" aria-busy="true" aria-label="Cargando">
+      <Skeleton className="h-14 w-72 rounded-2xl" />
+      <Skeleton className="h-[360px] rounded-[var(--radius-card)]" />
+    </div>
+  );
+}
 import { can, type Permission } from "./lib/permissions";
 
 function RequireSession() {
@@ -58,6 +70,7 @@ export default function App() {
       <AuthProvider>
         <ScopeProvider>
           <ToastProvider>
+            <Suspense fallback={<PageFallback />}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/estado-cuenta/:token" element={<EstadoCuentaPage />} />
@@ -82,6 +95,7 @@ export default function App() {
                 </Route>
               </Route>
             </Routes>
+            </Suspense>
           </ToastProvider>
         </ScopeProvider>
       </AuthProvider>

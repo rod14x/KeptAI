@@ -1,5 +1,9 @@
+import { AnimatePresence, motion } from "motion/react";
+import { MotionLink, Stagger, itemVariants, listVariants } from "../components/motion/primitives";
+import { PageHeader } from "../components/ui/PageHeader";
+import { Segmented } from "../components/ui/Segmented";
+import { Meter } from "../components/ui/Meter";
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
 import { CaretRight, HandCoins, MagnifyingGlass } from "@phosphor-icons/react";
 import { getCustomers, type CustomerRow } from "../api/client";
 import type { CreditStatus } from "../api/domain";
@@ -42,14 +46,8 @@ export function ClientesPage() {
   }, [data]);
 
   return (
-    <div className="mx-auto flex max-w-[1320px] flex-col gap-6">
-      <header className="animate-rise flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-[28px]">Clientes y crédito</h1>
-          <p className="mt-1 text-[15px] text-muted">Saldo, mora e historial de pago de cada cliente. Vista {SCOPE_LABEL[scope]}.</p>
-        </div>
-        <DemoBadge />
-      </header>
+    <Stagger className="mx-auto flex max-w-[1320px] flex-col gap-6">
+      <PageHeader title="Clientes y crédito" subtitle={<>Saldo, mora e historial de pago de cada cliente. Vista {SCOPE_LABEL[scope]}.</>} actions={<DemoBadge />} />
 
       {error ? (
         <ErrorState error={error} onRetry={reload} />
@@ -59,8 +57,8 @@ export function ClientesPage() {
           <Skeleton className="h-[420px] rounded-[var(--radius-card)]" />
         </div>
       ) : (
-        <>
-          <dl className="animate-rise grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stagger className="flex flex-col gap-6">
+          <motion.dl variants={listVariants} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Stat label="Crédito en uso" value={<Money cents={totals.used} />} hint={`${data.length} clientes`} />
             <Stat label="Saldo vencido" value={<Money cents={totals.overdue} />} hint={`${totals.inMora} ${totals.inMora === 1 ? "cliente en mora" : "clientes en mora"}`} bad={totals.overdue > 0} />
             <Stat label="Solicitudes pendientes" value={String(totals.pending)} hint="Esperan decisión de gerencia" />
@@ -69,31 +67,19 @@ export function ClientesPage() {
               value={avgLabel(data)}
               hint="Días respecto al vencimiento, pedidos cerrados"
             />
-          </dl>
+          </motion.dl>
 
-          <Card className="animate-rise p-4 sm:p-6" style={{ animationDelay: "60ms" }}>
+          <Card className="p-4 sm:p-6">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div role="radiogroup" aria-label="Filtrar por estado" className="no-scrollbar -mx-1 flex gap-1 overflow-x-auto px-1">
-                {FILTERS.map((f) => {
-                  const n = f.id === "todos" ? data.length : data.filter((r) => r.status === f.id).length;
-                  return (
-                    <button
-                      key={f.id}
-                      role="radio"
-                      aria-checked={filter === f.id}
-                      onClick={() => setFilter(f.id)}
-                      className={cx(
-                        "flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold transition-colors",
-                        filter === f.id ? "bg-ink text-white" : "bg-line-soft text-muted hover:text-ink",
-                      )}
-                    >
-                      {f.label}
-                      <span className={cx("tabular rounded-full px-1.5 text-[11px]", filter === f.id ? "bg-white/20" : "bg-card")}>{n}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <label className="flex h-10 items-center gap-2 rounded-full bg-panel px-3.5 ring-1 ring-line focus-within:ring-2 focus-within:ring-violet lg:w-72">
+              <Segmented
+                tone="solid"
+                label="Filtrar por estado"
+                value={filter}
+                onChange={setFilter}
+                className="-mx-1 flex px-1"
+                options={FILTERS.map((f) => ({ value: f.id, label: f.label, count: f.id === "todos" ? data.length : data.filter((r) => r.status === f.id).length }))}
+              />
+              <label className="flex h-11 items-center gap-2 rounded-full bg-panel px-4 ring-1 ring-line focus-within:ring-2 focus-within:ring-violet lg:w-72">
                 <MagnifyingGlass size={16} className="text-faint" />
                 <span className="sr-only">Buscar cliente</span>
                 <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar cliente" className="w-full bg-transparent text-sm outline-none placeholder:text-faint" />
@@ -105,7 +91,7 @@ export function ClientesPage() {
                 <EmptyState title="Ningún cliente coincide">Cambia el filtro o la búsqueda.</EmptyState>
               </div>
             ) : (
-              <ul className="mt-4 flex flex-col">
+              <motion.ul variants={listVariants} className="mt-4 flex flex-col">
                 <li className="hidden grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1fr)_120px_24px] gap-4 px-3 pb-2 text-xs font-semibold text-muted xl:grid">
                   <span>Cliente</span>
                   <span>Crédito usado</span>
@@ -115,15 +101,17 @@ export function ClientesPage() {
                   <span>Estado</span>
                   <span />
                 </li>
-                {rows.map((r) => (
-                  <CustomerRowView key={r.id} r={r} />
-                ))}
-              </ul>
+                <AnimatePresence initial={false} mode="popLayout">
+                  {rows.map((r) => (
+                    <CustomerRowView key={r.id} r={r} />
+                  ))}
+                </AnimatePresence>
+              </motion.ul>
             )}
           </Card>
-        </>
+        </Stagger>
       )}
-    </div>
+    </Stagger>
   );
 }
 
@@ -136,21 +124,23 @@ function avgLabel(rows: CustomerRow[]) {
 
 function Stat({ label, value, hint, bad }: { label: string; value: React.ReactNode; hint: string; bad?: boolean }) {
   return (
-    <div className="rounded-[18px] bg-card p-4 ring-1 ring-line/70">
+    <motion.div variants={itemVariants} className="rounded-[18px] bg-card p-4 shadow-[0_1px_2px_rgb(23_23_26/0.04)] ring-1 ring-line/70">
       <dt className="text-[13px] font-semibold text-muted">{label}</dt>
       <dd className={cx("tabular mt-1 text-xl font-extrabold tracking-tight", bad && "text-bad")}>{value}</dd>
       <p className="mt-0.5 text-xs text-muted">{hint}</p>
-    </div>
+    </motion.div>
   );
 }
 
+const EXIT = { opacity: 0, transition: { duration: 0.12 } };
+const TAP = { scale: 0.995 };
+
 function CustomerRowView({ r }: { r: CustomerRow }) {
-  const pct = r.creditLimitCents ? Math.min((r.usedCents / r.creditLimitCents) * 100, 100) : 0;
-  const over = r.usedCents > r.creditLimitCents;
   return (
-    <li className="border-t border-line-soft first:border-t-0">
-      <Link
+    <motion.li layout variants={itemVariants} exit={EXIT} className="border-t border-line-soft first:border-t-0">
+      <MotionLink
         to={`/clientes/${r.id}`}
+        whileTap={TAP}
         className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-3 rounded-2xl px-3 py-4 transition-colors hover:bg-panel xl:grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1fr)_120px_24px]"
       >
         <span className="flex min-w-0 items-center gap-3">
@@ -168,9 +158,7 @@ function CustomerRowView({ r }: { r: CustomerRow }) {
             <span className="font-bold">{formatMoney(r.usedCents)}</span>
             <span className="text-muted">de {formatMoney(r.creditLimitCents, { short: true })}</span>
           </span>
-          <span className="h-1.5 overflow-hidden rounded-full bg-line-soft">
-            <span className={cx("block h-full rounded-full", over ? "bg-bad" : pct > 75 ? "bg-[#d69a1f]" : "bg-violet")} style={{ width: `${Math.max(pct, 2)}%` }} />
-          </span>
+          <Meter value={r.creditLimitCents ? r.usedCents / r.creditLimitCents : 0} label={`Crédito usado de ${r.name}`} />
           <span className="text-xs text-muted">Plazo {r.termDays} días</span>
         </span>
 
@@ -215,7 +203,7 @@ function CustomerRowView({ r }: { r: CustomerRow }) {
           )}
         </span>
         <CaretRight size={16} weight="bold" className="hidden text-faint xl:block" />
-      </Link>
-    </li>
+      </MotionLink>
+    </motion.li>
   );
 }

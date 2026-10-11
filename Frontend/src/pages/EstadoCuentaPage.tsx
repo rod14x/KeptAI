@@ -1,3 +1,5 @@
+import { motion } from "motion/react";
+import { Stagger, itemVariants, listVariants } from "../components/motion/primitives";
 import { useParams } from "react-router";
 import { CalendarBlank, CheckCircle, Clock, LinkBreak, WarningCircle } from "@phosphor-icons/react";
 import { getStatement, type StatementDTO } from "../api/client";
@@ -14,7 +16,7 @@ export function EstadoCuentaPage() {
 
   return (
     <div className="min-h-[100dvh] bg-[#f6f4fb]">
-      <div className="mx-auto flex max-w-xl flex-col gap-5 px-4 py-6 sm:py-10">
+      <div className="mx-auto max-w-xl px-4 py-6 sm:py-10">
         {error ? (
           <ErrorState error={error} onRetry={reload} />
         ) : loading || !data ? (
@@ -24,7 +26,9 @@ export function EstadoCuentaPage() {
             <Skeleton className="h-72 rounded-[24px]" />
           </div>
         ) : data.ok ? (
-          <Statement d={data} />
+          <Stagger className="flex flex-col gap-5">
+            <Statement d={data} />
+          </Stagger>
         ) : (
           <Invalid reason={data.reason} />
         )}
@@ -41,13 +45,13 @@ function Invalid({ reason }: { reason: "no_existe" | "revocado" | "vencido" }) {
         ? "Este enlace fue desactivado. Pide uno nuevo a tu vendedor."
         : "No encontramos este estado de cuenta. Revisa que el enlace esté completo.";
   return (
-    <div className="mt-16 flex flex-col items-center gap-3 rounded-[24px] bg-card px-6 py-12 text-center shadow-[var(--shadow-card)]">
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-16 flex flex-col items-center gap-3 rounded-[24px] bg-card px-6 py-12 text-center shadow-[var(--shadow-card)]">
       <span className="flex size-12 items-center justify-center rounded-full bg-warn-tint text-warn">
         <LinkBreak size={24} weight="bold" />
       </span>
       <h1 className="text-lg font-bold">Enlace no disponible</h1>
       <p className="max-w-[34ch] text-sm text-muted">{text}</p>
-    </div>
+    </motion.div>
   );
 }
 
@@ -57,7 +61,7 @@ function Statement({ d }: { d: Extract<StatementDTO, { ok: true }> }) {
   const brand = d.brand === "corpotex" ? "Corpotex" : "Unicrack";
   return (
     <>
-      <header className="animate-rise flex items-center justify-between gap-3">
+      <motion.header variants={itemVariants} className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-violet-ink">{brand}</p>
           <h1 className="text-2xl font-extrabold tracking-tight">Estado de cuenta</h1>
@@ -67,9 +71,9 @@ function Statement({ d }: { d: Extract<StatementDTO, { ok: true }> }) {
           <br />
           <span className="font-semibold text-ink">{formatDateTime(d.generatedAt)}</span>
         </p>
-      </header>
+      </motion.header>
 
-      <section className="animate-rise rounded-[24px] bg-ink p-6 text-white shadow-[var(--shadow-lift)]" style={{ animationDelay: "60ms" }}>
+      <motion.section variants={itemVariants} className="rounded-[24px] bg-ink p-6 text-white shadow-[var(--shadow-lift)]">
         <p className="text-sm text-white/70">{d.customer}</p>
         <p className="mt-4 text-sm text-white/70">Saldo pendiente</p>
         <p className="tabular text-4xl font-extrabold tracking-tight">{formatMoney(d.balanceCents)}</p>
@@ -84,15 +88,15 @@ function Statement({ d }: { d: Extract<StatementDTO, { ok: true }> }) {
             {d.nextDue && <p className="tabular text-xs text-white/70">{formatMoney(d.nextDue.amountCents)}</p>}
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      <section className="animate-rise rounded-[24px] bg-card p-5 shadow-[var(--shadow-card)]" style={{ animationDelay: "120ms" }} aria-labelledby="st-orders">
+      <motion.section variants={itemVariants} className="rounded-[24px] bg-card p-5 shadow-[var(--shadow-card)]" aria-labelledby="st-orders">
         <h2 id="st-orders" className="text-base font-bold">
           Tus pedidos
         </h2>
-        <ul className="mt-3 flex flex-col">
+        <motion.ul variants={listVariants} className="mt-3 flex flex-col">
           {d.orders.map((o) => (
-            <li key={o.id} className="border-t border-line-soft py-3.5 first:border-t-0">
+            <motion.li variants={itemVariants} key={o.id} className="border-t border-line-soft py-3.5 first:border-t-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-semibold">{o.id}</p>
@@ -125,12 +129,12 @@ function Statement({ d }: { d: Extract<StatementDTO, { ok: true }> }) {
                 </span>
                 <span className="font-bold">Saldo {formatMoney(o.balanceCents)}</span>
               </div>
-            </li>
+            </motion.li>
           ))}
-        </ul>
-      </section>
+        </motion.ul>
+      </motion.section>
 
-      <section className="animate-rise rounded-[24px] bg-card p-5 shadow-[var(--shadow-card)]" style={{ animationDelay: "180ms" }} aria-labelledby="st-pay">
+      <motion.section variants={itemVariants} className="rounded-[24px] bg-card p-5 shadow-[var(--shadow-card)]" aria-labelledby="st-pay">
         <h2 id="st-pay" className="text-base font-bold">
           Pagos registrados
         </h2>
@@ -151,7 +155,7 @@ function Statement({ d }: { d: Extract<StatementDTO, { ok: true }> }) {
             ))}
           </ul>
         )}
-      </section>
+      </motion.section>
 
       <p className="flex items-start gap-2 px-1 text-xs leading-relaxed text-muted">
         <CalendarBlank size={14} className="mt-0.5 shrink-0" />

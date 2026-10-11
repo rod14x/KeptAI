@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { AnimatePresence, motion } from "motion/react";
 import { MagnifyingGlass } from "@phosphor-icons/react";
+import { popVariants } from "../motion/primitives";
 import { getState } from "../../api/store";
 import { cx, formatMoney } from "../../lib/format";
 import { useAuth } from "../../context/AuthContext";
@@ -53,7 +55,7 @@ export function SearchBox({ className }: { className?: string }) {
 
   return (
     <div className={cx("relative", className)}>
-      <label className="flex h-11 items-center gap-2 rounded-full bg-card px-4 ring-1 ring-line focus-within:ring-2 focus-within:ring-violet">
+      <label className="flex h-11 items-center gap-2 rounded-full bg-card px-4 shadow-[0_1px_2px_rgb(23_23_26/0.04)] ring-1 ring-line focus-within:ring-2 focus-within:ring-violet">
         <MagnifyingGlass size={18} className="shrink-0 text-faint" />
         <span className="sr-only">Buscar pedido, comprobante o cliente</span>
         <input
@@ -79,8 +81,17 @@ export function SearchBox({ className }: { className?: string }) {
           aria-controls="search-results"
         />
       </label>
+      <AnimatePresence>
       {open && q.trim() && (
-        <ul id="search-results" role="listbox" className="animate-fade absolute inset-x-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-2xl bg-card p-1.5 shadow-[var(--shadow-lift)] ring-1 ring-line">
+        <motion.ul
+          id="search-results"
+          role="listbox"
+          variants={popVariants}
+          initial="hidden"
+          animate="show"
+          exit="exit"
+          style={{ transformOrigin: "top center" }}
+          className="absolute inset-x-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-2xl bg-card p-1.5 shadow-[var(--shadow-lift)] ring-1 ring-line">
           {hits.length === 0 && <li className="px-3 py-3 text-sm text-muted">Sin resultados para “{q}”.</li>}
           {hits.map((h, i) => (
             <li key={h.href} role="option" aria-selected={i === active}>
@@ -94,8 +105,9 @@ export function SearchBox({ className }: { className?: string }) {
               </button>
             </li>
           ))}
-        </ul>
+        </motion.ul>
       )}
+      </AnimatePresence>
     </div>
   );
 }

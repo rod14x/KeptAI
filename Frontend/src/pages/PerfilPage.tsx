@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { motion } from "motion/react";
+import { Stagger, itemVariants, listVariants, spring } from "../components/motion/primitives";
+import { Segmented } from "../components/ui/Segmented";
 import { Link, useSearchParams } from "react-router";
 import { CalendarBlank, Check, EnvelopeSimple, Lock, Minus, FloppyDisk, Storefront } from "@phosphor-icons/react";
 import { getProfile, type ProfileDTO } from "../api/client";
@@ -32,8 +35,8 @@ export function PerfilPage() {
   const { data, loading, error, reload } = useApi(() => getProfile(me.name), [me.name]);
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-6">
-      <Card className="animate-rise flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:p-6">
+    <Stagger className="mx-auto flex max-w-[1100px] flex-col gap-6">
+      <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:p-6">
         <Avatar name={me.name} size="lg" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -55,37 +58,21 @@ export function PerfilPage() {
         </div>
       </Card>
 
-      <div role="tablist" aria-label="Secciones del perfil" className="no-scrollbar -mx-4 flex gap-1 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={tab === t.id}
-            onClick={() => setParams({ tab: t.id })}
-            className={cx(
-              "h-10 shrink-0 rounded-full px-4 text-sm font-semibold transition-colors",
-              tab === t.id ? "bg-card text-ink shadow-[0_1px_3px_rgb(23_23_26/0.1)] ring-1 ring-line/70" : "text-muted hover:text-ink",
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <motion.div variants={itemVariants} className="-mx-4 px-4 sm:mx-0 sm:px-0">
+        <Segmented kind="tab" label="Secciones del perfil" value={tab} onChange={(t) => setParams({ tab: t })} options={TABS.map((t) => ({ value: t.id, label: t.label }))} />
+      </motion.div>
 
       {error ? (
         <ErrorState error={error} onRetry={reload} />
       ) : loading || !data ? (
         <Skeleton className="h-[360px] rounded-[var(--radius-card)]" />
-      ) : tab === "datos" ? (
-        <RoleTab d={data} />
-      ) : tab === "actividad" ? (
-        <ActivityTab d={data} />
-      ) : tab === "preferencias" ? (
-        <PreferencesTab />
       ) : (
-        <SettingsTab d={data} />
+        // La clave reinicia el escalonado al cambiar de pestaña: el contenido nuevo entra en orden.
+        <Stagger key={tab} className="flex flex-col gap-6">
+          {tab === "datos" ? <RoleTab d={data} /> : tab === "actividad" ? <ActivityTab d={data} /> : tab === "preferencias" ? <PreferencesTab /> : <SettingsTab d={data} />}
+        </Stagger>
       )}
-    </div>
+    </Stagger>
   );
 }
 
@@ -100,26 +87,26 @@ function RoleTab({ d }: { d: ProfileDTO }) {
   ];
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-      <Card className="animate-rise p-5 sm:p-6">
-        <h2 className="text-lg font-bold tracking-tight">Lo que puede hacer tu rol</h2>
+      <Card className="p-5 sm:p-6">
+        <h2 className="text-section font-bold">Lo que puede hacer tu rol</h2>
         <p className="mt-1 text-sm text-muted">{ROLE_SUMMARY[me.role]}</p>
-        <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+        <motion.ul variants={listVariants} className="mt-4 grid gap-2 sm:grid-cols-2">
           {ALL_PERMISSIONS.map((p) => {
             const yes = can(me.role, p);
             return (
-              <li key={p} className={cx("flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px]", yes ? "bg-ok-tint/60 font-semibold text-ink" : "bg-panel text-muted")}>
+              <motion.li variants={itemVariants} key={p} className={cx("flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px]", yes ? "bg-ok-tint/60 font-semibold text-ink" : "bg-panel text-muted")}>
                 <span className={cx("flex size-5 shrink-0 items-center justify-center rounded-full", yes ? "bg-ok text-white" : "bg-line text-muted")}>
                   {yes ? <Check size={12} weight="bold" /> : <Minus size={12} weight="bold" />}
                 </span>
                 {PERMISSION_LABEL[p]}
-              </li>
+              </motion.li>
             );
           })}
-        </ul>
+        </motion.ul>
         <p className="mt-4 text-xs text-muted">El servidor valida cada permiso. Si algo no te corresponde, la app lo explica en lugar de ocultarlo sin aviso.</p>
       </Card>
-      <Card className="animate-rise p-5 sm:p-6" style={{ animationDelay: "60ms" }}>
-        <h2 className="text-lg font-bold tracking-tight">Tu trabajo registrado</h2>
+      <Card className="p-5 sm:p-6">
+        <h2 className="text-section font-bold">Tu trabajo registrado</h2>
         <dl className="mt-4 grid grid-cols-2 gap-3">
           {stats.map((s) => (
             <div key={s.label} className="rounded-2xl bg-panel p-3.5 ring-1 ring-line/70">
@@ -138,15 +125,15 @@ function RoleTab({ d }: { d: ProfileDTO }) {
 
 function ActivityTab({ d }: { d: ProfileDTO }) {
   return (
-    <Card className="animate-rise p-5 sm:p-6">
-      <h2 className="text-lg font-bold tracking-tight">Mi actividad</h2>
+    <Card className="p-5 sm:p-6">
+      <h2 className="text-section font-bold">Mi actividad</h2>
       <p className="mt-1 text-sm text-muted">Todo lo que hiciste en KeptAI, con fecha y hora. Este registro no se puede borrar.</p>
       {d.activity.length === 0 ? (
         <div className="mt-4">
           <EmptyState title="Aún no registras acciones">Cuando valides, apliques o solicites algo, aparecerá aquí.</EmptyState>
         </div>
       ) : (
-        <ul className="mt-4 flex flex-col">
+        <motion.ul variants={listVariants} className="mt-4 flex flex-col">
           {d.activity.map((a) => {
             const body = (
               <>
@@ -165,7 +152,7 @@ function ActivityTab({ d }: { d: ProfileDTO }) {
               </>
             );
             return (
-              <li key={a.id} className="border-t border-line-soft first:border-t-0">
+              <motion.li variants={itemVariants} key={a.id} className="border-t border-line-soft first:border-t-0">
                 {a.href ? (
                   <Link to={a.href} className="-mx-2 flex items-center gap-3 rounded-xl px-2 py-3 hover:bg-panel">
                     {body}
@@ -173,10 +160,10 @@ function ActivityTab({ d }: { d: ProfileDTO }) {
                 ) : (
                   <div className="flex items-center gap-3 py-3">{body}</div>
                 )}
-              </li>
+              </motion.li>
             );
           })}
-        </ul>
+        </motion.ul>
       )}
     </Card>
   );
@@ -202,8 +189,8 @@ function PreferencesTab() {
   };
 
   return (
-    <Card className="animate-rise p-5 sm:p-6">
-      <h2 className="text-lg font-bold tracking-tight">Preferencias</h2>
+    <Card className="p-5 sm:p-6">
+      <h2 className="text-section font-bold">Preferencias</h2>
       <p className="mt-1 text-sm text-muted">Se guardan solo en este navegador y no cambian datos del negocio.</p>
 
       <fieldset className="mt-5">
@@ -215,7 +202,7 @@ function PreferencesTab() {
         ) : (
           <div className="mt-2 flex flex-wrap gap-2">
             {(["consolidado", "corpotex", "unicrack"] as Scope[]).map((s) => (
-              <label key={s} className={cx("flex h-10 cursor-pointer items-center gap-2 rounded-full px-4 text-sm font-semibold ring-1", prefs.defaultScope === s ? "bg-ink text-white ring-ink" : "bg-card ring-line hover:bg-panel")}>
+              <label key={s} className={cx("flex h-11 cursor-pointer items-center gap-2 rounded-full px-4 text-sm font-semibold ring-1 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-violet", prefs.defaultScope === s ? "bg-ink text-white ring-ink" : "bg-card ring-line hover:bg-panel")}>
                 <input type="radio" name="scope" className="sr-only" checked={prefs.defaultScope === s} onChange={() => setPrefs({ ...prefs, defaultScope: s })} />
                 {SCOPE_LABEL[s]}
               </label>
@@ -229,7 +216,7 @@ function PreferencesTab() {
         <p className="mt-1 text-[13px] text-muted">Las alertas son internas: no se envían mensajes reales a clientes.</p>
         <div className="mt-3 flex flex-col gap-2">
           {(Object.keys(NOTIFY_LABEL) as Array<keyof Preferences["notify"]>).map((k) => (
-            <label key={k} className="flex cursor-pointer items-center justify-between gap-4 rounded-xl bg-panel px-4 py-3 ring-1 ring-line/70">
+            <label key={k} className="flex min-h-14 cursor-pointer items-center justify-between gap-4 rounded-xl bg-panel px-4 py-3 ring-1 ring-line/70 transition-colors hover:bg-line-soft/60 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-violet">
               <span className="text-sm font-medium">{NOTIFY_LABEL[k]}</span>
               <span className="relative inline-flex shrink-0">
                 <input
@@ -239,8 +226,14 @@ function PreferencesTab() {
                   checked={prefs.notify[k]}
                   onChange={(e) => setPrefs({ ...prefs, notify: { ...prefs.notify, [k]: e.target.checked } })}
                 />
-                <span className="h-6 w-11 rounded-full bg-line transition-colors peer-checked:bg-violet peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-violet" />
-                <span className="absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
+                <span className="h-7 w-12 rounded-full bg-line transition-colors duration-200 peer-checked:bg-violet peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-violet" />
+                <motion.span
+                  aria-hidden="true"
+                  initial={false}
+                  animate={{ x: prefs.notify[k] ? 20 : 0 }}
+                  transition={spring}
+                  className="absolute left-1 top-1 size-5 rounded-full bg-white shadow-[0_1px_3px_rgb(23_23_26/0.25)]"
+                />
               </span>
             </label>
           ))}
@@ -286,10 +279,10 @@ function SettingsTab({ d }: { d: ProfileDTO }) {
           <Lock size={16} /> Solo gerencia edita estos supuestos. Los ves para entender de dónde salen las cifras.
         </p>
       )}
-      <Card className="animate-rise p-5 sm:p-6">
+      <Card className="p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold tracking-tight">Supuestos de caja y crédito</h2>
+            <h2 className="text-section font-bold">Supuestos de caja y crédito</h2>
             <p className="mt-1 text-sm text-muted">Valores de demostración. Ninguno es política aprobada por la empresa.</p>
           </div>
           {s.updatedAt && (
@@ -314,7 +307,7 @@ function SettingsTab({ d }: { d: ProfileDTO }) {
             <span className="text-sm font-bold">Evento que inicia el plazo</span>
             <div className="flex flex-wrap gap-2">
               {(["entrega", "confirmacion"] as const).map((e) => (
-                <label key={e} className={cx("flex h-10 cursor-pointer items-center rounded-full px-4 text-sm font-semibold ring-1", start === e ? "bg-ink text-white ring-ink" : "bg-card ring-line")}>
+                <label key={e} className={cx("flex h-11 cursor-pointer items-center rounded-full px-4 text-sm font-semibold ring-1 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-violet", start === e ? "bg-ink text-white ring-ink" : "bg-card ring-line")}>
                   <input type="radio" name="start" className="sr-only" checked={start === e} onChange={() => setStart(e)} />
                   {e === "entrega" ? "Entrega del pedido" : "Confirmación del pedido"}
                 </label>
@@ -329,7 +322,7 @@ function SettingsTab({ d }: { d: ProfileDTO }) {
               {[15, 30, 45, 60].map((t) => {
                 const on = terms.includes(t);
                 return (
-                  <label key={t} className={cx("flex h-10 cursor-pointer items-center gap-1.5 rounded-full px-4 text-sm font-semibold ring-1", on ? "bg-violet-tint text-violet-ink ring-violet-tint" : "bg-card text-muted ring-line")}>
+                  <label key={t} className={cx("flex h-11 cursor-pointer items-center gap-1.5 rounded-full px-4 text-sm font-semibold ring-1 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-violet", on ? "bg-violet-tint text-violet-ink ring-violet-tint" : "bg-card text-muted ring-line")}>
                     <input type="checkbox" className="sr-only" checked={on} onChange={() => setTerms(on ? terms.filter((x) => x !== t) : [...terms, t])} />
                     {on && <Check size={14} weight="bold" />}
                     {t} días
@@ -368,8 +361,8 @@ function TransferCard({ d, editable }: { d: ProfileDTO; editable: boolean }) {
   const me = useMe();
   const toast = useToast();
   return (
-    <Card className="animate-rise p-5 sm:p-6" style={{ animationDelay: "60ms" }}>
-      <h2 className="text-lg font-bold tracking-tight">Precio de transferencia del taller</h2>
+    <Card className="p-5 sm:p-6">
+      <h2 className="text-section font-bold">Precio de transferencia del taller</h2>
       <p className="mt-1 text-sm text-muted">Lo que el taller cobra internamente a la marca por cada pedido de producción propia. En el consolidado se elimina.</p>
       <ul className="mt-4 flex flex-col">
         {d.ownOrders.map((o) => (

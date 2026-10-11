@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router";
+import { AnimatePresence, motion } from "motion/react";
 import { List, X } from "@phosphor-icons/react";
+import { overlayVariants, softSpring } from "../motion/primitives";
+
+const DRAWER_IN = { x: "-100%" };
+const DRAWER_SHOW = { x: 0 };
 import { Sidebar, NAV } from "./Sidebar";
 import { ScopeSelector } from "./ScopeSelector";
 import { SearchBox } from "./SearchBox";
@@ -25,21 +30,29 @@ export function AppLayout() {
         <Sidebar />
       </aside>
 
-      {drawer && (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menú">
-          <button aria-label="Cerrar menú" className="animate-fade absolute inset-0 bg-ink/30" onClick={() => setDrawer(false)} />
-          <div className="animate-rise absolute inset-y-0 left-0 w-[280px] max-w-[85vw] bg-app shadow-[var(--shadow-lift)]">
-            <button
-              onClick={() => setDrawer(false)}
-              aria-label="Cerrar menú"
-              className="absolute right-3 top-4 flex size-10 items-center justify-center rounded-full text-muted hover:bg-line-soft"
+      <AnimatePresence>
+        {drawer && (
+          <motion.div key="drawer" className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menú" initial="hidden" animate="show" exit="exit">
+            <motion.button variants={overlayVariants} aria-label="Cerrar menú" className="absolute inset-0 bg-ink/30" onClick={() => setDrawer(false)} />
+            <motion.div
+              initial={DRAWER_IN}
+              animate={DRAWER_SHOW}
+              exit={DRAWER_IN}
+              transition={softSpring}
+              className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] bg-app shadow-[var(--shadow-lift)]"
             >
-              <X size={20} />
-            </button>
-            <Sidebar onNavigate={() => setDrawer(false)} />
-          </div>
-        </div>
-      )}
+              <button
+                onClick={() => setDrawer(false)}
+                aria-label="Cerrar menú"
+                className="absolute right-3 top-4 flex size-11 items-center justify-center rounded-full text-muted hover:bg-line-soft"
+              >
+                <X size={20} />
+              </button>
+              <Sidebar onNavigate={() => setDrawer(false)} />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex min-w-0 flex-col lg:py-3 lg:pr-3">
         <div className="flex min-h-[100dvh] flex-col bg-panel lg:min-h-[calc(100dvh-24px)] lg:rounded-[24px] lg:ring-1 lg:ring-line/70">
@@ -65,7 +78,7 @@ export function AppLayout() {
               </div>
             </div>
             <div className="flex flex-col gap-2 px-4 pb-3 sm:px-6 lg:hidden">
-              <ScopeSelector className="flex w-full" />
+              <ScopeSelector className="flex w-full" stretch />
               <SearchBox className="md:hidden" />
             </div>
           </header>

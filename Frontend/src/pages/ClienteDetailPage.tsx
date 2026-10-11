@@ -1,3 +1,7 @@
+import { motion } from "motion/react";
+import { MotionLink, Stagger, itemVariants, listVariants, press } from "../components/motion/primitives";
+import { Segmented } from "../components/ui/Segmented";
+import { Meter } from "../components/ui/Meter";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Link, useParams } from "react-router";
 import {
@@ -70,12 +74,12 @@ function Detail({ d }: { d: CustomerDetailDTO }) {
   const pending = d.requests.find((r) => r.status === "pendiente");
 
   return (
-    <div className="mx-auto flex max-w-[1320px] flex-col gap-6">
-      <Link to="/clientes" className="animate-fade inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink">
+    <Stagger className="mx-auto flex max-w-[1320px] flex-col gap-6">
+      <MotionLink to="/clientes" variants={itemVariants} {...press} className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-full pr-3 text-sm font-semibold text-muted transition-colors hover:text-ink">
         <ArrowLeft size={16} weight="bold" /> Clientes
-      </Link>
+      </MotionLink>
 
-      <Card className="animate-rise flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center">
+      <Card className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center">
         <div className="flex min-w-0 flex-1 items-center gap-4">
           <span className="hidden sm:block">
             <AvatarXL name={c.name} />
@@ -112,15 +116,15 @@ function Detail({ d }: { d: CustomerDetailDTO }) {
       </Card>
 
       {snap.suggestion && (
-        <p className="animate-rise flex items-start gap-2.5 rounded-2xl bg-warn-tint px-4 py-3 text-sm font-medium text-warn ring-1 ring-[#f0dfb5]">
+        <motion.p variants={itemVariants} className="flex items-start gap-2.5 rounded-2xl bg-warn-tint px-4 py-3 text-sm font-medium text-warn ring-1 ring-[#f0dfb5]">
           <WarningCircle size={18} weight="bold" className="mt-px shrink-0" />
           <span>
             {snap.suggestion} <span className="font-normal text-ink-soft">La decisión la toma gerencia; la app no bloquea ni aprueba sola.</span>
           </span>
-        </p>
+        </motion.p>
       )}
 
-      <section aria-label="Crédito" className="animate-rise grid grid-cols-2 gap-3 lg:grid-cols-4" style={{ animationDelay: "60ms" }}>
+      <motion.section variants={itemVariants} aria-label="Crédito" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <CreditStat label="Línea de crédito" value={<Money cents={c.creditLimitCents} />} hint={`Plazo ${c.termDays} días desde la entrega`} />
         <CreditStat
           label="Usado"
@@ -139,7 +143,7 @@ function Detail({ d }: { d: CustomerDetailDTO }) {
           value={snap.avgDaysLate === null ? "Sin cierres" : snap.avgDaysLate > 0 ? `${snap.avgDaysLate} d tarde` : snap.avgDaysLate < 0 ? `${-snap.avgDaysLate} d antes` : "A tiempo"}
           hint={snap.lastPaymentAt ? `En pedidos ya cerrados. Último pago ${formatDate(snap.lastPaymentAt)}` : "Sin pagos registrados"}
         />
-      </section>
+      </motion.section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-6">
@@ -154,7 +158,7 @@ function Detail({ d }: { d: CustomerDetailDTO }) {
       </div>
 
       <RequestModal open={requestOpen} onClose={() => setRequestOpen(false)} d={d} />
-    </div>
+    </Stagger>
   );
 }
 
@@ -176,8 +180,8 @@ function CreditStat({ label, value, hint, bad, bar }: { label: string; value: Re
       <p className="text-[13px] font-semibold text-muted">{label}</p>
       <p className={cx("tabular mt-1 text-xl font-extrabold tracking-tight sm:text-2xl", bad && "text-bad")}>{value}</p>
       {bar !== undefined && (
-        <span className="mt-2 block h-1.5 overflow-hidden rounded-full bg-line-soft">
-          <span className={cx("block h-full rounded-full", bar > 1 ? "bg-bad" : bar > 0.75 ? "bg-[#d69a1f]" : "bg-violet")} style={{ width: `${Math.max(Math.min(bar, 1) * 100, 2)}%` }} />
+        <span className="mt-2 block">
+          <Meter value={bar} label={label} />
         </span>
       )}
       <p className="mt-1.5 text-xs text-muted">{hint}</p>
@@ -195,9 +199,9 @@ const ALERT_STATUS: Record<string, { tone: Tone; label: string }> = {
 function OrdersCard({ d }: { d: CustomerDetailDTO }) {
   const [open, setOpen] = useState<string | null>(d.orders.find((o) => o.balanceCents > 0)?.id ?? null);
   return (
-    <Card className="animate-rise p-5 sm:p-6" style={{ animationDelay: "100ms" }}>
+    <Card className="p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-bold tracking-tight">Pedidos</h2>
+        <h2 className="text-section font-bold">Pedidos</h2>
         <span className="text-[13px] text-muted">
           {d.orders.length} pedidos · <Money cents={d.snapshot.totalSoldCents} /> vendidos
         </span>
@@ -207,11 +211,11 @@ function OrdersCard({ d }: { d: CustomerDetailDTO }) {
           <EmptyState title="Sin pedidos todavía" />
         </div>
       ) : (
-        <ul className="mt-3 flex flex-col">
+        <motion.ul variants={listVariants} className="mt-3 flex flex-col">
           {d.orders.map((o) => {
             const expanded = open === o.id;
             return (
-              <li key={o.id} className="border-t border-line-soft first:border-t-0">
+              <motion.li variants={itemVariants} key={o.id} className="border-t border-line-soft first:border-t-0">
                 <button
                   onClick={() => setOpen(expanded ? null : o.id)}
                   aria-expanded={expanded}
@@ -241,7 +245,7 @@ function OrdersCard({ d }: { d: CustomerDetailDTO }) {
                   </span>
                 </button>
                 {expanded && (
-                  <div className="animate-fade mb-3 grid gap-4 rounded-[var(--radius-block)] bg-panel p-4 ring-1 ring-line md:grid-cols-2">
+                  <motion.div variants={itemVariants} className="mb-3 grid gap-4 rounded-[var(--radius-block)] bg-panel p-4 ring-1 ring-line md:grid-cols-2">
                     <div>
                       <p className="text-xs font-semibold text-muted">Cobro</p>
                       <dl className="tabular mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[13px]">
@@ -290,12 +294,12 @@ function OrdersCard({ d }: { d: CustomerDetailDTO }) {
                         ))}
                       </ol>
                     </div>
-                  </div>
+                  </motion.div>
                 )}
-              </li>
+              </motion.li>
             );
           })}
-        </ul>
+        </motion.ul>
       )}
     </Card>
   );
@@ -313,8 +317,8 @@ function DateCell({ label, date, strong }: { label: string; date: string; strong
 function SummaryCard({ d }: { d: CustomerDetailDTO }) {
   const s = d.snapshot;
   return (
-    <Card className="animate-rise p-5 sm:p-6" style={{ animationDelay: "100ms" }}>
-      <h2 className="text-lg font-bold tracking-tight">Resumen de cuenta</h2>
+    <Card className="p-5 sm:p-6">
+      <h2 className="text-section font-bold">Resumen de cuenta</h2>
       <dl className="tabular mt-4 grid grid-cols-2 gap-4 text-sm">
         <div>
           <dt className="text-[13px] text-muted">Total comprado</dt>
@@ -337,9 +341,9 @@ function SummaryCard({ d }: { d: CustomerDetailDTO }) {
       {d.payments.length === 0 ? (
         <p className="mt-2 text-sm text-muted">Sin pagos aplicados.</p>
       ) : (
-        <ul className="mt-2 flex flex-col">
+        <motion.ul variants={listVariants} className="mt-2 flex flex-col">
           {d.payments.slice(0, 6).map((p) => (
-            <li key={p.id} className="flex items-center justify-between gap-3 border-t border-line-soft py-2.5 text-[13px] first:border-t-0">
+            <motion.li variants={itemVariants} key={p.id} className="flex items-center justify-between gap-3 border-t border-line-soft py-2.5 text-[13px] first:border-t-0">
               <span className="min-w-0">
                 <span className="tabular block font-semibold">{formatDateTime(p.at)}</span>
                 <span className="block truncate text-muted">
@@ -357,9 +361,9 @@ function SummaryCard({ d }: { d: CustomerDetailDTO }) {
                 </span>
               </span>
               <span className="tabular shrink-0 font-bold text-ok">+{formatMoney(p.amountCents)}</span>
-            </li>
+            </motion.li>
           ))}
-        </ul>
+        </motion.ul>
       )}
     </Card>
   );
@@ -375,14 +379,14 @@ function RequestsCard({ d }: { d: CustomerDetailDTO }) {
     if (r.ok) setNote("");
   };
   return (
-    <Card className="animate-rise p-5 sm:p-6" style={{ animationDelay: "140ms" }}>
-      <h2 className="text-lg font-bold tracking-tight">Solicitudes de crédito</h2>
+    <Card className="p-5 sm:p-6">
+      <h2 className="text-section font-bold">Solicitudes de crédito</h2>
       {d.requests.length === 0 ? (
         <p className="mt-3 text-sm text-muted">Este cliente no tiene solicitudes registradas.</p>
       ) : (
-        <ul className="mt-3 flex flex-col gap-3">
+        <motion.ul variants={listVariants} className="mt-3 flex flex-col gap-3">
           {d.requests.map((r) => (
-            <li key={r.id} className={cx("rounded-[var(--radius-block)] p-4 ring-1", r.status === "pendiente" ? "bg-violet-wash ring-violet-tint" : "bg-panel ring-line")}>
+            <motion.li variants={itemVariants} key={r.id} className={cx("rounded-[var(--radius-block)] p-4 ring-1", r.status === "pendiente" ? "bg-violet-wash ring-violet-tint" : "bg-panel ring-line")}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-bold">
@@ -435,9 +439,9 @@ function RequestsCard({ d }: { d: CustomerDetailDTO }) {
                 </div>
               )}
               {r.status === "pendiente" && !can(me.role, "decidir_credito") && <p className="mt-2 text-xs font-medium text-violet-ink">Espera la decisión de gerencia.</p>}
-            </li>
+            </motion.li>
           ))}
-        </ul>
+        </motion.ul>
       )}
     </Card>
   );
@@ -459,10 +463,10 @@ function ShareCard({ d }: { d: CustomerDetailDTO }) {
   };
 
   return (
-    <Card className="animate-rise p-5 sm:p-6" style={{ animationDelay: "180ms" }}>
+    <Card className="p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold tracking-tight">Estado de cuenta para el cliente</h2>
+          <h2 className="text-section font-bold">Estado de cuenta para el cliente</h2>
           <p className="mt-0.5 text-[13px] text-muted">Enlace de solo lectura, vence en 7 días. No muestra costos, márgenes ni comprobantes.</p>
         </div>
         <ShareNetwork size={22} className="shrink-0 text-faint" />
@@ -485,9 +489,9 @@ function ShareCard({ d }: { d: CustomerDetailDTO }) {
         <p className="mt-3 text-[13px] text-muted">Administración o gerencia generan el enlace.</p>
       )}
       {d.links.length > 0 && (
-        <ul className="mt-4 flex flex-col gap-2">
+        <motion.ul variants={listVariants} className="mt-4 flex flex-col gap-2">
           {d.links.map((l) => (
-            <li key={l.token} className="rounded-[var(--radius-block)] bg-panel p-3 ring-1 ring-line">
+            <motion.li variants={itemVariants} key={l.token} className="rounded-[var(--radius-block)] bg-panel p-3 ring-1 ring-line">
               <div className="flex items-center justify-between gap-2">
                 <span className="tabular truncate text-xs text-muted">…/estado-cuenta/{l.token.slice(0, 10)}…</span>
                 <Chip tone={l.state === "activo" ? "ok" : "neutral"} className="px-2 py-0.5 text-[11px]">
@@ -506,7 +510,7 @@ function ShareCard({ d }: { d: CustomerDetailDTO }) {
                     href={`/estado-cuenta/${l.token}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex h-9 items-center gap-2 rounded-full bg-card px-3.5 text-[13px] font-semibold ring-1 ring-line hover:bg-panel"
+                    className="inline-flex h-10 items-center gap-2 rounded-full bg-card px-4 text-[13px] font-semibold ring-1 ring-line transition-colors hover:bg-panel"
                   >
                     <ArrowSquareOut size={14} weight="bold" /> Ver como cliente
                   </a>
@@ -524,9 +528,9 @@ function ShareCard({ d }: { d: CustomerDetailDTO }) {
                   )}
                 </div>
               )}
-            </li>
+            </motion.li>
           ))}
-        </ul>
+        </motion.ul>
       )}
     </Card>
   );
@@ -565,24 +569,12 @@ function TimelineCard({ items, cutDate }: { items: TimelineItem[]; cutDate: stri
   const visible = items.filter((i) => f === "todo" || i.kind === f);
   const shown = all ? visible : visible.slice(0, 10);
   return (
-    <Card className="animate-rise p-5 sm:p-6" style={{ animationDelay: "160ms" }}>
+    <Card className="p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight">
+        <h2 className="flex items-center gap-2 text-section font-bold">
           <ChatCircleDots size={20} className="text-faint" /> Historial
         </h2>
-        <div role="radiogroup" aria-label="Filtrar historial" className="no-scrollbar flex gap-1 overflow-x-auto">
-          {TL_FILTERS.map((x) => (
-            <button
-              key={x.id}
-              role="radio"
-              aria-checked={f === x.id}
-              onClick={() => setF(x.id)}
-              className={cx("h-8 shrink-0 rounded-full px-3 text-xs font-semibold", f === x.id ? "bg-ink text-white" : "bg-line-soft text-muted hover:text-ink")}
-            >
-              {x.label}
-            </button>
-          ))}
-        </div>
+        <Segmented tone="solid" size="sm" label="Filtrar historial" value={f} onChange={setF} options={TL_FILTERS.map((x) => ({ value: x.id, label: x.label }))} />
       </div>
       <p className="mt-1 text-xs text-muted">Fecha de corte {formatDate(cutDate)}. Lo programado aparece arriba con borde punteado.</p>
       {visible.length === 0 ? (
@@ -590,9 +582,9 @@ function TimelineCard({ items, cutDate }: { items: TimelineItem[]; cutDate: stri
           <EmptyState title="Sin eventos de este tipo" />
         </div>
       ) : (
-        <ol className="relative mt-4 flex flex-col gap-1 before:absolute before:bottom-3 before:left-[15px] before:top-3 before:w-px before:bg-line">
+        <motion.ol key={f} variants={listVariants} initial="hidden" animate="show" className="relative mt-4 flex flex-col gap-1 before:absolute before:bottom-3 before:left-[15px] before:top-3 before:w-px before:bg-line">
           {shown.map((i) => (
-            <li key={i.id} className={cx("relative flex gap-3 rounded-xl py-2.5 pl-0 pr-2", i.future && "opacity-80")}>
+            <motion.li variants={itemVariants} key={i.id} className={cx("relative flex gap-3 rounded-xl py-2.5 pl-0 pr-2", i.future && "opacity-80")}>
               <span className={cx("relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full ring-4 ring-card", TL_TONE[i.tone], i.future && "border border-dashed border-current bg-card")}>
                 {TL_ICON[i.kind]}
               </span>
@@ -609,9 +601,9 @@ function TimelineCard({ items, cutDate }: { items: TimelineItem[]; cutDate: stri
                   {i.amountCents != null && <span className={cx("tabular shrink-0 font-semibold", i.kind === "pago" ? "text-ok" : "text-ink")}>{i.kind === "pago" ? "+" : ""}{formatMoney(i.amountCents)}</span>}
                 </span>
               </span>
-            </li>
+            </motion.li>
           ))}
-        </ol>
+        </motion.ol>
       )}
       {visible.length > 10 && (
         <button onClick={() => setAll((a) => !a)} className="mt-3 text-[13px] font-semibold text-muted hover:text-ink">

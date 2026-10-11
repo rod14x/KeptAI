@@ -1,10 +1,13 @@
-import type { HTMLAttributes, ReactNode } from "react";
+import type { ReactNode } from "react";
+import { motion, type HTMLMotionProps } from "motion/react";
+import { itemVariants } from "../motion/primitives";
 import { ArrowClockwise, CloudSlash, Flask, Tray } from "@phosphor-icons/react";
 import { Button } from "./Button";
 import { cx, formatMoney } from "../../lib/format";
 
-export function Card({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
-  return <div {...rest} className={cx("rounded-[var(--radius-card)] bg-card shadow-[var(--shadow-card)] ring-1 ring-line/70", className)} />;
+/** Superficie elevada. Hereda la entrada escalonada del Stagger más cercano. */
+export function Card({ className, ...rest }: HTMLMotionProps<"div">) {
+  return <motion.div variants={itemVariants} {...rest} className={cx("rounded-[var(--radius-card)] bg-card shadow-[var(--shadow-card)] ring-1 ring-line/70", className)} />;
 }
 
 export function Money({ cents, className, signed, short }: { cents: number; className?: string; signed?: boolean; short?: boolean }) {

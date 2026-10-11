@@ -1,11 +1,12 @@
 import { Lock } from "@phosphor-icons/react";
 import type { Scope } from "../../api/schemas";
 import { SCOPE_LABEL, useScope } from "../../context/ScopeContext";
+import { Segmented } from "../ui/Segmented";
 import { cx } from "../../lib/format";
 
-const OPTIONS: Scope[] = ["corpotex", "unicrack", "consolidado"];
+const OPTIONS = (["corpotex", "unicrack", "consolidado"] as Scope[]).map((v) => ({ value: v, label: SCOPE_LABEL[v] }));
 
-export function ScopeSelector({ className }: { className?: string }) {
+export function ScopeSelector({ className, stretch }: { className?: string; stretch?: boolean }) {
   const { scope, setScope, locked } = useScope();
 
   if (locked) {
@@ -21,24 +22,13 @@ export function ScopeSelector({ className }: { className?: string }) {
   }
 
   return (
-    <div role="radiogroup" aria-label="Vista de datos" className={cx("rounded-full bg-line-soft p-1 ring-1 ring-line/60", className ?? "inline-flex")}>
-      {OPTIONS.map((opt) => {
-        const active = opt === scope;
-        return (
-          <button
-            key={opt}
-            role="radio"
-            aria-checked={active}
-            onClick={() => setScope(opt)}
-            className={cx(
-              "h-9 flex-1 rounded-full px-4 text-[13px] font-semibold transition-[background-color,color,box-shadow] duration-200",
-              active ? "bg-card text-ink shadow-[0_1px_3px_rgb(23_23_26/0.12)]" : "text-muted hover:text-ink",
-            )}
-          >
-            {SCOPE_LABEL[opt]}
-          </button>
-        );
-      })}
-    </div>
+    <Segmented
+      label="Vista de datos"
+      value={scope}
+      onChange={setScope}
+      options={OPTIONS}
+      size="sm"
+      className={cx(className ?? "inline-flex", stretch && "[&>button]:flex-1")}
+    />
   );
 }

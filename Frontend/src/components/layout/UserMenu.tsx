@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { AnimatePresence, motion } from "motion/react";
+import { popVariants, spring } from "../motion/primitives";
 import { CaretDown, ClockCounterClockwise, GearSix, SignOut, SlidersHorizontal, UserCircle } from "@phosphor-icons/react";
 import { Avatar } from "../ui/Avatar";
 import { useAuth } from "../../context/AuthContext";
@@ -58,8 +60,10 @@ export function UserMenu() {
 
   return (
     <div ref={wrap} className="relative">
-      <button
+      <motion.button
         ref={button}
+        whileTap={{ scale: 0.95 }}
+        transition={spring}
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -70,15 +74,21 @@ export function UserMenu() {
         )}
       >
         <Avatar name={person.name} size="lg" />
-        <CaretDown size={14} weight="bold" className={cx("text-muted transition-transform", open && "rotate-180")} />
-      </button>
+        <CaretDown size={14} weight="bold" className={cx("text-muted transition-transform duration-200", open && "rotate-180")} />
+      </motion.button>
 
+      <AnimatePresence>
       {open && (
-        <div
+        <motion.div
           role="menu"
+          variants={popVariants}
+          initial="hidden"
+          animate="show"
+          exit="exit"
+          style={{ transformOrigin: "top right" }}
           aria-label="Cuenta"
           onKeyDown={onMenuKey}
-          className="animate-fade absolute right-0 top-[calc(100%+8px)] z-40 w-72 overflow-hidden rounded-[20px] bg-card p-1.5 shadow-[var(--shadow-lift)] ring-1 ring-line"
+          className="absolute right-0 top-[calc(100%+8px)] z-40 w-72 overflow-hidden rounded-[20px] bg-card p-1.5 shadow-[var(--shadow-lift)] ring-1 ring-line"
         >
           <div className="flex items-center gap-3 px-3 pb-3 pt-2.5">
             <Avatar name={person.name} size="lg" />
@@ -97,7 +107,7 @@ export function UserMenu() {
               }}
               role="menuitem"
               onClick={() => go(to)}
-              className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium text-ink-soft outline-none hover:bg-panel focus-visible:bg-violet-wash"
+              className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium text-ink-soft outline-none hover:bg-panel focus-visible:bg-violet-wash"
             >
               <Icon size={18} className="text-muted" />
               {label}
@@ -113,13 +123,14 @@ export function UserMenu() {
               setOpen(false);
               signOut();
             }}
-            className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold text-bad outline-none hover:bg-bad-tint focus-visible:bg-bad-tint"
+            className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold text-bad outline-none hover:bg-bad-tint focus-visible:bg-bad-tint"
           >
             <SignOut size={18} />
             Cerrar sesión
           </button>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

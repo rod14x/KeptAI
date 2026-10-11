@@ -1,3 +1,6 @@
+import { motion } from "motion/react";
+import { MotionLink, Stagger, itemVariants, listVariants, press, spring } from "../components/motion/primitives";
+import { PageHeader } from "../components/ui/PageHeader";
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import {
@@ -44,17 +47,11 @@ export function ConciliacionPage() {
   }, [id, queue.data, navigate]);
 
   return (
-    <div className="mx-auto flex max-w-[1400px] flex-col gap-6">
-      <header className="animate-rise flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-[28px]">Conciliación</h1>
-          <p className="mt-1 text-[15px] text-muted">Revisa la evidencia junto a lo que leyó la IA y confirma cada paso.</p>
-        </div>
-        <DemoBadge />
-      </header>
+    <Stagger className="mx-auto flex max-w-[1400px] flex-col gap-6">
+      <PageHeader title="Conciliación" subtitle="Revisa la evidencia junto a lo que leyó la IA y confirma cada paso." actions={<DemoBadge />} />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className={cx("flex-col gap-2", id ? "hidden xl:flex" : "flex")} aria-label="Cola de revisión">
+        <motion.aside variants={listVariants} className={cx("flex-col gap-2", id ? "hidden xl:flex" : "flex")} aria-label="Cola de revisión">
           {queue.error ? (
             <ErrorState error={queue.error} onRetry={queue.reload} />
           ) : queue.loading || !queue.data ? (
@@ -64,11 +61,11 @@ export function ConciliacionPage() {
           ) : (
             queue.data.map((c) => <QueueItem key={c.id} card={c} active={c.id === id} />)
           )}
-        </aside>
+        </motion.aside>
 
         <section className={cx("min-w-0", !id && "hidden xl:block")}>{id ? <Detail id={id} /> : <EmptyState title="Elige un comprobante de la lista" />}</section>
       </div>
-    </div>
+    </Stagger>
   );
 }
 
@@ -83,15 +80,19 @@ const STATUS_LABEL = {
 function QueueItem({ card, active }: { card: BoardCard; active: boolean }) {
   const closed = card.status === "pago_aplicado" || card.status === "descartado";
   return (
-    <Link
+    <MotionLink
       to={`/conciliacion/${card.id}`}
       aria-current={active ? "page" : undefined}
+      variants={itemVariants}
+      {...press}
       className={cx(
-        "flex items-center gap-3 rounded-2xl p-3 transition-[background-color,box-shadow]",
-        active ? "bg-card shadow-[var(--shadow-card)] ring-2 ring-violet" : "bg-card/60 ring-1 ring-line/70 hover:bg-card",
+        "relative flex min-h-[76px] items-center gap-3 rounded-2xl p-3 transition-colors duration-200",
+        active ? "bg-card shadow-[var(--shadow-card)]" : "bg-card/60 ring-1 ring-line/70 hover:bg-card",
         closed && !active && "opacity-60",
       )}
     >
+      {/* El anillo de selección viaja entre elementos: el ojo sigue el cambio de evidencia. */}
+      {active && <motion.span layoutId="queue-active" transition={spring} aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-violet" />}
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 text-xs font-semibold text-muted">
           {card.id}
@@ -112,7 +113,7 @@ function QueueItem({ card, active }: { card: BoardCard; active: boolean }) {
         </div>
       </div>
       <span className="text-sm font-extrabold">{card.amountCents != null ? <Money cents={card.amountCents} /> : <span className="text-warn">S/ ?</span>}</span>
-    </Link>
+    </MotionLink>
   );
 }
 
@@ -136,7 +137,7 @@ function Detail({ id }: { id: string }) {
         </Link>
       </EmptyState>
     );
-  return <SplitView d={data} />;
+  return <SplitView key={data.evidence.id} d={data} />;
 }
 
 const STEPS = [
@@ -180,7 +181,13 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
   const by = me;
   const ev = d.evidence;
   const canEdit = can(me.role, "editar_evidencia");
-  const [pending, setPending] = useState<Pending | null>(null);
+  const [pending, setPendingState] = useState<Pending | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  // El contenido se conserva al cerrar para que el diálogo no se vacíe durante su salida.
+  const setPending = (p: Pending | null) => {
+    if (p) setPendingState(p);
+    setConfirmOpen(p != null);
+  };
   const [acceptMismatch, setAcceptMismatch] = useState(false);
   const [orderChoice, setOrderChoice] = useState("");
   const locked = !canEdit || ev.status === "pago_verificado" || ev.status === "pago_aplicado" || ev.status === "descartado";
@@ -335,16 +342,16 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
   const canDiscard = can(me.role, "descartar") && (ev.status === "borrador" || (ev.status === "comprobante_pendiente" && d.match !== "duplicado"));
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-      <Link to="/conciliacion" className="-mb-2 inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink xl:hidden">
+    <Stagger className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+      <Link to="/conciliacion" className="-mb-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink xl:hidden">
         <ArrowLeft size={16} weight="bold" /> Volver a la lista
       </Link>
 
-      <Card className="animate-rise p-5 sm:p-6 lg:self-start">
+      <Card className="p-5 sm:p-6 lg:self-start">
         <EvidenceViewer ev={ev} />
       </Card>
 
-      <Card className="animate-rise flex flex-col gap-5 p-5 sm:p-6" style={{ animationDelay: "60ms" }}>
+      <Card className="flex flex-col gap-5 p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold text-muted">Datos extraídos por la IA</p>
@@ -440,19 +447,19 @@ function SplitView({ d }: { d: EvidenceDetailDTO }) {
       </Card>
 
       <ConfirmDialog
-        open={pending != null}
+        open={confirmOpen}
         title={pending?.title ?? ""}
         confirmLabel={pending?.label ?? ""}
         tone={pending?.tone}
         onClose={() => setPending(null)}
         onConfirm={() => {
-          if (pending) run(pending.run);
+          if (pending && confirmOpen) run(pending.run);
           setPending(null);
         }}
       >
         {pending?.body}
       </ConfirmDialog>
-    </div>
+    </Stagger>
   );
 }
 

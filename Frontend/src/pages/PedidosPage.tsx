@@ -1,3 +1,7 @@
+import { motion } from "motion/react";
+import { MotionLink, Stagger, itemVariants, lift, listVariants } from "../components/motion/primitives";
+import { PageHeader } from "../components/ui/PageHeader";
+import { Segmented } from "../components/ui/Segmented";
 import { Link, useSearchParams } from "react-router";
 import { CalendarBlank, ChatCircleText, CheckCircle, Image, Microphone, NotePencil, SealCheck, Hourglass, X } from "@phosphor-icons/react";
 import { getBoard, getOrders, type BoardCard, type BoardColumnId, type BoardDTO, type OrderRow } from "../api/client";
@@ -53,30 +57,21 @@ export function PedidosPage() {
   };
 
   return (
-    <div className="mx-auto flex max-w-[1400px] flex-col gap-6">
-      <header className="animate-rise flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-[28px]">Pedidos y cobro</h1>
-          <p className="mt-1 text-[15px] text-muted">
-            Cada comprobante avanza de borrador a pago aplicado. Vista {SCOPE_LABEL[scope]}.
-          </p>
-        </div>
-        <DemoBadge />
-      </header>
+    <Stagger className="mx-auto flex max-w-[1400px] flex-col gap-6">
+      <PageHeader title="Pedidos y cobro" subtitle={<>Cada comprobante avanza de borrador a pago aplicado. Vista {SCOPE_LABEL[scope]}.</>} actions={<DemoBadge />} />
 
-      <div role="tablist" aria-label="Vista de pedidos" className="inline-flex w-fit rounded-full bg-line-soft p-1">
-        {(["tablero", "lista"] as const).map((v) => (
-          <button
-            key={v}
-            role="tab"
-            aria-selected={view === v}
-            onClick={() => setView(v)}
-            className={cx("h-9 rounded-full px-4 text-[13px] font-semibold transition-colors", view === v ? "bg-card text-ink shadow-sm" : "text-muted hover:text-ink")}
-          >
-            {v === "tablero" ? "Tablero de cobro" : "Lista de pedidos"}
-          </button>
-        ))}
-      </div>
+      <motion.div variants={itemVariants}>
+        <Segmented
+          kind="tab"
+          label="Vista de pedidos"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: "tablero", label: "Tablero de cobro" },
+            { value: "lista", label: "Lista de pedidos" },
+          ]}
+        />
+      </motion.div>
 
       {focus && <OrderFocus id={focus} onClose={() => setParams(view === "lista" ? { vista: "lista" } : {})} />}
 
@@ -93,7 +88,7 @@ export function PedidosPage() {
       ) : (
         <Board data={data} focus={focus} />
       )}
-    </div>
+    </Stagger>
   );
 }
 
@@ -105,7 +100,7 @@ function OrderFocus({ id, onClose }: { id: string; onClose: () => void }) {
   const balance = orderBalance(s, order);
   const d = daysToDue(s, order);
   return (
-    <Card className="animate-rise flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+    <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <Avatar name={customer} size="lg" />
         <div className="min-w-0">
@@ -135,7 +130,7 @@ function OrderFocus({ id, onClose }: { id: string; onClose: () => void }) {
       </dl>
       <div className="flex items-center gap-2">
         {balance > 0 ? <DueTag daysToDue={d} /> : <span className="text-sm font-semibold text-ok">Cobrado</span>}
-        <button onClick={onClose} aria-label="Quitar filtro de pedido" className="flex size-9 items-center justify-center rounded-full text-muted hover:bg-line-soft">
+        <button onClick={onClose} aria-label="Quitar filtro de pedido" className="flex size-11 items-center justify-center rounded-full text-muted hover:bg-line-soft">
           <X size={16} weight="bold" />
         </button>
       </div>
@@ -145,15 +140,14 @@ function OrderFocus({ id, onClose }: { id: string; onClose: () => void }) {
 
 function Board({ data, focus }: { data: BoardDTO; focus: string | null }) {
   return (
-    <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 xl:mx-0 xl:grid xl:grid-cols-4 xl:overflow-visible xl:px-0">
-      {data.columns.map((col, ci) => {
+    <Stagger className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 xl:mx-0 xl:grid xl:grid-cols-4 xl:overflow-visible xl:px-0">
+      {data.columns.map((col) => {
         const style = COLUMN_STYLE[col.id];
         return (
-          <section
+          <motion.section variants={itemVariants}
             key={col.id}
             aria-label={`${col.title}, ${col.cards.length} elementos`}
-            className="animate-rise flex w-[84vw] max-w-[340px] shrink-0 snap-start flex-col gap-3 sm:w-[320px] xl:w-auto xl:max-w-none"
-            style={{ animationDelay: `${ci * 60}ms` }}
+            className="flex w-[84vw] max-w-[340px] shrink-0 snap-start flex-col gap-3 sm:w-[320px] xl:w-auto xl:max-w-none"
           >
             <div className="flex items-center justify-between px-1">
               <span className={cx("inline-flex h-9 items-center gap-2 rounded-full pl-3 pr-1.5 text-[13px] font-bold", style.pill)}>
@@ -162,29 +156,33 @@ function Board({ data, focus }: { data: BoardDTO; focus: string | null }) {
                 <span className="tabular flex h-6 min-w-6 items-center justify-center rounded-full bg-card px-1.5 text-xs text-ink">{col.cards.length}</span>
               </span>
             </div>
-            <div className="flex min-h-[200px] flex-col gap-3 rounded-[22px] bg-line-soft/60 p-2">
+            <motion.div variants={listVariants} className="flex min-h-[200px] flex-col gap-3 rounded-[22px] bg-line-soft/60 p-2">
               {col.cards.length === 0 ? (
                 <EmptyState title="Sin elementos">{style.empty}</EmptyState>
               ) : (
                 col.cards.map((c) => <BoardCardView key={c.id} card={c} dim={focus != null && c.orderId !== focus} />)
               )}
-            </div>
-          </section>
+            </motion.div>
+          </motion.section>
         );
       })}
-    </div>
+    </Stagger>
   );
 }
 
 function BoardCardView({ card, dim }: { card: BoardCard; dim: boolean }) {
   return (
-    <Link
+    <MotionLink
       to={`/conciliacion/${card.id}`}
+      variants={itemVariants}
+      {...lift}
       className={cx(
-        "group block rounded-[18px] bg-card p-4 shadow-[var(--shadow-card)] ring-1 ring-line/70 transition-[box-shadow,transform,opacity] duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]",
+        "group relative block rounded-[18px] bg-card p-4 shadow-[var(--shadow-card)] ring-1 ring-line/70 transition-opacity duration-200",
         dim && "opacity-40",
       )}
     >
+      {/* Sombra elevada en una capa propia: al hover solo cambia su opacidad (GPU), no el box-shadow. */}
+      <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-[18px] opacity-0 shadow-[var(--shadow-lift)] transition-opacity duration-200 group-hover:opacity-100" />
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
           {KIND_ICON[card.kind]}
@@ -231,7 +229,7 @@ function BoardCardView({ card, dim }: { card: BoardCard; dim: boolean }) {
           {card.amountCents != null ? <Money cents={card.amountCents} /> : <span className="text-sm font-semibold text-warn">Monto pendiente</span>}
         </span>
       </div>
-    </Link>
+    </MotionLink>
   );
 }
 
@@ -242,7 +240,7 @@ function OrdersList({ focus }: { focus: string | null }) {
   if (loading || !data) return <Skeleton className="h-[420px] rounded-[var(--radius-card)]" />;
   if (data.length === 0) return <EmptyState title="Sin pedidos en esta vista" />;
   return (
-    <Card className="animate-rise overflow-hidden p-0">
+    <Card className="overflow-hidden p-0">
       <div className="overflow-x-auto">
         <table className="tabular w-full min-w-[980px] text-sm">
           <thead className="bg-panel text-left text-xs text-muted">

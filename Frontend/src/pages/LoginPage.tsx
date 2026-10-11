@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
+import { motion } from "motion/react";
+import { Item, Stagger, itemVariants, listVariants } from "../components/motion/primitives";
+import { DialogShell } from "../components/ui/Dialog";
+
+const ERROR_IN = { opacity: 0, y: -4 };
+const ERROR_SHOW = { opacity: 1, y: 0 };
 import { Navigate, useLocation, useNavigate } from "react-router";
 import { Eye, EyeSlash, X } from "@phosphor-icons/react";
 import { Logo } from "../components/layout/Logo";
@@ -43,28 +49,29 @@ export function LoginPage() {
           </Button>
         </nav>
 
-        <main className="grid items-center gap-12 py-12 lg:min-h-[calc(100dvh-104px)] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:py-16">
-          <section className="animate-rise max-w-xl">
-            <h1 className="text-[40px] font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-[58px]">
+        <Stagger className="grid items-center gap-12 py-12 lg:min-h-[calc(100dvh-104px)] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:py-16">
+          {/* El mensaje entra en orden de lectura: titular, explicación y acción. */}
+          <motion.section variants={listVariants} className="max-w-xl">
+            <motion.h1 variants={itemVariants} className="text-hero font-extrabold">
               Cobra con evidencia. <span className="text-violet">Proyecta tu caja.</span>
-            </h1>
-            <p className="mt-6 max-w-[46ch] text-lg leading-relaxed text-muted">
+            </motion.h1>
+            <motion.p variants={itemVariants} className="mt-6 max-w-[46ch] text-lg leading-relaxed text-muted">
               Convierte los pagos que llegan por WhatsApp en saldos conciliados, margen por pedido y caja a cuatro semanas.
-            </p>
-            <div className="mt-8">
-              <Button size="lg" onClick={() => setOpen(true)}>
+            </motion.p>
+            <Item className="mt-8">
+              <Button size="lg" onClick={() => setOpen(true)} className="w-full sm:w-auto">
                 Acceder
               </Button>
-            </div>
-          </section>
+            </Item>
+          </motion.section>
 
-          <section aria-label="Vista previa del panel" className="animate-rise relative" style={{ animationDelay: "120ms" }}>
+          <motion.section variants={itemVariants} aria-label="Vista previa del panel" className="relative">
             <div className="rounded-[28px] bg-white/60 p-2.5 shadow-[var(--shadow-lift)] ring-1 ring-white backdrop-blur lg:rotate-[-1.2deg]">
               <div className="rounded-[22px] bg-card p-5 ring-1 ring-line/70 sm:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold text-violet-ink">Corpotex + Unicrack</p>
-                    <p className="text-lg font-bold tracking-tight">Caja a 4 semanas</p>
+                    <p className="text-section font-bold">Caja a 4 semanas</p>
                   </div>
                   <DemoBadge />
                 </div>
@@ -73,16 +80,18 @@ export function LoginPage() {
                 </div>
               </div>
             </div>
-          </section>
-        </main>
+          </motion.section>
+        </Stagger>
       </div>
 
-      {open && <LoginModal from={from} onClose={() => setOpen(false)} />}
+      <DialogShell open={open} onClose={() => setOpen(false)} labelledBy="login-title" overlayClassName="bg-[#2a2440]/30 backdrop-blur-md" panelClassName="max-w-[460px] rounded-[28px] p-6 sm:p-9">
+        <LoginForm from={from} onClose={() => setOpen(false)} />
+      </DialogShell>
     </div>
   );
 }
 
-function LoginModal({ from, onClose }: { from: string; onClose: () => void }) {
+function LoginForm({ from, onClose }: { from: string; onClose: () => void }) {
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("carmen.ramos@keptai.pe");
@@ -91,14 +100,6 @@ function LoginModal({ from, onClose }: { from: string; onClose: () => void }) {
   const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
   const [loading, setLoading] = useState(false);
   const [help, setHelp] = useState(false);
-  const emailRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    emailRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -118,14 +119,12 @@ function LoginModal({ from, onClose }: { from: string; onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="login-title">
-      <button aria-label="Cerrar" className="animate-fade absolute inset-0 bg-[#2a2440]/30 backdrop-blur-md" onClick={onClose} />
-      <div className="animate-rise relative w-full max-w-[460px] rounded-[28px] bg-card p-6 shadow-[var(--shadow-lift)] sm:p-9">
-        <button onClick={onClose} aria-label="Cerrar" className="absolute right-4 top-4 flex size-10 items-center justify-center rounded-full text-muted hover:bg-line-soft hover:text-ink">
+    <>
+        <button onClick={onClose} aria-label="Cerrar" className="absolute right-4 top-4 flex size-11 items-center justify-center rounded-full text-muted hover:bg-line-soft hover:text-ink">
           <X size={20} />
         </button>
         <span className="flex size-11 items-center justify-center rounded-[13px] bg-ink text-lg font-extrabold text-white">K</span>
-        <h2 id="login-title" className="mt-5 text-[26px] font-extrabold tracking-tight">
+        <h2 id="login-title" className="mt-5 text-title font-extrabold">
           Iniciar sesión
         </h2>
         <p className="mt-1 text-[15px] text-muted">Accede al panel de cobros y caja.</p>
@@ -136,7 +135,6 @@ function LoginModal({ from, onClose }: { from: string; onClose: () => void }) {
               Correo electrónico
             </label>
             <input
-              ref={emailRef}
               id="email"
               type="email"
               autoComplete="email"
@@ -150,9 +148,9 @@ function LoginModal({ from, onClose }: { from: string; onClose: () => void }) {
               )}
             />
             {errors.email && (
-              <p id="email-error" className="text-[13px] font-medium text-bad">
+              <motion.p initial={ERROR_IN} animate={ERROR_SHOW} id="email-error" className="text-[13px] font-medium text-bad">
                 {errors.email}
-              </p>
+              </motion.p>
             )}
           </div>
 
@@ -189,11 +187,15 @@ function LoginModal({ from, onClose }: { from: string; onClose: () => void }) {
               </button>
             </div>
             {errors.password && (
-              <p id="password-error" className="text-[13px] font-medium text-bad">
+              <motion.p initial={ERROR_IN} animate={ERROR_SHOW} id="password-error" className="text-[13px] font-medium text-bad">
                 {errors.password}
-              </p>
+              </motion.p>
             )}
-            {help && <p className="animate-fade rounded-xl bg-panel px-3 py-2 text-[13px] text-muted">Pide a administración que restablezca tu acceso.</p>}
+            {help && (
+              <motion.p initial={ERROR_IN} animate={ERROR_SHOW} className="rounded-xl bg-panel px-3 py-2 text-[13px] text-muted">
+                Pide a administración que restablezca tu acceso.
+              </motion.p>
+            )}
           </div>
 
           <fieldset>
@@ -209,7 +211,7 @@ function LoginModal({ from, onClose }: { from: string; onClose: () => void }) {
                   }}
                   aria-pressed={email === a.email}
                   className={cx(
-                    "rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition-colors",
+                    "min-h-10 rounded-full px-3.5 text-xs font-semibold ring-1 transition-colors",
                     email === a.email ? "bg-ink text-white ring-ink" : "bg-card text-muted ring-line hover:text-ink",
                   )}
                 >
@@ -220,9 +222,9 @@ function LoginModal({ from, onClose }: { from: string; onClose: () => void }) {
           </fieldset>
 
           {errors.form && (
-            <p role="alert" className="rounded-xl bg-bad-tint px-3.5 py-2.5 text-[13px] font-medium text-bad">
+            <motion.p initial={ERROR_IN} animate={ERROR_SHOW} role="alert" className="rounded-xl bg-bad-tint px-3.5 py-2.5 text-[13px] font-medium text-bad">
               {errors.form}
-            </p>
+            </motion.p>
           )}
 
           <Button type="submit" size="lg" loading={loading} className="mt-1 w-full">
@@ -233,7 +235,6 @@ function LoginModal({ from, onClose }: { from: string; onClose: () => void }) {
         <p className="mt-6 text-center text-xs leading-relaxed text-muted">
           Acceso de demostración: elige una cuenta y usa cualquier contraseña de 6 caracteres o más. La autenticación real llega con Supabase.
         </p>
-      </div>
-    </div>
+    </>
   );
 }
