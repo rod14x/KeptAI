@@ -40,3 +40,7 @@ V4 admite campos ausentes únicamente en BORRADOR y retira MENSAJE/texto salient
 
 ## Muestra recibida del entorno de Isabella — 11/10/2026
 Ver [MIG-N8N-ISA-001](integracion-n8n-isabella.md): payload WF1, no export de workflow. Extraccion vacia incumple faltantes/confianza; envoltura de items no acredita body HTTP. Isabella mantiene n8n; D3 backend no sobrescribe sus workflows. Sin llamadas externas ni ingesta implementada.
+
+
+## V10 — contacto registrado (D-011, 11/10/2026)
+WF1 resuelve `chatId` y WF2 `clienteJid` contra `contacto` (JID canónico exacto, activo, misma organización); sin contacto, 422 genérico y nada se crea. La orden, el canal y el pago heredan el cliente del contacto; el voucher se asocia por contexto (`pago.orden_contexto_id`) al último pedido no cancelado del canal (`SIN_ORDEN` si no hay). El vendedor sigue pendiente. Detalle: [definición V10](../../BD/definicion-base-datos.md).

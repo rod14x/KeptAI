@@ -325,3 +325,12 @@ Sin tablas ni columnas nuevas.
 - **`asignacion_costo_item`:** costo_id y orden_item_id de la misma orden, organización y moneda; `monto` ≥ 0; `metodo` MANUAL/UNIDADES/VALOR_VENTA; `fuente`; `registrado_por` (autoría). Única por (organización, costo, ítem). La suma por costo no supera el costo (con bloqueo del costo). RLS: lectura ADMIN/GERENTE/JEFE_TALLER, escritura ADMIN/JEFE_TALLER.
 - **`transferencia_interna`:** orden (FK con moneda), `unidad_origen_id` solo TALLER_INTERNO, `monto` ≥ 0, `criterio` y `fuente` obligatorios, `registrado_por`. Inmutable salvo una anulación con autor y motivo. Una activa por (organización, orden, unidad). No es pago, factura ni caja. RLS: lectura ADMIN/GERENTE, escritura ADMIN.
 - **Triggers:** `tg_asignacion_validar`, `tg_transferencia_validar`, `tg_costo_asignado_proteger` (un costo no baja de lo asignado), `tg_asignacion_invalidar` y `tg_transferencia_invalidar` (cualquier cambio reabre `costos_reales_completos`).
+
+
+## V10 — `contacto` y columnas de asociación (D-011)
+| Objeto | Columna / regla | Descripción |
+|---|---|---|
+| `contacto` | `id`, `organizacion_id`, `cliente_id`, `nombre`, `whatsapp_jid`, `activo`, `creado_en` | Contacto de WhatsApp de un cliente. `whatsapp_jid` = dígitos internacionales + `@s.whatsapp.net`, único por organización. Solo metadatos. |
+| `canal_whatsapp` | `contacto_id` (nuevo) | Contacto del canal; FK compuesta (organización, contacto, cliente, chat_jid). |
+| `orden` | FK (organización, `canal_id`, `cliente_id`) → canal | La orden tiene el cliente del canal cuando ambos existen. |
+| `pago` | `canal_id`, `orden_contexto_id` (nuevos) | Canal del contacto y último pedido no cancelado al registrar el voucher (contexto, no aplicación). |

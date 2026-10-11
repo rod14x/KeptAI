@@ -127,6 +127,8 @@ class ServiceApiKeyIntegrationTests {
 			s.execute("INSERT INTO cliente(organizacion_id,razon_social,tipo) VALUES "
 					+ "('" + ORG_A + "','Cliente A1','EMPRESA'),('" + ORG_B + "','Cliente B1','EMPRESA')");
 			s.execute("INSERT INTO pago(id,organizacion_id,monto,fecha_pago,medio,idempotency_key) VALUES ('" + PAGO_A + "','" + ORG_A + "',10,current_date,'YAPE','fixture-pago-a')");
+			// V10: contacto registrado del cliente existente «Cliente A1» (no se agregan clientes: otras pruebas cuentan los de A).
+			s.execute("INSERT INTO contacto(organizacion_id,cliente_id,nombre,whatsapp_jid) SELECT organizacion_id, id, 'Contacto A', '51900000000@s.whatsapp.net' FROM cliente WHERE razon_social = 'Cliente A1'");
 			s.execute("CREATE ROLE keptai_app LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS PASSWORD 'fixture-only'");
 			s.execute("GRANT keptai_runtime TO keptai_app");
 		}

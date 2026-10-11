@@ -54,8 +54,10 @@ class SchemaRlsTests {
  }
  static String application(String id,String amount){return "INSERT INTO aplicacion_pago(id,organizacion_id,pago_id,obligacion_id,monto_aplicado,aplicado_por) VALUES ('"+id+"','"+A+"','"+PA+"','"+RA+"',"+amount+",'"+UA+"')";}
  @Test void migrationsAndPrivacy()throws Exception{try(Connection c=owner()){
-  assertThat(scalar(c,"SELECT count(*) FROM keptai.flyway_schema_history WHERE success AND version IS NOT NULL")).isEqualTo("9");
-  assertThat(scalar(c,"SELECT count(*) FROM information_schema.tables WHERE table_schema='keptai' AND table_name IN ('mensaje','mensaje_saliente','contacto','nota_cliente')")).isEqualTo("0");
+  assertThat(scalar(c,"SELECT count(*) FROM keptai.flyway_schema_history WHERE success AND version IS NOT NULL")).isEqualTo("10");
+  assertThat(scalar(c,"SELECT count(*) FROM information_schema.tables WHERE table_schema='keptai' AND table_name IN ('mensaje','mensaje_saliente','nota_cliente')")).isEqualTo("0");
+  // V10 (dirección de Miguel, 11/10/2026): contacto vuelve SOLO como metadatos de WhatsApp de un cliente; sin mensajes ni notas.
+  assertThat(scalar(c,"SELECT string_agg(column_name, ',' ORDER BY column_name) FROM information_schema.columns WHERE table_schema='keptai' AND table_name='contacto'")).isEqualTo("activo,cliente_id,creado_en,id,nombre,organizacion_id,whatsapp_jid");
   assertThat(scalar(c,"SELECT count(*) FROM information_schema.columns WHERE table_schema='keptai' AND column_name IN ('contenido_texto','texto','mensaje_id')")).isEqualTo("0");
   assertThat(scalar(c,"SELECT count(*) FROM pg_tables WHERE schemaname='keptai' AND tablename<>'flyway_schema_history' AND NOT rowsecurity")).isEqualTo("0");
   assertThat(scalar(c,"SELECT count(*) FROM pg_policies WHERE schemaname='keptai' AND 'public'=ANY(roles)")).isEqualTo("0");

@@ -89,6 +89,11 @@ class N8nIngestaServiceKeyIntegrationTests {
 			s.execute("INSERT INTO integracion_servicio(organizacion_id,instancia,alcance,clave_hash) VALUES "
 					+ svc(ORG_A, "isabel", "INGESTA", KEY_ING_A) + "," + svc(ORG_A, "isabel", "SCHEDULER", KEY_SCH_A) + ","
 					+ svc(ORG_A, "otra", "INGESTA", KEY_ING_OTRA) + "," + svc(ORG_B, "isabel", "INGESTA", KEY_ING_B));
+			// V10: el JID del chat debe ser el de un contacto registrado de la organización (ficticio).
+			s.execute("INSERT INTO cliente(id,organizacion_id,razon_social,tipo) VALUES ('20000000-0000-4000-8000-0000000000a1','" + ORG_A
+					+ "','Cliente A ficticio','EMPRESA'),('20000000-0000-4000-8000-0000000000b1','" + ORG_B + "','Cliente B ficticio','EMPRESA')");
+			s.execute("INSERT INTO contacto(organizacion_id,cliente_id,nombre,whatsapp_jid) VALUES ('" + ORG_A + "','20000000-0000-4000-8000-0000000000a1','Contacto A','51900000001@s.whatsapp.net'),"
+					+ "('" + ORG_B + "','20000000-0000-4000-8000-0000000000b1','Contacto B','51900000001@s.whatsapp.net')");
 			s.execute("CREATE ROLE keptai_app LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS PASSWORD 'fixture-only'");
 			s.execute("GRANT keptai_runtime TO keptai_app");
 		}

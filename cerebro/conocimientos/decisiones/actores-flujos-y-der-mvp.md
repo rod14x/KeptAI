@@ -427,3 +427,7 @@ D-009 añade [validaciones obligatorias de cierre](../../../BD/validaciones-pre-
 - Una extracción incompleta cabe en BORRADOR; no se rellena con cero ni un cliente inventado. Antes de confirmar se exigen cliente, condición y total positivo.
 - Margen sobre cobrado y margen sobre venta son métricas distintas; con costos no cerrados, los márgenes quedan `null`.
 - [Revisión detallada SQL](../../../BD/revision-sql-rls.md), [migraciones](../../../BD/migrations/) y [preparación Supabase](../desarrollo/miguel/preparacion-supabase-rls.md).
+
+
+## 7. Contacto registrado y asociación voucher → pedido (D-011, 11/10/2026)
+La entrada n8n contrasta el JID con los **contactos registrados** de la organización (V10). Demo: Cloud Technologies es CLIENTE de Corpotex; Andrés es su CONTACTO (no vendedor, no tenant, no usuario de Auth). La ingesta crea un BORRADOR con el cliente del contacto y una hoja con la razón social real y el contacto de la base; el vendedor queda PENDIENTE. El voucher queda `RECIBIDO` y asociado por contexto al último pedido no cancelado de ese contacto (`SIN_ORDEN` si no hay; `DUPLICADO` prevalece). Asociación contextual ≠ verificación bancaria ≠ aplicación de saldos. Fuente editable del cambio: [DER V10](../../diagramas/keptai-der-v10.md).

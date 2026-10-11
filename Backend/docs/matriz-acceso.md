@@ -49,7 +49,7 @@ Cierre de costos (`costos_*_completos`): solo ADMIN o JEFE_TALLER lo certifican 
 
 | Operación | Ruta | Servicio requerido | Estado actual (MIG-04/05) | Qué permite V7 y qué no |
 |---|---|---|---|---|
-| n8nIngestOrder (WF1) | POST /api/v1/ordenes/ingesta | INGESTA | **Implementada**: 201 con orden y hoja `BORRADOR` desde datos estructurados, idempotente (409 si cambia el contenido); sin cliente, marca ni vendedor asociados | Crea orden, ítems, hoja de resumen **solo en BORRADOR**, canal y auditoría; no toca crédito, caja, obligaciones ni aplicaciones |
+| n8nIngestOrder (WF1) | POST /api/v1/ordenes/ingesta | INGESTA | **Implementada**: 201 con orden y hoja `BORRADOR` desde datos estructurados, idempotente (409 si cambia el contenido); cliente = el del **contacto registrado** por `chatId` (422 si no existe); sin marca ni vendedor asignados | Crea orden, ítems, hoja de resumen **solo en BORRADOR**, canal y auditoría; no toca crédito, caja, obligaciones ni aplicaciones |
 | n8nReceiveVoucher (WF2) | POST /api/v1/pagos/voucher | INGESTA | **Implementada**: 201 con pago `RECIBIDO` y comprobante privado (`imagen_base64`); Storage real comprobado con archivo temporal; flujo completo pendiente | `pago` solo fase RECIBIDO, sin `verificado_*`, nunca APLICADO; comprobante sin fondos verificados |
 | n8nConfirmOrder (WF0 `/ok`) | POST /api/v1/ordenes/confirmar | **conflicto, ver 5.3** | **Cerrada** por decisión pendiente (403) | La confirmación fija `revisado_por` y V7 prohíbe que un servicio firme como persona |
 | n8nReportMessageStatus (callback WF3) | POST /api/v1/mensajes/{id}/estado | SCHEDULER (propuesta) | **Cerrada** (403) | `envio_notificacion` solo la escriben ADMIN y SCHEDULER; INGESTA no |
@@ -121,6 +121,9 @@ Fuente única: `security/AccessPolicy` (una regla por operación entrante del co
 
 ## 6.6 MIG-04/05 — ingesta y voucher de n8n (alcance de estas dos rutas)
 Implementadas con `TenantTransaction` (contexto de servicio INGESTA, login runtime sin BYPASSRLS), sin ampliar permisos ni RLS: orden/hoja/ítems/canal/auditoría/idempotencia son escrituras que V4/V7 ya permiten a INGESTA, y el pago `RECIBIDO` y el comprobante también (`p_ingesta_pago_limite`). Cuerpo HTTP acotado antes de leerlo (`keptai.n8n.ingesta.max-body-bytes`; voucher derivado de `keptai.n8n.voucher.max-file-bytes`, 10 485 760 bytes = 10 MiB como el bucket). La clave secreta de Storage solo la usa el backend, después de autenticar al servicio y de construir la ruta con la organización de la credencial. Las pruebas de negocio usan Storage simulado; adicionalmente Codex comprobó subida, lectura y eliminación de un PNG temporal en Supabase real. No acredita el flujo completo de negocio ni lectura por panel. No cierra MIG-04 (lectura/URLs firmadas del panel), MIG-05/06/07 completos ni VAL-03.
+
+## 6.7 V10 — contacto registrado (D-011)
+INGESTA puede LEER contactos ACTIVOS de su organización (política `p_lectura_ingesta`) para resolver el JID; no los crea, modifica ni borra (probado con el login runtime). Los contactos los administra ADMIN; la provisión demo usa el migrador. El contacto no autoriza nada: no es vendedor ni usuario. SCHEDULER y JEFE_TALLER no leen la agenda. Las FK compuestas impiden contactos/canales/órdenes/pagos cruzados entre organizaciones, clientes y canales sin ampliar permisos de INGESTA.
 
 ## 7. Qué no cubre esta entrega
 Webhooks y workflows n8n (D3), controllers distintos de `/me`, Storage, motor financiero, cambios en V1–V7 ni Supabase remoto. Las pruebas usan un JWKS local de prueba y PostgreSQL de Testcontainers: **no acreditan** integración con Supabase Auth real.

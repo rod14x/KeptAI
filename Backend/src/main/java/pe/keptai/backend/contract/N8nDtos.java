@@ -119,7 +119,9 @@ public record N8nPagoVoucherResponse(
 @JsonProperty("ordenRef") @Pattern(regexp="^[A-Z]{1,5}-[0-9]{1,9}$") String ordenRef,
 @JsonProperty("alertaId")  java.util.UUID alertaId,
 @JsonProperty("fondosVerificados") @NotNull Boolean fondosVerificados,
-@JsonProperty("saldoModificado") @NotNull Boolean saldoModificado
+@JsonProperty("saldoModificado") @NotNull Boolean saldoModificado,
+/** Avisos informativos (p. ej. SIN_ORDEN, ORDEN_AMBIGUA); ausente en respuestas anteriores a V10. */
+@JsonProperty("avisos") @Size(max=20) java.util.List<@Valid N8nAviso> avisos
 ) {}
 public record N8nMensajeEstadoRequest(
 @JsonProperty("mensajeId") @NotNull java.util.UUID mensajeId,

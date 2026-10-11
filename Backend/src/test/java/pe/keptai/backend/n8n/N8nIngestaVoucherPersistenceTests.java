@@ -82,6 +82,30 @@ class N8nIngestaVoucherPersistenceTests {
 
 	static final UUID ORG_B = UUID.fromString("10000000-0000-4000-8000-0000000000b2");
 
+	static final UUID CLOUD = UUID.fromString("20000000-0000-4000-8000-0000000000c1");
+
+	static final UUID OTRO_CLIENTE = UUID.fromString("20000000-0000-4000-8000-0000000000c2");
+
+	static final UUID EMPRESA_B = UUID.fromString("20000000-0000-4000-8000-0000000000b1");
+
+	static final UUID ANDRES = UUID.fromString("30000000-0000-4000-8000-0000000000a1");
+
+	static final UUID BEATRIZ = UUID.fromString("30000000-0000-4000-8000-0000000000a3");
+
+	static final UUID CARLA = UUID.fromString("30000000-0000-4000-8000-0000000000a4");
+
+	static final UUID INACTIVO = UUID.fromString("30000000-0000-4000-8000-0000000000a5");
+
+	static final UUID BEA = UUID.fromString("30000000-0000-4000-8000-0000000000b1");
+
+	static final String JID_ANDRES = "51900000001@s.whatsapp.net";
+
+	static final String JID_BEATRIZ = "51900000003@s.whatsapp.net";
+
+	static final String JID_CARLA = "51900000004@s.whatsapp.net";
+
+	static final String JID_INACTIVO = "51900000005@s.whatsapp.net";
+
 	static final SecureRandom RANDOM = new SecureRandom();
 
 	static final String KEY_ING_A = key();
@@ -118,6 +142,15 @@ class N8nIngestaVoucherPersistenceTests {
 			// Un vendedor REAL con el mismo JID que envía n8n: aun así la orden no se le asigna (el JID no autentica).
 			s.execute("INSERT INTO usuario(organizacion_id,auth_user_id,nombre,rol,whatsapp_jid) VALUES ('" + ORG_A + "','"
 					+ UUID.randomUUID() + "','Vendedor ficticio','VENDEDOR','51900000002@s.whatsapp.net')");
+			// V10: clientes y contactos REGISTRADOS (los crea el owner/migrador; INGESTA solo los lee). Nombres ficticios.
+			s.execute("INSERT INTO cliente(id,organizacion_id,razon_social,tipo) VALUES ('" + CLOUD + "','" + ORG_A + "','Cloud Technologies','EMPRESA'),"
+					+ "('" + OTRO_CLIENTE + "','" + ORG_A + "','Segundo Cliente SAC','EMPRESA'),('" + EMPRESA_B + "','" + ORG_B + "','Empresa B','EMPRESA')");
+			s.execute("INSERT INTO contacto(id,organizacion_id,cliente_id,nombre,whatsapp_jid,activo) VALUES "
+					+ "('" + ANDRES + "','" + ORG_A + "','" + CLOUD + "','Andrés','" + JID_ANDRES + "',true),"
+					+ "('" + BEATRIZ + "','" + ORG_A + "','" + CLOUD + "','Beatriz','" + JID_BEATRIZ + "',true),"
+					+ "('" + CARLA + "','" + ORG_A + "','" + OTRO_CLIENTE + "','Carla','" + JID_CARLA + "',true),"
+					+ "('" + INACTIVO + "','" + ORG_A + "','" + CLOUD + "','Inactivo','" + JID_INACTIVO + "',false),"
+					+ "('" + BEA + "','" + ORG_B + "','" + EMPRESA_B + "','Bea','" + JID_ANDRES + "',true)");
 			s.execute("CREATE ROLE keptai_app LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS PASSWORD 'fixture-only'");
 			s.execute("GRANT keptai_runtime TO keptai_app");
 		}
@@ -259,8 +292,8 @@ class N8nIngestaVoucherPersistenceTests {
 		assertThat(one(o.formatted("plazo_dias"))).isEqualTo("30");
 		assertThat(one(o.formatted("total"))).isEqualTo("125.00");
 		assertThat(one(o.formatted("origen"))).isEqualTo("WHATSAPP");
-		// Lo que NO se inventa ni se deduce: cliente, marca y vendedor (aunque exista un usuario con ese JID).
-		assertThat(one(o.formatted("cliente_id"))).isNull();
+		// El cliente sale del contacto REGISTRADO por JID (no del nombre declarado por la IA); marca y vendedor no se deducen.
+		assertThat(one(o.formatted("cliente_id"))).isEqualTo(CLOUD.toString());
 		assertThat(one(o.formatted("marca_id"))).isNull();
 		assertThat(one(o.formatted("vendedor_id"))).isNull();
 		assertThat(one(o.formatted("canal_id"))).isNotNull();
@@ -269,7 +302,11 @@ class N8nIngestaVoucherPersistenceTests {
 		assertThat(one("SELECT estado || ':' || version FROM keptai.hoja_resumen")).isEqualTo("BORRADOR:1");
 		assertThat(one("SELECT revisado_por FROM keptai.hoja_resumen")).isNull();
 		assertThat(one("SELECT confianza FROM keptai.hoja_resumen")).isEqualTo("0.957");
-		assertThat(one("SELECT resumen_md FROM keptai.hoja_resumen")).contains("ORD-1").contains("Polo ficticio").contains("borrador");
+		assertThat(one("SELECT resumen_md FROM keptai.hoja_resumen")).contains("ORD-1").contains("Polo ficticio").contains("borrador")
+			.contains("Cliente registrado: Cloud Technologies").contains("Contacto registrado: Andrés").contains("Vendedor: pendiente");
+		assertThat(one("SELECT cliente_id || ':' || contacto_id FROM keptai.canal_whatsapp")).isEqualTo(CLOUD + ":" + ANDRES);
+		assertThat(one("SELECT extraccion->'registro'->>'cliente_razon_social' || '/' || (extraccion->'registro'->>'contacto_nombre') FROM keptai.hoja_resumen")).isEqualTo("Cloud Technologies/Andrés");
+		assertThat(resp.toString()).contains("CLIENTE_ASOCIADO_POR_CONTACTO").contains("CLIENTE_DECLARADO_DISTINTO").contains("VENDEDOR_SIN_RESOLVER").doesNotContain("CLIENTE_SIN_ASOCIAR");
 		assertThat(one("SELECT actor || ':' || operacion FROM keptai.evento_auditoria")).isEqualTo("N8N:ORDEN_INGESTA_BORRADOR");
 		assertThat(count("SELECT count(*) FROM keptai.aprobacion_credito") + count("SELECT count(*) FROM keptai.obligacion_cobro")
 				+ count("SELECT count(*) FROM keptai.aplicacion_pago") + count("SELECT count(*) FROM keptai.despacho")).isZero();
@@ -292,7 +329,7 @@ class N8nIngestaVoucherPersistenceTests {
 		JsonNode resp = tree(r);
 		List<String> avisos = new ArrayList<>();
 		resp.get("avisos").forEach(a -> avisos.add(a.get("codigo").asString()));
-		assertThat(avisos).contains("ITEMS_INCOMPLETOS", "PLAZO_CREDITO_NO_REGISTRADO", "CLIENTE_SIN_ASOCIAR", "MARCA_SIN_ASIGNAR", "VENDEDOR_SIN_RESOLVER");
+		assertThat(avisos).contains("ITEMS_INCOMPLETOS", "PLAZO_CREDITO_NO_REGISTRADO", "CLIENTE_ASOCIADO_POR_CONTACTO", "MARCA_SIN_ASIGNAR", "VENDEDOR_SIN_RESOLVER");
 		List<String> ausentes = new ArrayList<>();
 		resp.get("camposAusentes").forEach(a -> ausentes.add(a.asString()));
 		assertThat(ausentes).contains("total", "precio", "items", "condicion_pago");
@@ -381,7 +418,8 @@ class N8nIngestaVoucherPersistenceTests {
 			return send("/api/v1/pagos/voucher", KEY_ING_A, json(b));
 		});
 		assertThat(results).allSatisfy(result -> assertThat(result.getResponse().getStatus()).isEqualTo(201));
-		assertThat(count("SELECT count(*) FROM keptai.pago WHERE estado_conciliacion = 'PENDIENTE'")).isEqualTo(1);
+		// V10: el contacto no tiene pedido, así que el único original queda SIN_ORDEN (antes PENDIENTE); el resto son DUPLICADO.
+		assertThat(count("SELECT count(*) FROM keptai.pago WHERE estado_conciliacion = 'SIN_ORDEN'")).isEqualTo(1);
 		assertThat(count("SELECT count(*) FROM keptai.pago WHERE estado_conciliacion = 'DUPLICADO'")).isEqualTo(7);
 		assertThat(count("SELECT count(*) FROM keptai.aplicacion_pago")).isZero();
 	}
@@ -419,7 +457,8 @@ class N8nIngestaVoucherPersistenceTests {
 		JsonNode resp = tree(r);
 		assertThat(resp.get("resultado").asString()).isEqualTo("REGISTRADO");
 		assertThat(resp.get("fase").asString()).isEqualTo("RECIBIDO");
-		assertThat(resp.get("estadoConciliacion").asString()).isEqualTo("PENDIENTE");
+		assertThat(resp.get("estadoConciliacion").asString()).isEqualTo("SIN_ORDEN"); // el contacto aún no tiene pedido: no se inventa ninguno
+		assertThat(resp.get("avisos").toString()).contains("SIN_ORDEN");
 		assertThat(resp.get("fondosVerificados").asBoolean()).isFalse();
 		assertThat(resp.get("saldoModificado").asBoolean()).isFalse();
 		assertThat(resp.get("ordenRef").isNull()).isTrue();
@@ -427,9 +466,10 @@ class N8nIngestaVoucherPersistenceTests {
 		// Importe exacto: 3.5 -> 3.50 PEN, fase RECIBIDO, sin verificar, sin cliente.
 		assertThat(one("SELECT monto FROM keptai.pago")).isEqualTo("3.50");
 		assertThat(one("SELECT moneda FROM keptai.pago")).isEqualTo("PEN");
-		assertThat(one("SELECT fase || ':' || estado_conciliacion || ':' || medio FROM keptai.pago")).isEqualTo("RECIBIDO:PENDIENTE:YAPE");
+		assertThat(one("SELECT fase || ':' || estado_conciliacion || ':' || medio FROM keptai.pago")).isEqualTo("RECIBIDO:SIN_ORDEN:YAPE");
+		assertThat(one("SELECT orden_contexto_id FROM keptai.pago")).isNull();
 		assertThat(one("SELECT verificado_por FROM keptai.pago")).isNull();
-		assertThat(one("SELECT cliente_id FROM keptai.pago")).isNull();
+		assertThat(one("SELECT cliente_id FROM keptai.pago")).isEqualTo(CLOUD.toString()); // cliente del contacto registrado
 		assertThat(one("SELECT idempotency_key FROM keptai.pago")).isEqualTo("3EB0C767D0A5C7F2A9B1");
 		assertThat(count("SELECT count(*) FROM keptai.aplicacion_pago") + count("SELECT count(*) FROM keptai.obligacion_cobro")
 				+ count("SELECT count(*) FROM keptai.alerta_cobranza")).isZero();
@@ -609,7 +649,7 @@ class N8nIngestaVoucherPersistenceTests {
 		Map<String, Object> distinto = voucherBody();
 		distinto.put("mensajeId", "3EB0C767D0A5C7F2A9C0");
 		ext(distinto).put("monto", 4.0);
-		assertThat(tree(send("/api/v1/pagos/voucher", KEY_ING_A, json(distinto))).get("estadoConciliacion").asString()).isEqualTo("PENDIENTE");
+		assertThat(tree(send("/api/v1/pagos/voucher", KEY_ING_A, json(distinto))).get("estadoConciliacion").asString()).isEqualTo("SIN_ORDEN");
 	}
 
 	@Test
@@ -711,6 +751,271 @@ class N8nIngestaVoucherPersistenceTests {
 		assertThat(send("/api/v1/pagos/voucher", KEY_SCH_A, body).getResponse().getStatus()).isEqualTo(403);
 		assertThat(send("/api/v1/pagos/voucher", null, body).getResponse().getStatus()).isEqualTo(401);
 		assertThat(storage.objetos).hasSize(2);
+	}
+
+	// ---------- V10: contacto registrado, cliente por JID y asociación contextual voucher -> último pedido ----------
+
+	@Autowired
+	org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+	@Autowired
+	pe.keptai.backend.tenancy.TenantTransaction tenant;
+
+	static final String ING = "/api/v1/ordenes/ingesta";
+
+	static final String VOU = "/api/v1/pagos/voucher";
+
+	MvcResult ingest(String jid, String generadoEn) throws Exception {
+		Map<String, Object> b = ordenBody();
+		b.put("chatId", jid);
+		b.put("generadoEn", generadoEn);
+		return send(ING, KEY_ING_A, json(b));
+	}
+
+	MvcResult voucher(String jid, String mensajeId, String codigo) throws Exception {
+		Map<String, Object> b = voucherBody();
+		b.put("chatId", jid);
+		b.put("clienteJid", jid);
+		b.put("mensajeId", mensajeId);
+		ext(b).put("codigo_operacion", codigo);
+		return send(VOU, KEY_ING_A, json(b));
+	}
+
+	static String ordenId(String ref) throws Exception {
+		return one("SELECT id FROM keptai.orden WHERE ref = '" + ref + "' AND organizacion_id = '" + ORG_A + "'");
+	}
+
+	@Test
+	void unknownInactiveAndUnsupportedJidsAreRejectedWithTheSameGenericErrorAndNoSideEffects() throws Exception {
+		String[] jids = { "51900000099@s.whatsapp.net", JID_INACTIVO, "51900000001:12@s.whatsapp.net", "51900000001@lid",
+			"51900000002@s.whatsapp.net", "5190000000@s.whatsapp.net", "519000000011@s.whatsapp.net" };
+		for (String jid : jids) {
+			Map<String, Object> b = ordenBody();
+			b.put("chatId", jid);
+			ext(b).put("cliente", Map.of("nombre", "Cloud Technologies", "tipo", "EMPRESA")); // el nombre de la IA no identifica a nadie
+			MvcResult r = send(ING, KEY_ING_A, json(b));
+			assertThat(r.getResponse().getStatus()).as("ingesta " + jid).isEqualTo(422);
+			assertThat(tree(r).get("code").asString()).isEqualTo("CONTACT_NOT_REGISTERED");
+			assertThat(r.getResponse().getContentAsString()).doesNotContain("5190000").doesNotContain("Cloud");
+			MvcResult v = voucher(jid, "MSG-UNK-" + Math.abs(jid.hashCode()), "OP-UNK");
+			assertThat(v.getResponse().getStatus()).as("voucher " + jid).isEqualTo(422);
+			assertThat(tree(v).get("code").asString()).isEqualTo("CONTACT_NOT_REGISTERED");
+			assertThat(v.getResponse().getContentAsString()).doesNotContain("5190000");
+		}
+		assertThat(businessRows()).as("ni pedido, ni pago, ni canal, ni reserva idempotente").isZero();
+		assertThat(storage.operaciones).as("un contacto desconocido no sube archivo").isEmpty();
+	}
+
+	@Test
+	void theVoucherChatAndContactMustCoincide() throws Exception {
+		Map<String, Object> b = voucherBody();
+		b.put("chatId", JID_BEATRIZ);
+		b.put("clienteJid", JID_ANDRES);
+		MvcResult r = send(VOU, KEY_ING_A, json(b));
+		assertThat(r.getResponse().getStatus()).isEqualTo(422);
+		assertThat(tree(r).get("code").asString()).isEqualTo("CONTACT_JID_MISMATCH");
+		assertThat(businessRows()).isZero();
+		assertThat(storage.operaciones).isEmpty();
+	}
+
+	@Test
+	void aForgedClientNameOrAClientPhoneAsSellerNeverChangeTheIdentityOrAuthorize() throws Exception {
+		Map<String, Object> b = ordenBody();
+		ext(b).put("cliente", Map.of("nombre", "Segundo Cliente SAC", "tipo", "EMPRESA"));
+		b.put("vendedorJid", JID_ANDRES); // el teléfono del cliente como «vendedor»
+		MvcResult r = send(ING, KEY_ING_A, json(b));
+		assertThat(r.getResponse().getStatus()).isEqualTo(201);
+		assertThat(one("SELECT cliente_id FROM keptai.orden")).isEqualTo(CLOUD.toString());
+		assertThat(one("SELECT vendedor_id FROM keptai.orden")).isNull();
+		assertThat(one("SELECT estado FROM keptai.orden")).isEqualTo("BORRADOR");
+		assertThat(r.getResponse().getContentAsString()).contains("CLIENTE_DECLARADO_DISTINTO").contains("VENDEDOR_SIN_RESOLVER");
+		assertThat(one("SELECT resumen_md FROM keptai.hoja_resumen")).contains("Cliente registrado: Cloud Technologies");
+		assertThat(count("SELECT count(*) FROM keptai.aprobacion_credito") + count("SELECT count(*) FROM keptai.despacho")).isZero();
+	}
+
+	@Test
+	void theSameJidInTwoCompaniesResolvesEachToItsOwnClientWithoutCrossing() throws Exception {
+		String body = json(ordenBody());
+		assertThat(send(ING, KEY_ING_A, body).getResponse().getStatus()).isEqualTo(201);
+		assertThat(send(ING, KEY_ING_B, body).getResponse().getStatus()).isEqualTo(201);
+		assertThat(one("SELECT cliente_id FROM keptai.orden WHERE organizacion_id = '" + ORG_A + "'")).isEqualTo(CLOUD.toString());
+		assertThat(one("SELECT cliente_id FROM keptai.orden WHERE organizacion_id = '" + ORG_B + "'")).isEqualTo(EMPRESA_B.toString());
+		assertThat(one("SELECT contacto_id FROM keptai.canal_whatsapp WHERE organizacion_id = '" + ORG_B + "'")).isEqualTo(BEA.toString());
+		assertThat(one("SELECT resumen_md FROM keptai.hoja_resumen WHERE organizacion_id = '" + ORG_B + "'")).contains("Empresa B").doesNotContain("Cloud Technologies");
+	}
+
+	@Test
+	void twoContactsOfTheSameClientDoNotSwapOrdersAndAnotherClientHasNoOrder() throws Exception {
+		assertThat(ingest(JID_ANDRES, "2026-10-11T08:00:01.000Z").getResponse().getStatus()).isEqualTo(201); // ORD-1
+		assertThat(ingest(JID_BEATRIZ, "2026-10-11T08:00:02.000Z").getResponse().getStatus()).isEqualTo(201); // ORD-2
+		JsonNode a = tree(voucher(JID_ANDRES, "MSG-AND-0001", "OP-A1"));
+		JsonNode b = tree(voucher(JID_BEATRIZ, "MSG-BEA-0001", "OP-B1"));
+		JsonNode c = tree(voucher(JID_CARLA, "MSG-CAR-0001", "OP-C1"));
+		assertThat(a.get("ordenRef").asString()).isEqualTo("ORD-1");
+		assertThat(b.get("ordenRef").asString()).isEqualTo("ORD-2");
+		assertThat(c.get("ordenRef").isNull()).isTrue();
+		assertThat(c.get("estadoConciliacion").asString()).isEqualTo("SIN_ORDEN");
+		assertThat(a.get("estadoConciliacion").asString()).isEqualTo("PENDIENTE");
+		assertThat(count("SELECT count(*) FROM keptai.pago p JOIN keptai.canal_whatsapp c ON c.id = p.canal_id AND c.organizacion_id = p.organizacion_id"
+				+ " JOIN keptai.orden o ON o.id = p.orden_contexto_id AND o.organizacion_id = p.organizacion_id WHERE o.canal_id = c.id AND o.cliente_id = p.cliente_id")).isEqualTo(2);
+		assertThat(one("SELECT o.ref FROM keptai.pago p JOIN keptai.orden o ON o.id = p.orden_contexto_id WHERE p.idempotency_key = 'MSG-BEA-0001'")).isEqualTo("ORD-2");
+	}
+
+	@Test
+	void theVoucherPointsToTheLastNonCancelledOrderAndAReplayKeepsItsOriginalReference() throws Exception {
+		ingest(JID_ANDRES, "2026-10-11T08:00:01.000Z");
+		ingest(JID_ANDRES, "2026-10-11T08:00:02.000Z");
+		MvcResult first = voucher(JID_ANDRES, "MSG-LAST-0001", "OP-L1");
+		assertThat(tree(first).get("ordenRef").asString()).isEqualTo("ORD-2");
+		try (Connection cx = owner(); Statement st = cx.createStatement()) {
+			st.execute("UPDATE keptai.orden SET estado = 'CANCELADA' WHERE ref = 'ORD-2'");
+		}
+		assertThat(tree(voucher(JID_ANDRES, "MSG-LAST-0002", "OP-L2")).get("ordenRef").asString()).as("el último pedido CANCELADO se excluye").isEqualTo("ORD-1");
+		ingest(JID_ANDRES, "2026-10-11T08:00:03.000Z"); // ORD-3
+		MvcResult replay = voucher(JID_ANDRES, "MSG-LAST-0001", "OP-L1");
+		assertThat(replay.getResponse().getHeader("Idempotency-Replayed")).isEqualTo("true");
+		assertThat(tree(replay).get("ordenRef").asString()).as("la asociación quedó congelada en la respuesta idempotente").isEqualTo("ORD-2");
+		assertThat(tree(replay).get("pagoId").asString()).isEqualTo(tree(first).get("pagoId").asString());
+		assertThat(tree(voucher(JID_ANDRES, "MSG-LAST-0003", "OP-L3")).get("ordenRef").asString()).isEqualTo("ORD-3");
+		// Asociación contextual solamente: nada se verifica ni se aplica ni cambia saldos.
+		assertThat(count("SELECT count(*) FROM keptai.pago WHERE fase <> 'RECIBIDO' OR verificado_por IS NOT NULL")).isZero();
+		assertThat(count("SELECT count(*) FROM keptai.aplicacion_pago") + count("SELECT count(*) FROM keptai.obligacion_cobro")).isZero();
+		assertThat(one("SELECT actor || ':' || (cambios->>'ordenRef') || ':' || (cambios->>'criterio') FROM keptai.evento_auditoria WHERE operacion = 'VOUCHER_RECIBIDO' ORDER BY ocurrido_en LIMIT 1"))
+			.isEqualTo("N8N:ORD-2:ultimo_pedido_no_cancelado_del_canal");
+	}
+
+	@Test
+	void anExactTieBetweenTheMostRecentOrdersIsNotResolvedAtRandom() throws Exception {
+		ingest(JID_ANDRES, "2026-10-11T08:00:01.000Z");
+		ingest(JID_ANDRES, "2026-10-11T08:00:02.000Z");
+		try (Connection cx = owner(); Statement st = cx.createStatement()) {
+			st.execute("UPDATE keptai.orden SET creado_en = '2026-10-11T10:00:00Z'");
+		}
+		JsonNode r = tree(voucher(JID_ANDRES, "MSG-TIE-0001", "OP-T1"));
+		assertThat(r.get("ordenRef").isNull()).isTrue();
+		assertThat(r.get("estadoConciliacion").asString()).isEqualTo("SIN_ORDEN");
+		assertThat(r.get("avisos").toString()).contains("ORDEN_AMBIGUA");
+		assertThat(count("SELECT count(*) FROM keptai.pago WHERE orden_contexto_id IS NOT NULL")).isZero();
+	}
+
+	@Test
+	void aPossibleFinancialDuplicateKeepsPrecedenceOverNoOrder() throws Exception {
+		voucher(JID_ANDRES, "MSG-DUP-0001", "OP-D1");
+		JsonNode dup = tree(voucher(JID_ANDRES, "MSG-DUP-0002", "OP-D1"));
+		assertThat(dup.get("estadoConciliacion").asString()).isEqualTo("DUPLICADO");
+		assertThat(dup.get("duplicadoDePagoId").isNull()).isFalse();
+		assertThat(count("SELECT count(*) FROM keptai.pago WHERE fase <> 'RECIBIDO'")).isZero();
+	}
+
+	@Test
+	void aChannelAlreadyLinkedToAnotherClientIsNeverOverwrittenAndALegacyUnlinkedOneIsLinked() throws Exception {
+		try (Connection cx = owner(); Statement st = cx.createStatement()) {
+			st.execute("INSERT INTO keptai.canal_whatsapp(organizacion_id, instancia, chat_jid, cliente_id) VALUES ('" + ORG_A + "','isabel','" + JID_ANDRES + "','" + OTRO_CLIENTE + "')");
+		}
+		MvcResult r = ingest(JID_ANDRES, "2026-10-11T08:00:01.000Z");
+		assertThat(r.getResponse().getStatus()).isEqualTo(422);
+		assertThat(tree(r).get("code").asString()).isEqualTo("CHANNEL_CLIENT_CONFLICT");
+		assertThat(voucher(JID_ANDRES, "MSG-CONF-0001", "OP-X1").getResponse().getStatus()).isEqualTo(422);
+		assertThat(one("SELECT cliente_id FROM keptai.canal_whatsapp")).isEqualTo(OTRO_CLIENTE.toString());
+		assertThat(count("SELECT count(*) FROM keptai.orden") + count("SELECT count(*) FROM keptai.pago") + count("SELECT count(*) FROM keptai.solicitud_idempotente")).isZero();
+		assertThat(storage.operaciones).isEmpty();
+		try (Connection cx = owner(); Statement st = cx.createStatement()) {
+			st.execute("DELETE FROM keptai.canal_whatsapp");
+			st.execute("INSERT INTO keptai.canal_whatsapp(organizacion_id, instancia, chat_jid) VALUES ('" + ORG_A + "','isabel','" + JID_ANDRES + "')");
+		}
+		assertThat(ingest(JID_ANDRES, "2026-10-11T08:00:02.000Z").getResponse().getStatus()).isEqualTo(201);
+		assertThat(one("SELECT cliente_id || ':' || contacto_id FROM keptai.canal_whatsapp")).isEqualTo(CLOUD + ":" + ANDRES);
+	}
+
+	@Test
+	void sqlForeignKeysRejectCrossedContactClientOrderChannelAndPaymentAssociations() throws Exception {
+		ingest(JID_ANDRES, "2026-10-11T08:00:01.000Z");
+		ingest(JID_BEATRIZ, "2026-10-11T08:00:02.000Z");
+		ingest(JID_CARLA, "2026-10-11T08:00:03.000Z");
+		String ordAndres = ordenId("ORD-1");
+		String ordCarla = ordenId("ORD-3");
+		String canalAndres = one("SELECT id FROM keptai.canal_whatsapp WHERE chat_jid = '" + JID_ANDRES + "' AND organizacion_id = '" + ORG_A + "'");
+		String canalBeatriz = one("SELECT id FROM keptai.canal_whatsapp WHERE chat_jid = '" + JID_BEATRIZ + "' AND organizacion_id = '" + ORG_A + "'");
+		String canalCarla = one("SELECT id FROM keptai.canal_whatsapp WHERE chat_jid = '" + JID_CARLA + "' AND organizacion_id = '" + ORG_A + "'");
+		String pago = "INSERT INTO keptai.pago(organizacion_id, cliente_id, canal_id, orden_contexto_id, monto, fecha_pago, medio) VALUES ('" + ORG_A + "', %s, %s, %s, 1, current_date, 'OTRO')";
+		String[] rechazos = {
+			// contacto de un cliente de otra organización
+			"INSERT INTO keptai.contacto(organizacion_id, cliente_id, nombre, whatsapp_jid) VALUES ('" + ORG_A + "','" + EMPRESA_B + "','Cruzado','51900000077@s.whatsapp.net')",
+			// JID no canónico
+			"INSERT INTO keptai.contacto(organizacion_id, cliente_id, nombre, whatsapp_jid) VALUES ('" + ORG_A + "','" + CLOUD + "','Mal JID','51900000077@lid')",
+			// mismo JID dos veces en la misma organización
+			"INSERT INTO keptai.contacto(organizacion_id, cliente_id, nombre, whatsapp_jid) VALUES ('" + ORG_A + "','" + OTRO_CLIENTE + "','Duplicado','" + JID_ANDRES + "')",
+			// canal con el contacto de Andrés pero otro cliente
+			"INSERT INTO keptai.canal_whatsapp(organizacion_id, instancia, chat_jid, cliente_id, contacto_id) VALUES ('" + ORG_A + "','otra','" + JID_ANDRES + "','" + OTRO_CLIENTE + "','" + ANDRES + "')",
+			// canal con el contacto de Andrés pero otro JID
+			"INSERT INTO keptai.canal_whatsapp(organizacion_id, instancia, chat_jid, cliente_id, contacto_id) VALUES ('" + ORG_A + "','otra','51900000066@s.whatsapp.net','" + CLOUD + "','" + ANDRES + "')",
+			// orden cuyo cliente no es el del canal
+			"UPDATE keptai.orden SET cliente_id = '" + OTRO_CLIENTE + "' WHERE id = '" + ordAndres + "'",
+			// pago de otro cliente con el pedido de Andrés
+			pago.formatted("'" + OTRO_CLIENTE + "'", "'" + canalCarla + "'", "'" + ordAndres + "'"),
+			// pago de Cloud con el pedido de Carla
+			pago.formatted("'" + CLOUD + "'", "'" + canalAndres + "'", "'" + ordCarla + "'"),
+			// mismo cliente pero otro canal (Beatriz) con el pedido de Andrés
+			pago.formatted("'" + CLOUD + "'", "'" + canalBeatriz + "'", "'" + ordAndres + "'"),
+			// pedido sin cliente/canal del contexto
+			pago.formatted("NULL", "NULL", "'" + ordAndres + "'"),
+		};
+		for (String sql : rechazos) {
+			try (Connection cx = owner(); Statement st = cx.createStatement()) {
+				org.assertj.core.api.Assertions.assertThatThrownBy(() -> st.execute(sql)).as(sql).isInstanceOf(java.sql.SQLException.class);
+			}
+		}
+		// La asociación coherente sí es válida.
+		try (Connection cx = owner(); Statement st = cx.createStatement()) {
+			st.execute(pago.formatted("'" + CLOUD + "'", "'" + canalAndres + "'", "'" + ordAndres + "'"));
+		}
+	}
+
+	@Test
+	void serviceIngestaCanOnlyReadActiveContactsOfItsOrganizationAndNeverWriteOrDeleteThem() throws Exception {
+		UUID servicioA = UUID.fromString(one("SELECT id FROM keptai.integracion_servicio WHERE organizacion_id = '" + ORG_A + "' AND alcance = 'INGESTA'"));
+		UUID servicioSch = UUID.fromString(one("SELECT id FROM keptai.integracion_servicio WHERE organizacion_id = '" + ORG_A + "' AND alcance = 'SCHEDULER'"));
+		try {
+			org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(new pe.keptai.backend.security.ServiceAuthentication(
+					new pe.keptai.backend.security.ServiceIdentity(servicioA, ORG_A, "isabel", pe.keptai.backend.security.AccessRole.INGESTA)));
+			assertThat(tenant.executeReadOnly(() -> jdbc.queryForObject("SELECT count(*) FROM keptai.contacto", Integer.class))).as("solo activos y de su organización").isEqualTo(3);
+			assertThat(tenant.executeReadOnly(() -> jdbc.queryForObject("SELECT count(*) FROM keptai.contacto WHERE nombre = 'Inactivo' OR nombre = 'Bea'", Integer.class))).isZero();
+			org.assertj.core.api.Assertions.assertThatThrownBy(() -> tenant.execute(() -> jdbc.update(
+					"INSERT INTO keptai.contacto(organizacion_id, cliente_id, nombre, whatsapp_jid) VALUES (keptai.app_organizacion_actual(), ?, 'Nuevo', '51900000088@s.whatsapp.net')", CLOUD)))
+				.rootCause().hasMessageContaining("row-level security");
+			assertThat(tenant.execute(() -> jdbc.update("UPDATE keptai.contacto SET nombre = 'Cambiado'"))).isZero();
+			org.assertj.core.api.Assertions.assertThatThrownBy(() -> tenant.execute(() -> jdbc.update("DELETE FROM keptai.contacto"))).rootCause().hasMessageContaining("permission denied");
+			org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(new pe.keptai.backend.security.ServiceAuthentication(
+					new pe.keptai.backend.security.ServiceIdentity(servicioSch, ORG_A, "isabel", pe.keptai.backend.security.AccessRole.SCHEDULER)));
+			assertThat(tenant.executeReadOnly(() -> jdbc.queryForObject("SELECT count(*) FROM keptai.contacto", Integer.class))).as("SCHEDULER no lee la agenda").isZero();
+		}
+		finally {
+			org.springframework.security.core.context.SecurityContextHolder.clearContext();
+		}
+		assertThat(one("SELECT nombre FROM keptai.contacto WHERE id = '" + ANDRES + "'")).isEqualTo("Andrés");
+	}
+
+	@Test
+	void concurrentIngestAndVoucherForTheSameContactNeverDuplicateOrdersPaymentsOrFilesAndStayConsistent() throws Exception {
+		ingest(JID_ANDRES, "2026-10-11T07:59:59.000Z"); // ORD-1 previo
+		List<MvcResult> res = parallel(8, i -> i % 2 == 0 ? ingest(JID_ANDRES, "2026-10-11T08:00:0" + i + ".000Z") : voucher(JID_ANDRES, "MSG-CONC-000" + i, "OP-CONC-" + i));
+		assertThat(res).allSatisfy(r -> assertThat(r.getResponse().getStatus()).isEqualTo(201));
+		assertThat(count("SELECT count(*) FROM keptai.orden")).isEqualTo(5);
+		assertThat(count("SELECT count(DISTINCT ref) FROM keptai.orden")).isEqualTo(5);
+		assertThat(count("SELECT count(*) FROM keptai.pago")).isEqualTo(4);
+		assertThat(count("SELECT count(*) FROM keptai.comprobante")).isEqualTo(4);
+		assertThat(storage.objetos).hasSize(4);
+		assertThat(count("SELECT count(*) FROM keptai.canal_whatsapp")).isEqualTo(1);
+		// Cada pago apunta a un pedido existente del mismo cliente y canal (nunca a otro contacto) o a ninguno.
+		assertThat(count("SELECT count(*) FROM keptai.pago p LEFT JOIN keptai.orden o ON o.id = p.orden_contexto_id AND o.organizacion_id = p.organizacion_id"
+				+ " WHERE p.orden_contexto_id IS NOT NULL AND (o.id IS NULL OR o.canal_id <> p.canal_id OR o.cliente_id <> p.cliente_id OR o.estado = 'CANCELADA')")).isZero();
+		// Y con ORD-1 ya confirmado antes del voucher, ninguno queda SIN_ORDEN.
+		assertThat(count("SELECT count(*) FROM keptai.pago WHERE orden_contexto_id IS NULL")).isZero();
+		// Repetir todo es idempotente: sin filas ni objetos nuevos.
+		parallel(8, i -> i % 2 == 0 ? ingest(JID_ANDRES, "2026-10-11T08:00:0" + i + ".000Z") : voucher(JID_ANDRES, "MSG-CONC-000" + i, "OP-CONC-" + i));
+		assertThat(count("SELECT count(*) FROM keptai.orden")).isEqualTo(5);
+		assertThat(count("SELECT count(*) FROM keptai.pago")).isEqualTo(4);
+		assertThat(storage.objetos).hasSize(4);
 	}
 
 	// ---------- comunes ----------

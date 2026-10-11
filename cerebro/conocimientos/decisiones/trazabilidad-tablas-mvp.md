@@ -4,6 +4,8 @@ ID: DB-MAP-001. Fecha: 10/10/2026. Elaborado por Miguel/Codex por solicitud de M
 
 ## Respuesta a la cantidad
 
+> **D-011 / V10 (11/10/2026), dirección de Miguel:** la tabla `contacto` vuelve como metadatos de WhatsApp de un cliente porque la entrada n8n debe identificar al cliente por JID registrado; no se justifica por un conteo de tablas. Ver [definición V10](../../../BD/definicion-base-datos.md).
+>
 > **D-008, posterior a esta revision:** Miguel aprobo las 25 recomendadas. V6 excluye contacto/nota_cliente si vacias; las 27 entradas siguientes se conservan como trazabilidad del esquema anterior. Las dos opcionales ya no son tablas vigentes. [DER actual V6](../../diagramas/keptai-der-v6.md) y [guia local](../../../BD/local/README.md).
 
 **No es obligatorio tener exactamente 27 tablas.** La empresa describe problemas, datos y resultados; no prescribe tablas. 27 es el número del esquema V5 actual, no una condición del reto ni de la skill. Menos tablas no garantiza simplicidad, y más tablas no acredita cobertura.

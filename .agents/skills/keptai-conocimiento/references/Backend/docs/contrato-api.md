@@ -41,9 +41,9 @@ Los cuatro roles son los de `usuario.rol`; `service_n8n` es una credencial técn
 | `getCreditDecision` | GET | `/api/v1/orders/{order_id}/credit-decision` | `miguel_adapter_andres_engine` | MIG-07 | VENDEDOR, ADMIN, GERENTE | Propuesta, no implementado |
 | `submitCreditDecision` | POST | `/api/v1/orders/{order_id}/credit-decision` | `miguel_adapter_andres_engine` | MIG-07 | VENDEDOR | Propuesta, no implementado |
 | `registerDispatch` | POST | `/api/v1/orders/{order_id}/dispatch` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN, JEFE_TALLER | Propuesta, no implementado |
-| `n8nIngestOrder` | POST | `/api/v1/ordenes/ingesta` | `miguel` | MIG-05 | service_n8n | Propuesta de contrato; **implementado** (MIG-05): orden y hoja BORRADOR desde datos estructurados, 201, idempotencia y 409; sin confirmar ni asociar cliente |
+| `n8nIngestOrder` | POST | `/api/v1/ordenes/ingesta` | `miguel` | MIG-05 | service_n8n | Propuesta de contrato; **implementado** (MIG-05): orden y hoja BORRADOR desde datos estructurados, 201, idempotencia y 409; cliente por contacto registrado (V10, 422 si no existe); sin confirmar ni vendedor |
 | `n8nConfirmOrder` | POST | `/api/v1/ordenes/confirmar` | `miguel_adapter_andres_engine` | MIG-06 | service_n8n | Propuesta, no implementado; **cerrada por decisión pendiente** (403 a cualquier servicio) |
-| `n8nReceiveVoucher` | POST | `/api/v1/pagos/voucher` | `miguel_adapter_andres_engine` | MIG-04-05 | service_n8n | Propuesta de contrato; **implementado** (MIG-04/05): pago RECIBIDO + comprobante privado con `imagen_base64`, sin verificar ni aplicar; Storage real pendiente de prueba |
+| `n8nReceiveVoucher` | POST | `/api/v1/pagos/voucher` | `miguel_adapter_andres_engine` | MIG-04-05 | service_n8n | Propuesta de contrato; **implementado** (MIG-04/05): pago RECIBIDO + comprobante privado con `imagen_base64`, asociado por contexto al último pedido del contacto (V10), sin verificar ni aplicar; Storage real pendiente de prueba |
 | `n8nReportMessageStatus` | POST | `/api/v1/mensajes/{id}/estado` | `miguel_adapter_andres_engine` | MIG-07 | service_n8n | Propuesta, no implementado; **cerrada** (403) hasta aprobar el alcance SCHEDULER |
 
 Matriz ruta → identidad → rol → alcance (coherente con V7) y configuración de seguridad externa: [matriz-acceso.md](matriz-acceso.md) (MIG-03-A, propuesta sin implementación de autenticación).

@@ -41,6 +41,23 @@ class N8nIntegrationDocsTests {
 	}
 
 	@Test
+	void theContactAssociationIsDocumentedWithItsErrorCodesAndLimits() throws IOException {
+		String doc = read("docs", "integracion-n8n-isabella.md");
+		assertThat(doc).contains("Contacto registrado: cómo se identifica al cliente", "CONTACT_NOT_REGISTERED", "CONTACT_JID_MISMATCH", "CHANNEL_CLIENT_CONFLICT",
+				"SIN_ORDEN", "ORDEN_AMBIGUA", "último pedido no cancelado", "Cloud Technologies", "Andrés", "El vendedor sigue PENDIENTE", "no revela cuál caso");
+		JsonNode paths = OpenApiSpec.load().root().path("paths");
+		String ingest = paths.path("/api/v1/ordenes/ingesta").path("post").path("description").asString();
+		String voucher = paths.path("/api/v1/pagos/voucher").path("post").path("description").asString();
+		assertThat(ingest).contains("CONTACT_NOT_REGISTERED", "CHANNEL_CLIENT_CONFLICT", "VENDEDOR_SIN_RESOLVER");
+		assertThat(voucher).contains("CONTACT_NOT_REGISTERED", "CONTACT_JID_MISMATCH", "ORDEN_AMBIGUA", "orden_contexto_id", "SIN_ORDEN", "congelada");
+		assertThat(OpenApiSpec.load().root().path("components").path("schemas").path("N8nPagoVoucherResponse").path("properties").has("avisos")).isTrue();
+		assertThat(read("docs", "provision-servicios-local.md")).contains("provisionar-contacto-local.sh", "NO APLICADO", "no migra");
+		assertThat(read("docs", "despliegue-n8n.md")).contains("La base debe estar en V10", "no migra");
+		assertThat(Files.isExecutable(Path.of("scripts", "provisionar-contacto-local.sh"))).isTrue();
+		assertThat(Files.readString(Path.of("..", "BD", "migrations", "V10__contacto_whatsapp.sql"))).contains("CREATE TABLE contacto", "ENABLE ROW LEVEL SECURITY", "p_lectura_ingesta");
+	}
+
+	@Test
 	void theConnectionGuideGivesTheExactNodeInstructionsAndAFullExample() throws IOException {
 		String doc = read("docs", "integracion-n8n-isabella.md");
 		assertThat(doc).contains("«Enviar pedido al backend»", "«Enviar pago al backend»", "`X-Api-Key`", "`X-Api-Secret`", "`Content-Type: application/json`",

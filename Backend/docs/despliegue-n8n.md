@@ -53,3 +53,11 @@ Imagen local keptai-backend:n8n construida correctamente. Contenedor propio 8088
 
 ## Hosting propuesto
 Render permite servicio Docker y dominio propio con TLS administrado: https://render.com/docs/docker y https://render.com/docs/custom-domains. Propuesta conforme al roadmap previo, no cuenta ni gasto contratado. Primero completar asociación de contacto, escoger base remota compatible y confirmar acceso a DNS; después crear servicio con rootDirectory Backend, rama backend-partefinal y health /actuator/health.
+
+
+## Actualización 11/10/2026 — contacto registrado y asociación voucher → pedido (V10)
+El requisito previo de Miguel quedó **implementado y probado localmente** (PostgreSQL desechable, Storage simulado): cliente por JID de contacto registrado, hoja con la razón social real, voucher asociado al último pedido del contacto. Consecuencias para el despliegue:
+- **La base debe estar en V10** antes de ejecutar este código: sin la tabla `contacto` ambas rutas fallarían. La imagen Docker **no migra** la base al arrancar (Flyway desactivado); V10 se aplica aparte con el rol migrador. La base local activa sigue en V7 (faltan V8, V9 y V10) y el esquema remoto/runtime no se ha validado: pendiente de Andrés y de la revisión de Codex.
+- Registrar el contacto real (Cloud Technologies / Andrés) en la base del despliegue con `Backend/scripts/provisionar-contacto-local.sh` (`provision-servicios-local.md` §2.2). No se aplica ninguna semilla demo al iniciar `prod`.
+- Comprobación de la imagen tras V10: `docker build` correcto (la imagen no contiene migraciones ni datos).
+- Siguen pendientes: validar el esquema remoto/runtime, provisionar la credencial en la base del despliegue y DNS/HTTPS. El vendedor y la validación humana de `/cerrar` permanecen pendientes: no está listo para n8n público.

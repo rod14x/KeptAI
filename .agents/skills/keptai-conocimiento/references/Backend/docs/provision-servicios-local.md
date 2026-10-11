@@ -55,6 +55,15 @@ sg docker -c 'Backend/scripts/servicio-local.sh listar --org-id 87d1132c-5b6d-4a
 ```
 Entrega: el contenido del archivo `.key` se pasa a Isabella por un canal privado y se pega en una credencial de n8n tipo Header Auth (`X-Api-Key`); nunca en un chat, ticket, workflow ni `VITE_*`. En PostgreSQL queda solo su SHA-256. Para rotar o revocar usar `rotar`/`revocar`. Esta clave no es la de Supabase ni un JWT. Para que Spring suba vouchers, el backend (no n8n) necesita `SUPABASE_URL`, `SUPABASE_STORAGE_BUCKET=keptai-vouchers` y `SUPABASE_SECRET_KEY` en su entorno ya existente (`Backend/.env`); su uso real contra Supabase Storage está pendiente de probar.
 
+## 2.2 Cliente y contacto de WhatsApp (V10; demo Cloud Technologies / Andrés) — PREPARADO, NO APLICADO
+La entrada n8n exige que el JID sea el de un contacto registrado. `Backend/scripts/provisionar-contacto-local.sh` (vista previa por defecto; `--apply` explícito; solo base local o la indicada con `KEPTAI_PSQL_EXEC`) usa una **organización existente**, crea o reutiliza el cliente (tipo EMPRESA) y el contacto con el JID canónico derivado del teléfono. No crea organizaciones, vendedores, usuarios de Auth, servicios ni pedidos; no inventa RUC, marca, crédito ni correo; reejecutar no duplica y un dato distinto (otro tipo, nombre o cliente) falla sin sobrescribir. Probado en un PostgreSQL desechable (`verificar-n8n-local.sh`); **no se aplicó a la base local activa**, que sigue en V7 (la aplicación exige antes migrar a V10 con el rol migrador: V8 y V9 también faltan allí).
+```bash
+Backend/scripts/provisionar-contacto-local.sh --org-nombre Corpotex --cliente-razon-social "Cloud Technologies" --cliente-tipo EMPRESA \
+    --contacto-nombre "Andrés" --telefono "+51 951 570 191"          # vista previa: JID 51XXXXXXXXX@s.whatsapp.net
+sg docker -c 'Backend/scripts/provisionar-contacto-local.sh ... --apply'   # solo tras migrar la base local a V10 y revisar la vista previa
+```
+No se aplica ninguna semilla demo al iniciar `prod`. La imagen Docker de Spring **no migra** la base al arrancar: V10 se aplica aparte con Flyway/rol migrador.
+
 ## 3. Configurar n8n (lado Spring listo; los workflows de Isabella no se tocan)
 Cada instancia enviará su clave en la cabecera `X-Api-Key` desde una credencial de n8n (nunca en el JSON del workflow ni en el nodo Config). La configuración exacta de los nodos finales de WF1 y WF2, la separación de las cuatro autenticaciones y los datos pendientes de Isabella están en [integracion-n8n-isabella.md](integracion-n8n-isabella.md) (sección MIG-03-D3). Brecha vigente en los antecedentes versionados: WF0–WF2 usan una sola `apiKey` y sus webhooks de entrada no exigen cabecera en los JSON del repo; la configuración real es de Isabella.
 

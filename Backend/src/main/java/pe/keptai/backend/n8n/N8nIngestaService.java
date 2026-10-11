@@ -73,6 +73,8 @@ public class N8nIngestaService {
 		IdempotencyStore idem = new IdempotencyStore(db);
 
 		return tenant.execute(() -> {
+			// El cliente sale del contacto REGISTRADO por JID (nunca del nombre del chat ni de la IA). Si no existe: 422 sin reservar nada.
+			ContactoCanal.Contacto contacto = ContactoCanal.resolver(db, req.chatId());
 			IdempotencyStore.Reserva reserva = idem.reservar(OPERACION, clave, hash);
 			switch (reserva.resultado()) {
 				case REPETIDA -> {
@@ -83,26 +85,22 @@ public class N8nIngestaService {
 				default -> {
 				}
 			}
-			N8nIngestaOrdenResponse resp = crear(db, servicio, req, x, estructurada, clave);
+			N8nIngestaOrdenResponse resp = crear(db, servicio, req, x, estructurada, clave, contacto);
 			idem.completar(OPERACION, clave, escribir(resp));
 			return new Resultado(resp, false);
 		});
 	}
 
 	private N8nIngestaOrdenResponse crear(JdbcTemplate db, ServiceIdentity servicio, N8nIngestaOrdenRequest req, N8nExtraccionOrden x,
-			ObjectNode estructurada, String clave) {
+			ObjectNode estructurada, String clave, ContactoCanal.Contacto contacto) {
 		List<N8nAviso> avisos = new ArrayList<>();
 		Set<String> ausentes = new LinkedHashSet<>(x.faltantes());
 
-		// Serializar también la creación del canal: ON CONFLICT + SELECT comparte snapshot.
+		// Canal vinculado al contacto (sin sobrescribir uno ya vinculado a otro cliente) y cerrojo del canal; luego la numeración.
+		// `creado_en` = clock_timestamp() (no now()): captura el instante del alta bajo el cerrojo del canal,
+		// no el inicio de la transacción. Si hay empate exacto, el voucher lo trata como ambiguo.
+		UUID canal = ContactoCanal.vincular(db, req.instancia(), contacto);
 		long numero = siguienteNumero(db);
-		UUID canal = db.queryForObject("""
-				WITH nuevo AS (
-				  INSERT INTO keptai.canal_whatsapp (organizacion_id, instancia, chat_jid)
-				  VALUES (keptai.app_organizacion_actual(), ?, ?) ON CONFLICT (organizacion_id, instancia, chat_jid) DO NOTHING RETURNING id)
-				SELECT id FROM nuevo UNION ALL
-				SELECT id FROM keptai.canal_whatsapp WHERE organizacion_id = keptai.app_organizacion_actual() AND instancia = ? AND chat_jid = ?
-				LIMIT 1""", UUID.class, req.instancia(), req.chatId(), req.instancia(), req.chatId());
 
 		// Condición de pago: solo lo que cabe en el modelo sin inventar. El resto queda en la extracción estructurada.
 		String condicion = null;
@@ -145,9 +143,9 @@ public class N8nIngestaService {
 		String ref = "ORD-" + numero;
 		UUID ordenId = db.queryForObject("""
 				INSERT INTO keptai.orden (organizacion_id, ref, cliente_id, marca_id, vendedor_id, canal_id, estado, condicion_pago, plazo_dias,
-				       anticipo_requerido, total, moneda, fecha_entrega_solicitada, origen, idempotency_key)
-				VALUES (keptai.app_organizacion_actual(), ?, NULL, NULL, NULL, ?, 'BORRADOR', ?, ?, ?, ?, 'PEN', ?, 'WHATSAPP', ?) RETURNING id""",
-				UUID.class, ref, canal, condicion, plazo, anticipo, total, x.fecha_entrega_solicitada(), clave);
+				       anticipo_requerido, total, moneda, fecha_entrega_solicitada, origen, idempotency_key, creado_en)
+				VALUES (keptai.app_organizacion_actual(), ?, ?, NULL, NULL, ?, 'BORRADOR', ?, ?, ?, ?, 'PEN', ?, 'WHATSAPP', ?, clock_timestamp()) RETURNING id""",
+				UUID.class, ref, contacto.clienteId(), canal, condicion, plazo, anticipo, total, x.fecha_entrega_solicitada(), clave);
 
 		// Ítems: solo si TODOS están completos (cantidad y precio); nunca se completan ni se descartan en silencio algunos.
 		List<N8nExtraccionItem> items = x.items() == null ? List.of() : x.items();
@@ -173,7 +171,11 @@ public class N8nIngestaService {
 				avisos.add(aviso("TOTAL_NO_COINCIDE_CON_ITEMS", "El total declarado no coincide con la suma de los ítems; se conserva lo declarado"));
 			}
 		}
-		avisos.add(aviso("CLIENTE_SIN_ASOCIAR", "El cliente no se crea ni se asocia automáticamente: lo confirma la revisión"));
+		avisos.add(aviso("CLIENTE_ASOCIADO_POR_CONTACTO", "El cliente es el del contacto registrado para este JID; el nombre declarado por la IA no lo cambia"));
+		String declarado = x.cliente() == null ? null : x.cliente().nombre();
+		if (declarado != null && !declarado.isBlank() && !declarado.trim().equalsIgnoreCase(contacto.razonSocial().trim())) {
+			avisos.add(aviso("CLIENTE_DECLARADO_DISTINTO", "El cliente declarado por la IA difiere del cliente registrado; prevalece el registrado"));
+		}
 		avisos.add(aviso("MARCA_SIN_ASIGNAR", "La marca declarada queda en la hoja; no se asigna sola"));
 		avisos.add(aviso("VENDEDOR_SIN_RESOLVER", "vendedorJid no identifica al autor: la autoría la fija la confirmación autenticada"));
 
@@ -183,13 +185,24 @@ public class N8nIngestaService {
 				INSERT INTO keptai.hoja_resumen (organizacion_id, orden_id, canal_id, version, extraccion, campos_ausentes, resumen_md, confianza,
 				       mensajes_procesados, estado)
 				VALUES (keptai.app_organizacion_actual(), ?, ?, 1, ?::jsonb, ?::jsonb, ?, ?, ?, 'BORRADOR')""",
-				ordenId, canal, estructurada.toString(), escribirLista(listaAusentes), resumen(ref, x, listaAusentes), confianza, req.mensajesProcesados());
+				ordenId, canal, conRegistro(estructurada, contacto).toString(), escribirLista(listaAusentes), resumen(ref, x, listaAusentes, contacto), confianza, req.mensajesProcesados());
 
 		db.update("""
 				INSERT INTO keptai.evento_auditoria (organizacion_id, usuario_id, actor, operacion, entidad, entidad_id, cambios, request_id)
 				VALUES (keptai.app_organizacion_actual(), NULL, 'N8N', 'ORDEN_INGESTA_BORRADOR', 'orden', ?, ?::jsonb, ?)""",
-				ordenId, "{\"ref\":\"" + ref + "\",\"hojaVersion\":1,\"items\":" + guardados + "}", MDC.get(RequestIdFilter.MDC_KEY));
+				ordenId, "{\"ref\":\"" + ref + "\",\"hojaVersion\":1,\"items\":" + guardados + ",\"clienteId\":\"" + contacto.clienteId() + "\",\"contactoId\":\"" + contacto.id() + "\"}", MDC.get(RequestIdFilter.MDC_KEY));
 		return new N8nIngestaOrdenResponse(ordenId, ref, "BORRADOR", 1, listaAusentes, avisos);
+	}
+
+	/** La hoja conserva la extracción estructurada y, aparte, los datos REGISTRADOS del cliente y el contacto (de la base, no de la IA). */
+	private static ObjectNode conRegistro(ObjectNode estructurada, ContactoCanal.Contacto c) {
+		ObjectNode n = estructurada.deepCopy();
+		ObjectNode r = n.putObject("registro");
+		r.put("cliente_id", c.clienteId().toString());
+		r.put("cliente_razon_social", c.razonSocial());
+		r.put("contacto_id", c.id().toString());
+		r.put("contacto_nombre", c.nombre());
+		return n;
 	}
 
 	/** Referencia legible ORD-n por organización; el cerrojo transaccional serializa la asignación (UNIQUE organización+ref). */
@@ -220,8 +233,11 @@ public class N8nIngestaService {
 	}
 
 	/** Resumen construido SOLO con los datos estructurados; el hojaResumenMd entrante se valida pero no se guarda. */
-	private static String resumen(String ref, N8nExtraccionOrden x, List<String> ausentes) {
+	private static String resumen(String ref, N8nExtraccionOrden x, List<String> ausentes, ContactoCanal.Contacto contacto) {
 		StringBuilder sb = new StringBuilder("# Pedido propuesto ").append(ref).append(" (borrador, pendiente de revisión)\n");
+		sb.append("- Cliente registrado: ").append(contacto.razonSocial()).append('\n');
+		sb.append("- Contacto registrado: ").append(contacto.nombre()).append('\n');
+		sb.append("- Vendedor: pendiente de asignar\n");
 		if (x.cliente() != null && x.cliente().nombre() != null && !x.cliente().nombre().isBlank()) {
 			sb.append("- Cliente declarado: ").append(x.cliente().nombre());
 			if (x.cliente().ruc() != null && !x.cliente().ruc().isBlank()) {

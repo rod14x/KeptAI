@@ -28,8 +28,12 @@ cleanup() {
 trap cleanup EXIT
 echo "== PostgreSQL desechable ($name)"
 docker run -d --rm --name "$name" -e POSTGRES_PASSWORD=x -e POSTGRES_DB=k -p 127.0.0.1::5432 postgres:17-alpine >/dev/null
-for _ in $(seq 1 40); do docker exec "$name" pg_isready -U postgres -d k >/dev/null 2>&1 && break; sleep 1; done
-sleep 2
+# El entrypoint arranca un servidor temporal, lo detiene y arranca el definitivo: se exigen 3 consultas reales seguidas.
+ok=0; for _ in $(seq 1 90); do
+  if docker exec "$name" psql -X -q -U postgres -d k -c 'select 1' >/dev/null 2>&1; then ok=$((ok+1)); [[ $ok -ge 3 ]] && break; else ok=0; fi
+  sleep 1
+done
+[[ $ok -ge 3 ]] || { echo "FALLA: PostgreSQL desechable no quedó disponible." >&2; exit 1; }
 hostport="$(docker port "$name" 5432/tcp | head -1 | sed 's/.*://')"
 psqlx=(docker exec -i "$name" psql -X -q -U postgres -d k)
 { echo "CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role; CREATE SCHEMA keptai; SET search_path=keptai,public;"
@@ -57,6 +61,15 @@ reuse=0; "$svc" alta --org-id "$org" --instancia otra2 --alcance INGESTA --key-f
 noorg=0; "$svc" alta --org-id 99999999-9999-4999-8999-999999999999 --instancia x --alcance INGESTA --key-file "$tmp/ing2.key" --apply >/dev/null 2>&1 || noorg=1
 echo "   duplicado (org+instancia+alcance) rechazado: $([[ $dup == 1 ]] && echo sí || echo NO) · clave reutilizada rechazada: $([[ $reuse == 1 ]] && echo sí || echo NO) · organización inexistente rechazada: $([[ $noorg == 1 ]] && echo sí || echo NO)"
 [[ $dup == 1 && $reuse == 1 && $noorg == 1 ]] || { echo "FALLA: la provisión sobrescribió o aceptó algo indebido." >&2; exit 1; }
+echo "== Contacto registrado con provisionar-contacto-local.sh (--apply sobre la base DESECHABLE; datos ficticios)"
+pct=Backend/scripts/provisionar-contacto-local.sh
+"$pct" --org-id "$org" --cliente-razon-social "Cloud Technologies" --contacto-nombre "Andrés" --telefono "+51 900 000 001" --apply | tail -1
+"$pct" --org-id "$org" --cliente-razon-social "Cloud Technologies" --contacto-nombre "Andrés" --telefono "+51 900 000 001" --apply >/dev/null   # reejecución idempotente
+conflicto=0; "$pct" --org-id "$org" --cliente-razon-social "Cloud Technologies" --contacto-nombre "Otro nombre" --telefono "+51 900 000 001" --apply >/dev/null 2>&1 || conflicto=1
+tipo=0; "$pct" --org-id "$org" --cliente-razon-social "Cloud Technologies" --cliente-tipo PERSONA --contacto-nombre "Andrés" --telefono "+51 900 000 001" --apply >/dev/null 2>&1 || tipo=1
+cuenta="$("${psqlx[@]}" -t -A -c "select (select count(*) from keptai.cliente)||','||(select count(*) from keptai.contacto)")"
+echo "   reejecución sin duplicar (clientes,contactos = $cuenta, esperado 1,1) · datos distintos rechazados: nombre $([[ $conflicto == 1 ]] && echo sí || echo NO), tipo $([[ $tipo == 1 ]] && echo sí || echo NO)"
+[[ "$cuenta" == "1,1" && $conflicto == 1 && $tipo == 1 ]] || { echo "FALLA: la provisión de contacto duplicó o sobrescribió." >&2; exit 1; }
 echo "== Storage SIMULADO en :$SPORT (storage_simulado.py; no es Supabase)"
 skey="sb_secret_$(python3 -I -c 'import secrets;print(secrets.token_hex(24))')"
 # Cada proceso propio arranca en su propia sesión y escribe SU pid (= id de grupo) antes de exec: la limpieza lo termina entero.
@@ -79,6 +92,9 @@ echo "== Persistencia permitida y nada sensible (D-007)"
 q() { "${psqlx[@]}" -t -A -c "$1"; }
 fila="$(q "select (select count(*) from keptai.orden)||','||(select count(*) from keptai.hoja_resumen)||','||(select count(*) from keptai.orden where estado<>'BORRADOR')||','||(select count(*) from keptai.pago)||','||(select count(*) from keptai.comprobante)||','||(select count(*) from keptai.aplicacion_pago)||','||(select count(*) from keptai.pago where fase<>'RECIBIDO' or verificado_por is not null)")"
 echo "   orden,hoja,orden_no_borrador,pago,comprobante,aplicaciones,pagos_no_recibidos = $fila (esperado 1,1,0,1,1,0,0)"
+asoc="$(q "select (o.cliente_id = cl.id)||','||(p.orden_contexto_id = o.id)||','||(p.cliente_id = cl.id)||','||(cl.razon_social = 'Cloud Technologies') from keptai.pago p join keptai.orden o on o.organizacion_id=p.organizacion_id and o.id=p.orden_contexto_id join keptai.cliente cl on cl.organizacion_id=o.organizacion_id and cl.id=o.cliente_id")"
+echo "   cliente del pedido = cliente del contacto, pago asociado por contexto al pedido, razón social real: $asoc (esperado true,true,true,true)"
+[[ "$asoc" == "true,true,true,true" ]] || { echo "FALLA: la asociación pedido/pago/contacto es incoherente." >&2; exit 1; }
 [[ "$fila" == "1,1,0,1,1,0,0" ]] || { echo "FALLA: filas inesperadas tras la comprobación." >&2; exit 1; }
 volcado="$(q "select coalesce((select string_agg(t::text,' ') from keptai.hoja_resumen t),'')||coalesce((select string_agg(t::text,' ') from keptai.orden t),'')||coalesce((select string_agg(t::text,' ') from keptai.solicitud_idempotente t),'')||coalesce((select string_agg(t::text,' ') from keptai.evento_auditoria t),'')||coalesce((select string_agg(t::text,' ') from keptai.canal_whatsapp t),'')||coalesce((select string_agg(t::text,' ') from keptai.pago t),'')||coalesce((select string_agg(t::text,' ') from keptai.comprobante t),'')")"
 imagen="$(python3 -I -c 'import json;print(json.load(open("Backend/docs/ejemplos/wf2-voucher-ficticio.json"))["imagen_base64"])')"

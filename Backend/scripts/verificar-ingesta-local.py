@@ -72,9 +72,11 @@ def main():
     orden = copy.deepcopy(comps["examples"]["N8nIngestaCredit"]["value"])
     orden.update({"instancia": a.instancia, "transcript": SENT_TRANSCRIPT, "hojaResumenMd": SENT_HOJA})
     orden["extraccion"]["crudo"] = SENT_CRUDO
-    ing_req.validate(orden)
     voucher = json.load(open(os.path.join(ROOT, "docs", "ejemplos", "wf2-voucher-ficticio.json"), encoding="utf-8"))
     voucher["instancia"] = a.instancia
+    # V10: pedido y voucher son del MISMO contacto registrado (JID del ejemplo de WF2); el resto del JID es ficticio.
+    orden["chatId"] = voucher["chatId"]
+    ing_req.validate(orden)
     vou_req.validate(voucher)
     archivo = base64.b64decode(voucher["imagen_base64"], validate=True)
     sha = hashlib.sha256(archivo).hexdigest()
@@ -134,11 +136,18 @@ def main():
         conforme = False
     check("ingesta válida: 201 BORRADOR conforme al contrato", st == 201 and conforme and resp.get("estado") == "BORRADOR" and resp.get("hojaResumenVersion") == 1, f"HTTP {st}")
     check("ingesta: X-Request-Id presente y sin Idempotency-Replayed", bool(hdr.get("x-request-id")) and "idempotency-replayed" not in hdr)
+    check("ingesta: cliente asociado por el contacto registrado y vendedor pendiente (avisos)",
+          {"CLIENTE_ASOCIADO_POR_CONTACTO", "VENDEDOR_SIN_RESOLVER"} <= {x["codigo"] for x in resp.get("avisos", [])} and "CLIENTE_SIN_ASOCIAR" not in {x["codigo"] for x in resp.get("avisos", [])})
+    orden_ref = resp.get("ref")
     st2, hdr2, text2 = post(ING, ing, js(orden))
     check("ingesta repetida: 201 con Idempotency-Replayed y el mismo ordenId", st2 == 201 and hdr2.get("idempotency-replayed") == "true" and json.loads(text2).get("ordenId") == resp.get("ordenId"), f"HTTP {st2}")
     cambiado = copy.deepcopy(orden)
     cambiado["extraccion"]["total"] = 12345.67
     estado("ingesta: misma clave con otro contenido", ING, 409, ing, js(cambiado))
+    desconocido = "51900000099@s.whatsapp.net"
+    estado("ingesta: contacto no registrado (el nombre del cliente de la IA no identifica)", ING, 422, ing, js({**orden, "chatId": desconocido}))
+    estado("ingesta: JID @lid no se interpreta como teléfono", ING, 422, ing, js({**orden, "chatId": "51900000001@lid"}))
+    estado("ingesta: JID con dispositivo no coincide parcialmente", ING, 422, ing, js({**orden, "chatId": "51900000001:12@s.whatsapp.net"}))
     estado("ingesta: sin credencial", ING, 401, None, js(orden))
     estado("ingesta: clave inexistente", ING, 401, uuid.uuid4().hex + uuid.uuid4().hex, js(orden))
     estado("ingesta: clave mal formada", ING, 401, "corta", js(orden))
@@ -167,8 +176,9 @@ def main():
     except jsonschema.ValidationError:
         conforme = False
     check("voucher válido: 201 REGISTRADO conforme al contrato", st == 201 and conforme and resp.get("resultado") == "REGISTRADO", f"HTTP {st}")
-    check("voucher: fase RECIBIDO, sin fondos verificados ni saldo modificado ni orden asociada",
-          resp.get("fase") == "RECIBIDO" and resp.get("fondosVerificados") is False and resp.get("saldoModificado") is False and resp.get("ordenRef") is None and resp.get("estadoConciliacion") == "PENDIENTE")
+    check("voucher: fase RECIBIDO, sin fondos verificados ni saldo modificado",
+          resp.get("fase") == "RECIBIDO" and resp.get("fondosVerificados") is False and resp.get("saldoModificado") is False)
+    check("voucher: asociado por CONTEXTO al último pedido del contacto (ordenRef real, PENDIENTE; no aplicado)", resp.get("ordenRef") == orden_ref and resp.get("estadoConciliacion") == "PENDIENTE", f"ordenRef={resp.get('ordenRef')} esperado {orden_ref}")
     if a.storage_url:
         objs = json.loads(call(a.storage_url, "GET", "/_objetos")[2])
         check("voucher: un único objeto en Storage, SHA-256 y tamaño iguales a los bytes decodificados", len(objs) == 1 and next(iter(objs.values())) == {"bytes": len(archivo), "sha256": sha})
@@ -207,6 +217,8 @@ def main():
     estado("voucher: URL en lugar de Base64 (no se descarga)", VOU, 400, ing, v(imagen_base64="https://ejemplo.invalid/v.png"))
     estado("voucher: contenido que no es JPEG/PNG/PDF", VOU, 422, ing, v(imagen_base64=base64.b64encode(b"texto que dice ser una imagen").decode()))
     estado("voucher: PNG cortado (sin IEND)", VOU, 422, ing, v(imagen_base64=base64.b64encode(archivo[:-6]).decode()))
+    estado("voucher: contacto no registrado (no sube archivo)", VOU, 422, ing, v(chatId=desconocido, clienteJid=desconocido))
+    estado("voucher: chat y contacto no coinciden", VOU, 422, ing, v(chatId="51900000003@s.whatsapp.net"))
     estado("voucher: moneda USD", VOU, 422, ing, v(extraccion={"moneda": "USD"}))
     estado("voucher: monto ausente", VOU, 422, ing, v(extraccion={"monto": None}))
     estado("voucher: fecha ausente", VOU, 422, ing, v(extraccion={"fecha": None}))
@@ -223,6 +235,8 @@ def main():
     check("voucher: imagen que no es voucher -> 200 IGNORADO_NO_VOUCHER", st == 200 and json.loads(text).get("resultado") == "IGNORADO_NO_VOUCHER", f"HTTP {st}")
     if a.storage_url:
         check("ningún rechazo ni la imagen ignorada subió objetos", len(json.loads(call(a.storage_url, "GET", "/_objetos")[2])) == 1)
+    st3, _, text3 = post(VOU, ing, js(voucher))
+    check("replay del voucher conserva el ordenRef original", st3 == 201 and json.loads(text3).get("ordenRef") == orden_ref)
     check("ninguna respuesta repite el transcript, la hoja, el crudo, el Base64 ni una clave", not leaks, ", ".join(sorted(set(leaks))))
 
     bad = [r for r in results if not r[1]]
