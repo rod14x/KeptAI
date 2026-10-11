@@ -2,6 +2,31 @@
 
 Estado al 10/10/2026. Contrato: `Backend/docs/openapi.yaml` (MIG-02). Base de datos: `BD/` (V6).
 
+## 0. Panel conectado a Spring (INT-FE-API-001, 11/10/2026, rama `develop`)
+
+En modo `api` todos los módulos usan Spring + PostgreSQL reales, salvo **Carga manual** (`/captura`): subir un voucher necesita el uploader privado de Storage (MIG-04), que aún no tiene endpoint. Las secciones 2.1 y 5 describen el estado anterior (AUTH-FE-03) y quedan como antecedente.
+
+| Endpoint | Estado |
+|---|---|
+| `/me`, órdenes, crédito (GET/POST), despacho | Conectado |
+| Pagos, conciliación, verificación, aplicación | Conectado (ADMIN). La verificación la registra el motor como simulada (`simulated_demo`, sin banco) |
+| Cuentas por cobrar, alertas, estado de cuenta, auditoría | Conectado |
+| Resultados, margen, centro productivo, caja, CSV | Conectado (GERENTE), cifras de `MotorResultados`/`MotorCaja` |
+| Evidencias y borradores | Sin endpoint (404): el panel los muestra vacíos |
+
+Decisiones del adaptador que conviene conocer:
+- **Contado:** el panel envía `approved` sin `credit_term_days`; Spring lo trata como contado (orden RETENIDA hasta cobrarse completa). Con plazo es crédito (orden LIBERADA); con `advance_pct_bps` > 0, anticipo (RETENIDA hasta aplicar el anticipo; al aplicarlo pasa sola a LIBERADA).
+- **Mora:** si el cliente tiene saldo vencido y no se envía `arrears_notice_acknowledged=true`, Spring responde 422 `ARREARS_NOTICE_NOT_ACKNOWLEDGED`. La mora avisa; no bloquea.
+- **Código de pago:** `display_code` = `V-NNN` por orden de llegada en la organización (la tabla `pago` no tiene referencia propia).
+- Fechas e instantes llegan con desfase de Lima (`-05:00`).
+
+### Cómo correrlo en local
+1. BD: `./BD/local/db.sh up && ./BD/local/db.sh migrate && ./BD/local/db.sh seed` (V1–V10 y semilla). Opcional: `./BD/local/db.sh seed-escenarios` agrega pedidos por decidir, un pedido por despachar y vouchers por verificar.
+2. Spring (perfil `local`) con el JWKS de Supabase (`KEPTAI_JWT_*`, ver `Backend/docs/configuracion-supabase-local.md`). Si el 8080 está ocupado: `PORT=8081`; agregar el origen del frontend a `KEPTAI_CORS_ALLOWED_ORIGINS` si no es `localhost:5173`.
+3. Frontend `.env.local`: `VITE_API_MODE=api`, `VITE_API_BASE_URL=http://localhost:8081`, `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` del proyecto.
+4. Cuentas: crear en Supabase Auth un usuario por rol y vincular cada uno: `./BD/local/db.sh link-auth VENDEDOR <uuid-del-usuario-en-Auth>` (igual con ADMIN, GERENTE, JEFE_TALLER). Sin vínculo, `/me` responde 403.
+5. Prueba de contrato en vivo: `KEPTAI_LIVE_API=http://127.0.0.1:8081 KEPTAI_LIVE_TOKEN_ADMIN=… npx vitest run src/api/contract/live.test.ts` (un token por rol).
+
 ## 1. Cómo se elige la fuente de datos
 
 | Variable | Valor | Efecto |

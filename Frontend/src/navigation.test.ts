@@ -60,60 +60,61 @@ afterEach(() => {
 });
 
 describe("disponibilidad de módulos", () => {
-  it("en api solo el inicio está disponible; en mock todos", () => {
+  it("en api todo está conectado salvo la carga manual (MIG-04); en mock todo", () => {
     for (const key of Object.keys(MODULE_LABEL) as ModuleKey[]) {
       expect(isModuleAvailable(key, true)).toBe(true);
-      expect(isModuleAvailable(key, false)).toBe(key === "inicio");
+      expect(isModuleAvailable(key, false)).toBe(key !== "captura");
     }
   });
 });
 
-describe("modo api: inicio autenticado", () => {
-  it.each(Object.keys(ROLES) as ApiRole[])("%s ve su identidad de /me y ninguna cifra ni dato de negocio", async (role) => {
+describe("modo api: módulos conectados (INT-FE-API-001)", () => {
+  it.each(Object.keys(ROLES) as ApiRole[])("%s ve en /sesion su identidad de /me sin cargar datos de negocio", async (role) => {
     const { render, calls } = await load(false);
-    const html = render("/", role);
+    const html = render("/sesion", role);
     expect(html).toContain('data-testid="inicio-identidad"');
     expect(html).toContain(EMAIL);
     expect(html).toContain(USER);
     expect(html).toContain(ORG);
     expect(html).toContain(`(${role})`);
-    expect(html).not.toMatch(/Datos de demostración|Corpotex|Unicrack|S\/ ?\d|Dashboard|En el equipo desde/);
+    // Las marcas aparecen solo como opciones del selector de vista; no hay cifras ni datos ficticios.
+    expect(html).not.toMatch(/Datos de demostración|S\/ ?\d/);
     expect(html).toContain("Cerrar sesión");
     expect(calls).toEqual([]);
   });
 
-  it("el menú marca como no disponibles los módulos del rol y no los enlaza", async () => {
+  it("el menú de cada rol enlaza sus módulos conectados, como en la demostración", async () => {
     const { render } = await load(false);
-    const nav = await import("./components/layout/nav");
-    for (const role of Object.keys(ROLES) as ApiRole[]) {
-      const html = render("/", role);
-      const { ROLE_FROM_API } = await import("./lib/permissions");
-      const pending = nav.NAV.filter((n) => n.module !== "inicio" && n.show?.(ROLE_FROM_API[role]) !== false);
-      expect((html.match(/aria-disabled="true"/g) ?? []).length).toBe(pending.length);
-      expect((html.match(/data-testid="modulo-/g) ?? []).length).toBe(pending.length);
-      for (const n of pending) expect(html).not.toContain(`href="${n.to}"`);
-      expect(html).toContain('href="/"');
-    }
+    const vendedor = render("/sesion", "VENDEDOR");
+    for (const to of ["/pedidos", "/clientes"]) expect(vendedor).toContain(`href="${to}"`);
+    const admin = render("/sesion", "ADMIN");
+    for (const to of ["/conciliacion", "/cobranza", "/pedidos"]) expect(admin).toContain(`href="${to}"`);
+    const gerencia = render("/sesion", "GERENTE");
+    expect(gerencia).toContain('href="/resultado"');
+    for (const html of [vendedor, admin, gerencia]) expect(html).not.toContain('aria-disabled="true"');
   });
 
-  it("no hay buscador, selector de marca, reinicio de demo ni menú de perfil", async () => {
+  it("hay buscador y selector de marca; no hay reinicio de demo", async () => {
     const { render } = await load(false);
-    const html = render("/", "ADMIN");
-    expect(html).not.toContain("Buscar cliente, orden o pago");
-    expect(html).not.toContain("Vista de datos");
+    const html = render("/sesion", "ADMIN");
+    expect(html).toContain('placeholder="Buscar…"');
+    expect(html).toContain("Vista de datos");
     expect(html).not.toContain("Reiniciar demo");
-    expect(html).not.toContain("/perfil");
   });
 
-  it.each(Object.keys(ROLES) as ApiRole[])("%s: el acceso directo por URL a cada módulo muestra «no disponible» sin cargar nada", async (role) => {
+  it.each(["VENDEDOR", "ADMIN"] as ApiRole[])("%s: la carga manual por URL muestra «no disponible» sin cargar nada", async (role) => {
     const { render, calls } = await load(false);
-    for (const path of BUSINESS_PATHS) {
-      const html = render(path, role);
-      expect(html, `${role} ${path}`).toContain('data-testid="modulo-no-disponible"');
-      expect(html, `${role} ${path}`).not.toContain('data-testid="inicio-identidad"');
-      expect(html).toContain("aún no está disponible");
-    }
+    const html = render("/captura", role);
+    expect(html).toContain('data-testid="modulo-no-disponible"');
+    expect(html).toContain("aún no está disponible");
     expect(calls).toEqual([]);
+  });
+
+  it.each(Object.keys(ROLES) as ApiRole[])("%s: las rutas de módulos conectados no muestran el aviso de no disponible", async (role) => {
+    const { render } = await load(false);
+    for (const path of BUSINESS_PATHS.filter((p) => p !== "/captura")) {
+      expect(render(path, role), `${role} ${path}`).not.toContain('data-testid="modulo-no-disponible"');
+    }
   });
 
   it("una ruta inexistente sigue siendo 404 y no el aviso de módulo", async () => {

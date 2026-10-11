@@ -134,6 +134,11 @@ function balanceOf(o: S.OrderT, r: S.ReceivableT | undefined) {
   return o.receivable_status === "paid" ? 0 : zero(o.sale);
 }
 
+/** Lo que debe cobrarse antes de producir: el anticipo, o el total si la orden es al contado (gate V5). */
+function requiredBeforeProduction(o: S.OrderT) {
+  return o.payment_condition === "cash" ? zero(o.sale) : o.advance_required.amount_cents;
+}
+
 function errorResult(e: unknown): ActionResult {
   if (e instanceof HttpError) {
     if (e.status === 403) return { ok: false, message: "Tu rol no tiene permiso para esta acción." };
@@ -196,7 +201,7 @@ function card(o: S.OrderT, ctx: Ctx, moroso: Set<string>): OrderCard {
     origen: o.source === "whatsapp" ? "whatsapp" : o.source === "manual" ? "manual" : "historico",
     faltantes: 0,
     clienteEnMora: o.customer ? moroso.has(o.customer.id) : false,
-    anticipoPendienteCents: o.status === "held" ? o.advance_required.amount_cents : 0,
+    anticipoPendienteCents: o.status === "held" ? requiredBeforeProduction(o) : 0,
     demo: o.data_origin === "demo_fixture",
   };
 }
@@ -374,7 +379,8 @@ function paymentToEvidence(p: S.PaymentT): Evidence {
       amountCents: p.received_amount.amount_cents,
       operationRef: p.operation_reference,
       payer: p.payer_name,
-      paidAt: p.paid_at,
+      // pago.fecha_pago es una fecha de negocio: se muestra sin hora (no se inventa una).
+      paidAt: p.paid_at ? formatDate(p.paid_at.slice(0, 10)) : null,
       channel: CHANNEL[p.channel],
     },
     declaredAmountCents: null,
@@ -448,7 +454,9 @@ function receivableRow(r: S.ReceivableT, today: string): ReceivableRow {
 
 function activity(e: S.AuditEventT, meId: string | null): ActivityItem {
   const actor = e.actor === "user" ? (e.actor_user_id === meId ? "Tú" : "Usuario") : e.actor === "n8n" ? "n8n" : e.actor === "scheduler" ? "Programador" : "Sistema";
-  const href = e.entity_type.includes("payment") ? `/conciliacion/${e.entity_id}` : e.entity_type.includes("order") ? `/pedidos/${e.entity_id}` : null;
+  // evento_auditoria.entidad es el nombre de la tabla (pago, orden, aplicacion_pago, despacho…): solo pago y orden
+  // apuntan a una pantalla con ese id.
+  const href = e.entity_type === "pago" || e.entity_type === "payment" ? `/conciliacion/${e.entity_id}` : e.entity_type === "orden" || e.entity_type === "order" ? `/pedidos/${e.entity_id}` : null;
   return {
     id: e.id,
     at: e.occurred_at,
@@ -529,7 +537,7 @@ export const apiSource: DataSource = {
         assistant.push({ id: `pend-${o.id}`, tone: "violet", title: role === "vendedor" ? `${o.display_code} espera tu confirmación` : `${o.display_code} espera confirmación del vendedor`, detail: `${o.customer?.name ?? "Sin cliente"}, ${formatMoney(zero(o.sale))}.`, href: `/pedidos/${o.id}`, date: o.created_at.slice(0, 10) });
       }
       for (const o of orders.filter((x) => x.status === "held")) {
-        assistant.push({ id: `ret-${o.id}`, tone: "info", title: `${o.display_code} retenida: falta anticipo de ${formatMoney(o.advance_required.amount_cents)}`, detail: "No entra a producción hasta que Administración verifique y aplique el anticipo.", href: `/pedidos/${o.id}`, date: o.created_at.slice(0, 10) });
+        assistant.push({ id: `ret-${o.id}`, tone: "info", title: `${o.display_code} retenida: falta ${o.payment_condition === "cash" ? "el pago al contado" : "anticipo"} de ${formatMoney(requiredBeforeProduction(o))}`, detail: "No entra a producción hasta que Administración verifique y aplique el pago.", href: `/pedidos/${o.id}`, date: o.created_at.slice(0, 10) });
       }
     }
     if (notify.vencimientos) {
@@ -646,7 +654,7 @@ export const apiSource: DataSource = {
       card: c,
       credit: snapshotFor(o.customer?.id ?? null, ctx),
       paidCents: r ? r.applied_amount.amount_cents : 0,
-      anticipoRequeridoCents: o.advance_required.amount_cents,
+      anticipoRequeridoCents: requiredBeforeProduction(o),
       gatekeeper: !["draft", "pending_approval", "held", "cancelled"].includes(o.status),
       costCents: null,
       marginCents: null,
@@ -677,7 +685,7 @@ export const apiSource: DataSource = {
       entregaSolicitada: o.requested_delivery_date,
       plazoDias: o.credit_term_days,
       despacho: o.dispatch_date ? { fecha: o.dispatch_date, acta: "Registrado", by: "Taller" } : null,
-      anticipoPendienteCents: o.status === "held" ? o.advance_required.amount_cents : 0,
+      anticipoPendienteCents: o.status === "held" ? requiredBeforeProduction(o) : 0,
     });
     const orders = ctx.orders.filter((o) => fits(toBrand(o.brand), scope));
     return {
@@ -727,7 +735,7 @@ export const apiSource: DataSource = {
         ? { id: top.order_id, ref: top.order_code, customer: top.customer_name, line: null, saleCents: null, balanceCents: top.balance.amount_cents, daysToDue: null, dueDate: null, seller: null }
         : null,
       missing,
-      openOrders: (rec?.candidates ?? []).map((c) => ({ id: c.receivable_id, label: `${c.order_code} · ${c.customer_name} · saldo ${formatMoney(c.balance.amount_cents)}` })),
+      openOrders: (rec?.candidates ?? []).filter((c) => c.balance.amount_cents > 0).map((c) => ({ id: c.receivable_id, label: `${c.order_code} · ${c.customer_name} · saldo ${formatMoney(c.balance.amount_cents)}` })),
     };
   },
 
@@ -956,16 +964,16 @@ export const apiSource: DataSource = {
     const count = (re: RegExp) => mine?.filter((e) => re.test(e.operation)).length ?? 0;
     const counts: Record<Role, Array<{ label: string; value: number }>> = {
       vendedor: [
-        { label: "Créditos decididos", value: count(/CREDIT/i) },
-        { label: "Borradores confirmados", value: count(/DRAFT|CONFIRM/i) },
+        { label: "Créditos decididos", value: count(/CREDIT|CONTADO/i) },
+        { label: "Borradores confirmados", value: count(/DRAFT|BORRADOR/i) },
       ],
       administracion: [
         { label: "Pagos verificados", value: count(/VERIF/i) },
-        { label: "Pagos aplicados", value: count(/APPL/i) },
-        { label: "Despachos registrados", value: count(/DISPATCH/i) },
+        { label: "Pagos aplicados", value: count(/APPL|APLICADO/i) },
+        { label: "Despachos registrados", value: count(/DISPATCH|DESPACHO/i) },
       ],
       gerencia: [{ label: "Eventos revisados", value: audit?.items.length ?? 0 }],
-      jefe_taller: [{ label: "Despachos registrados", value: count(/DISPATCH/i) }],
+      jefe_taller: [{ label: "Despachos registrados", value: count(/DISPATCH|DESPACHO/i) }],
     };
     return { activity: mine ? mine.slice(0, 30).map((e) => activity(e, me?.user_id ?? null)) : null, counts: counts[person.role], settings: null, ownOrders: [] };
   },
@@ -1030,7 +1038,7 @@ export const apiSource: DataSource = {
       run(async () => {
         const [p, rec] = await Promise.all([endpoints.getPayment(id), endpoints.getReconciliationCandidates(id)]);
         const chosen = chosenReceivable.get(id);
-        const c = rec.candidates.find((x) => x.receivable_id === chosen) ?? rec.candidates[0];
+        const c = rec.candidates.find((x) => x.receivable_id === chosen) ?? rec.candidates.find((x) => x.balance.amount_cents > 0);
         if (!c) return { ok: false, message: "No hay una cuenta por cobrar candidata para este pago." };
         const available = zero(p.verified_amount ?? p.received_amount) - p.applied_amount.amount_cents;
         const amount = Math.min(available, c.balance.amount_cents);

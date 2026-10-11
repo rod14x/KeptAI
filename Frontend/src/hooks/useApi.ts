@@ -5,7 +5,8 @@ type ApiState<T> = { data: T | undefined; loading: boolean; error: Error | null;
 
 /** Carga asíncrona que se refresca cuando cambia el store o las dependencias. */
 export function useApi<T>(fetcher: () => Promise<T>, deps: unknown[]): ApiState<T> {
-  const version = useSyncExternalStore(subscribe, getVersion);
+  // getVersion también como snapshot de servidor: sin él, el render en servidor (pruebas SSR) falla.
+  const version = useSyncExternalStore(subscribe, getVersion, getVersion);
   const [data, setData] = useState<T | undefined>(undefined);
   const [error, setError] = useState<Error | null>(null);
   const [loading, setLoading] = useState(true);

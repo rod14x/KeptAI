@@ -25,18 +25,18 @@ export function AppLayout() {
 
   // Con la sesión abierta, precargar en segundo plano las pantallas que usa este rol.
   useEffect(() => {
-    // En modo api no hay módulos de negocio que precargar (no se descarga ni se ejecuta ninguno).
-    if (!person || !IS_MOCK) return;
+    if (!person) return;
     const byRole = {
       vendedor: ["pendientes", "pedidos", "orden", "clientes", "cliente", "captura", "perfil"],
       administracion: ["pendientes", "pedidos", "orden", "conciliacion", "cobranza", "clientes", "cliente", "captura", "perfil"],
       gerencia: ["dashboard", "pedidos", "orden", "clientes", "cliente", "resultado", "perfil"],
       jefe_taller: ["taller", "perfil"],
     } as const;
-    prefetch([...byRole[person.role]]);
+    // La carga manual no está conectada en modo api: no se precarga.
+    prefetch(byRole[person.role].filter((p) => IS_MOCK || p !== "captura"));
   }, [person?.role]); // eslint-disable-line react-hooks/exhaustive-deps
   // Un rol con una sola pantalla (Jefe de taller) no necesita menú.
-  const hasNav = person ? (!IS_MOCK || NAV_BY_ROLE[person.role].length > 0) : false;
+  const hasNav = person ? NAV_BY_ROLE[person.role].length > 0 : false;
 
   useEffect(() => {
     if (!drawer) return;
@@ -111,16 +111,16 @@ export function AppLayout() {
                 <span className="font-semibold">{sectionLabel(pathname, person?.role)}</span>
               </nav>
               <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-3">
-                {IS_MOCK && person?.role !== "jefe_taller" && <SearchBox className="hidden w-60 md:block xl:w-72" />}
-                {IS_MOCK && <ScopeSelector className="hidden lg:inline-flex" />}
+                {person?.role !== "jefe_taller" && <SearchBox className="hidden w-60 md:block xl:w-72" />}
+                <ScopeSelector className="hidden lg:inline-flex" />
                 <ThemeToggle />
                 <UserMenu />
               </div>
             </div>
-            {IS_MOCK && <div className="flex items-center gap-2 px-4 pb-3 sm:px-6 lg:hidden">
+            <div className="flex items-center gap-2 px-4 pb-3 sm:px-6 lg:hidden">
               <ScopeSelector className="flex shrink-0" />
-              {IS_MOCK && person?.role !== "jefe_taller" && <SearchBox className="min-w-0 flex-1 md:hidden" />}
-            </div>}
+              {person?.role !== "jefe_taller" && <SearchBox className="min-w-0 flex-1 md:hidden" />}
+            </div>
           </header>
           <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 px-4 py-7 sm:px-6 lg:px-9 lg:py-9">
             <Outlet />

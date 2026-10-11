@@ -2,22 +2,21 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { popVariants, spring } from "../motion/primitives";
-import { CaretDown, ClockCounterClockwise, GearSix, SignOut, SlidersHorizontal, UserCircle } from "../ui/icons";
+import { CaretDown, ClockCounterClockwise, GearSix, IdentificationCard, SignOut, SlidersHorizontal, UserCircle } from "../ui/icons";
 import { Avatar } from "../ui/Avatar";
 import { useAuth } from "../../context/AuthContext";
 import { can, ROLE_LABEL } from "../../lib/permissions";
 import { cx } from "../../lib/format";
 import { IS_MOCK } from "../../config";
 
-// En modo api el perfil y sus pestañas consultan módulos de negocio pendientes: el menú solo ofrece la identidad (inicio).
-const ITEMS = IS_MOCK
-  ? [
-      { to: "/perfil", label: "Mi perfil", icon: UserCircle },
-      { to: "/perfil?tab=actividad", label: "Mi actividad", icon: ClockCounterClockwise },
-      { to: "/perfil?tab=preferencias", label: "Preferencias", icon: SlidersHorizontal },
-      { to: "/perfil?tab=configuracion", label: "Configuración", icon: GearSix },
-    ]
-  : [{ to: "/", label: "Mi identidad", icon: UserCircle }];
+// En modo api se agrega "Mi sesión": la identidad que el servidor resolvió con GET /api/v1/me.
+const ITEMS = [
+  { to: "/perfil", label: "Mi perfil", icon: UserCircle },
+  { to: "/perfil?tab=actividad", label: "Mi actividad", icon: ClockCounterClockwise },
+  { to: "/perfil?tab=preferencias", label: "Preferencias", icon: SlidersHorizontal },
+  { to: "/perfil?tab=configuracion", label: "Configuración", icon: GearSix },
+  ...(IS_MOCK ? [] : [{ to: "/sesion", label: "Mi sesión", icon: IdentificationCard }]),
+];
 
 export function UserMenu() {
   const { person, signOut } = useAuth();

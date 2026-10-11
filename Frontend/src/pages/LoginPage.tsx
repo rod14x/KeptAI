@@ -26,10 +26,10 @@ const DEMO_ACCOUNTS = [
 export function LoginPage() {
   const { person, error, retry, signOut } = useAuth();
   const location = useLocation();
-  const from = IS_MOCK ? ((location.state as { from?: string } | null)?.from ?? "/") : "/";
+  const from = (location.state as { from?: string } | null)?.from ?? "/";
 
   // Mientras la persona escribe, se descarga la pantalla de inicio: entrar es inmediato.
-  useEffect(() => IS_MOCK ? prefetch(["pendientes"]) : undefined, []);
+  useEffect(() => prefetch(["pendientes"]), []);
 
   if (person) return <Navigate to={from} replace />;
 

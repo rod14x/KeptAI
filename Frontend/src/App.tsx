@@ -42,8 +42,7 @@ function RequireSession() {
   const { person, ready, signedOut } = useAuth();
   const location = useLocation();
   if (!ready) return <PageFallback />;
-  // En modo api no se recuerda la ruta de origen: el único destino disponible es el inicio de identidad.
-  if (!person) return <Navigate to="/login" replace state={signedOut || !IS_MOCK ? null : { from: location.pathname + location.search }} />;
+  if (!person) return <Navigate to="/login" replace state={signedOut ? null : { from: location.pathname + location.search }} />;
   return <Outlet />;
 }
 
@@ -71,7 +70,6 @@ function RequirePermission({ permission, children }: { permission: Permission | 
  */
 function Home() {
   const { person } = useAuth();
-  if (!IS_MOCK) return <InicioPage />;
   if (person?.role === "jefe_taller") return <Navigate to="/taller" replace />;
   if (person?.role === "gerencia") return <DashboardPage />;
   return <PendientesPage />;
@@ -117,6 +115,8 @@ export function AppRoutes() {
                   <Route path="captura" element={gate("captura", "captura", <CapturaPage />)} />
                   <Route path="resultado" element={gate("resultado", "ver_resultado", <ResultadoPage />)} />
                   <Route path="perfil" element={moduleOnly("perfil", <PerfilPage />)} />
+                  {/* Identidad resuelta por GET /api/v1/me (AUTH-FE-03): diagnóstico de la sesión real. */}
+                  {!IS_MOCK && <Route path="sesion" element={<InicioPage />} />}
                   <Route path="*" element={<NotFound />} />
                 </Route>
               </Route>

@@ -9,6 +9,7 @@
     "e2e": "node e2e/recorrido.mjs",
     "e2e:diseno": "node e2e/diseno.mjs",
     "e2e:api": "node e2e/identidad-api.mjs",
+    "e2e:conectado": "node e2e/recorrido-api.mjs",
     "test": "vitest run"
   },
   "dependencies": {
