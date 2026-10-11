@@ -398,7 +398,7 @@ function SplitView({ d, nextHref }: { d: EvidenceDetailDTO; nextHref: string | n
               Datos del comprobante
             </h3>
             {canEdit && !editing && (
-              <button onClick={() => setEditing(true)} className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink">
+              <button onClick={() => setEditing(true)} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink">
                 <NotePencil size={16} /> Corregir
               </button>
             )}
@@ -448,13 +448,13 @@ function SplitView({ d, nextHref }: { d: EvidenceDetailDTO; nextHref: string | n
             <button
               onClick={() => setMore((m) => !m)}
               aria-expanded={more}
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink"
             >
               <CaretDown size={14} weight="bold" className={cx("transition-transform", more && "rotate-180")} />
               Más opciones
             </button>
             {open && nextHref && (
-              <MotionLink to={nextHref} {...press} className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink">
+              <MotionLink to={nextHref} {...press} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink">
                 Saltar <ArrowRight size={14} weight="bold" />
               </MotionLink>
             )}

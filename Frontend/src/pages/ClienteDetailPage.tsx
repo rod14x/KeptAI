@@ -66,7 +66,7 @@ function Detail({ d }: { d: CustomerDetailDTO }) {
   const [tab, setTab] = useState("pedidos");
   return (
     <Stagger className="mx-auto flex max-w-[1320px] flex-col gap-6">
-      <MotionLink to="/clientes" variants={itemVariants} {...press} className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-full pr-3 text-sm font-semibold text-muted transition-colors hover:text-ink">
+      <MotionLink to="/clientes" variants={itemVariants} {...press} className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink">
         <ArrowLeft size={16} weight="bold" /> Clientes
       </MotionLink>
 
@@ -328,7 +328,7 @@ function StatementCard({ d }: { d: CustomerDetailDTO }) {
       {can(me.role, "ver_estado_cuenta") ? (
         <Link
           to={`/clientes/${d.customer.id}/estado-cuenta`}
-          className="mt-4 inline-flex h-10 items-center gap-2 rounded-full bg-card px-4 text-[13px] font-semibold ring-1 ring-line transition-colors hover:bg-panel"
+          className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg bg-card px-4 text-[13px] font-semibold ring-1 ring-line transition-colors hover:bg-panel"
         >
           <ArrowSquareOut size={14} weight="bold" /> Abrir estado de cuenta
         </Link>

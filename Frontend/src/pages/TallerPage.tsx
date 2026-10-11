@@ -27,7 +27,7 @@ export function TallerPage() {
   const [open, setOpen] = useState(false);
 
   return (
-    <Stagger className="mx-auto flex max-w-[1100px] flex-col gap-6">
+    <Stagger className="mx-auto flex max-w-[1320px] flex-col gap-6 lg:gap-8">
       <PageHeader title="Producción y despacho" subtitle={<>Registra la salida de los pedidos listos para entregar. Vista {SCOPE_LABEL[scope]}.</>} actions={IS_MOCK ? <DemoBadge /> : undefined} />
 
       {error ? (
@@ -35,12 +35,15 @@ export function TallerPage() {
       ) : loading || !data ? (
         <Skeleton className="h-[360px] rounded-[var(--radius-card)]" />
       ) : (
-        <Stagger className="flex flex-col gap-6">
+        <Stagger className="flex flex-col gap-6 lg:gap-8">
           <Card className="p-5 sm:p-6">
-            <h2 className="flex items-center gap-2 text-section font-bold">
-              <Factory size={20} className="text-info" /> En producción
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="flex items-center gap-2 text-section font-bold">
+                <Factory size={20} className="text-info" /> En producción
+              </h2>
               <Chip tone="info">{data.enProduccion.length}</Chip>
-            </h2>
+            </div>
+            <p className="mt-1 text-[13px] text-muted">Órdenes liberadas en proceso de confección o listas para despacho.</p>
             {data.enProduccion.length === 0 ? (
               <div className="mt-4">
                 <EmptyState title="Nada en producción">Cuando el vendedor confirme una orden con crédito, o se verifique un anticipo, aparecerá aquí.</EmptyState>
@@ -63,52 +66,70 @@ export function TallerPage() {
             )}
           </Card>
 
-          <Card className="p-5 sm:p-6">
-            <h2 className="flex items-center gap-2 text-section font-bold">
-              <Hourglass size={20} className="text-warn" /> Retenidas
-              <Chip tone="warn">{data.retenidas.length}</Chip>
-            </h2>
-            <p className="mt-1 text-[13px] text-muted">No se producen hasta que Administración verifique el anticipo.</p>
-            {data.retenidas.length > 0 && (
-              <ul className="mt-3 flex flex-col">
-                {data.retenidas.map((o) => (
-                  <li key={o.id} className="flex items-center justify-between gap-3 border-t border-line-soft py-3 text-sm first:border-t-0">
-                    <span className="min-w-0">
-                      <span className="block font-bold">
-                        {o.ref} · {o.customer}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            <Card className="flex flex-col h-full p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="flex items-center gap-2 text-section font-bold">
+                  <Hourglass size={20} className="text-warn" /> Retenidas
+                </h2>
+                <Chip tone="warn">{data.retenidas.length}</Chip>
+              </div>
+              <p className="mt-1 text-[13px] text-muted">No se producen hasta que Administración verifique el anticipo.</p>
+              {data.retenidas.length > 0 ? (
+                <ul className="mt-4 flex flex-col divide-y divide-line-soft">
+                  {data.retenidas.map((o) => (
+                    <li key={o.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3 text-sm">
+                      <span className="min-w-0">
+                        <span className="block font-bold truncate">
+                          {o.ref} · {o.customer}
+                        </span>
+                        <span className="block truncate text-[13px] text-muted">{o.description}</span>
                       </span>
-                      <span className="block truncate text-[13px] text-muted">{o.description}</span>
-                    </span>
-                    <Chip tone="warn">Esperando anticipo</Chip>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
+                      <Chip tone="warn" className="shrink-0">Esperando anticipo</Chip>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="mt-4 flex flex-1 items-center justify-center rounded-lg border border-line-soft bg-panel/40 p-6 text-center text-xs text-muted">
+                  Sin órdenes retenidas pendientes de anticipo.
+                </div>
+              )}
+            </Card>
 
-          <Card className="p-5 sm:p-6">
-            <h2 className="flex items-center gap-2 text-section font-bold">
-              <Truck size={20} className="text-ok" /> Últimos despachos
-            </h2>
-            <ul className="mt-3 flex flex-col">
-              {data.despachadas.map((o) => (
-                <li key={o.id} className="tabular flex items-center justify-between gap-3 border-t border-line-soft py-3 text-sm first:border-t-0">
-                  <span className="min-w-0">
-                    <span className="block font-bold">
-                      {o.ref} · {o.customer}
-                    </span>
-                    <span className="block truncate text-[13px] text-muted">
-                      {o.despacho?.acta} · {o.despacho?.by}
-                    </span>
-                  </span>
-                  <span className="text-right text-[13px]">
-                    <span className="block font-semibold">{o.despacho ? formatDate(o.despacho.fecha) : ""}</span>
-                    {o.despacho && o.plazoDias != null && <span className="block text-xs text-muted">vence {formatDate(addDays(o.despacho.fecha, o.plazoDias))}</span>}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Card>
+            <Card className="flex flex-col h-full p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="flex items-center gap-2 text-section font-bold">
+                  <Truck size={20} className="text-ok" /> Últimos despachos
+                </h2>
+                <Chip tone="ok">{data.despachadas.length}</Chip>
+              </div>
+              <p className="mt-1 text-[13px] text-muted">Historial de pedidos despachados con guía y vencimiento.</p>
+              {data.despachadas.length > 0 ? (
+                <ul className="mt-4 flex flex-col divide-y divide-line-soft">
+                  {data.despachadas.map((o) => (
+                    <li key={o.id} className="tabular grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3 text-sm">
+                      <span className="min-w-0">
+                        <span className="block font-bold truncate">
+                          {o.ref} · {o.customer}
+                        </span>
+                        <span className="block truncate text-[13px] text-muted">
+                          {o.despacho?.acta} · {o.despacho?.by}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-right text-[13px]">
+                        <span className="block font-semibold">{o.despacho ? formatDate(o.despacho.fecha) : ""}</span>
+                        {o.despacho && o.plazoDias != null && <span className="block text-xs text-muted">vence {formatDate(addDays(o.despacho.fecha, o.plazoDias))}</span>}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="mt-4 flex flex-1 items-center justify-center rounded-lg border border-line-soft bg-panel/40 p-6 text-center text-xs text-muted">
+                  Sin despachos registrados en este período.
+                </div>
+              )}
+            </Card>
+          </div>
         </Stagger>
       )}
 
@@ -121,36 +142,42 @@ function TallerRow({ o, cutDate, onDispatch }: { o: TallerOrder; cutDate: string
   const me = useMe();
   const daysLeft = o.entregaSolicitada ? daysBetween(cutDate, o.entregaSolicitada) : null;
   return (
-    <div className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center">
-      <div className="min-w-0 flex-1">
-        <p className="font-bold">
+    <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] items-start md:items-center gap-4 py-5">
+      <div className="min-w-0">
+        <p className="font-bold text-ink">
           {o.ref} · {o.customer}
         </p>
-        <ul className="mt-1 text-[13px] text-muted">
+        <ul className="mt-1 text-[13px] text-muted space-y-0.5">
           {o.items.map((it, i) => (
             <li key={i}>
               {it.cantidad} × {it.descripcion} · {it.detalle}
             </li>
           ))}
         </ul>
-        <p className="tabular mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+        <p className="tabular mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
           <span>Producción desde {o.inicioProduccion ? formatDate(o.inicioProduccion) : "sin fecha"}</span>
+          <span>·</span>
           <span>{o.modality === "propia" ? "Taller interno" : "Taller tercero"}</span>
           {o.entregaSolicitada && (
-            <span className={cx("font-semibold", daysLeft !== null && daysLeft <= 3 ? "text-bad" : "text-ink")}>
-              Entrega pedida {formatDate(o.entregaSolicitada)}
-              {daysLeft !== null && (daysLeft < 0 ? ` (atrasada ${-daysLeft} d)` : ` (en ${daysLeft} d)`)}
-            </span>
+            <>
+              <span>·</span>
+              <span className={cx("font-semibold", daysLeft !== null && daysLeft <= 3 ? "text-bad" : "text-ink")}>
+                Entrega pedida {formatDate(o.entregaSolicitada)}
+                {daysLeft !== null && (daysLeft < 0 ? ` (atrasada ${-daysLeft} d)` : ` (en ${daysLeft} d)`)}
+              </span>
+            </>
           )}
         </p>
       </div>
-      {can(me.role, "registrar_despacho") ? (
-        <Button icon={<Truck size={18} weight="bold" />} onClick={onDispatch} className="w-full sm:w-auto">
-          Registrar despacho
-        </Button>
-      ) : (
-        <Chip tone="neutral">Lo despacha el Jefe de taller</Chip>
-      )}
+      <div className="flex shrink-0 items-center justify-start md:justify-end w-full md:w-auto">
+        {can(me.role, "registrar_despacho") ? (
+          <Button icon={<Truck size={18} weight="bold" />} onClick={onDispatch} className="w-full md:w-auto">
+            Registrar despacho
+          </Button>
+        ) : (
+          <Chip tone="neutral">Lo despacha el Jefe de taller</Chip>
+        )}
+      </div>
     </div>
   );
 }
