@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "0d73b9d3ff0eccf5850cf6344e2b54b37a1d7da9",
+  "source_head_at_generation": "da863b309fc69f1398eb89412932dbe3e823c0ba",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -11,7 +11,7 @@
   ],
   "source_changes_at_generation": [
     "M cerebro/conocimientos/desarrollo/miguel/estado.md",
-    " M cerebro/conocimientos/desarrollo/miguel/plan-continuacion-backend-integrado.md"
+    "?? cerebro/conocimientos/desarrollo/miguel/prompt-contacto-pedido-voucher.md"
   ],
   "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
   "interview_ids": [
@@ -112,8 +112,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/estado.md",
-      "bytes": 108347,
-      "sha256": "f5b190c2c6b2db16a5c3f13c86594b0201cff482933fc2d1f0b6617fffcdc4e1"
+      "bytes": 109729,
+      "sha256": "d6b2ab497ac694ccee2cbd2d4b3cb44ec734d3bce0298f6e0b2366f23f1e60ec"
     },
     {
       "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
@@ -154,6 +154,11 @@
       "path": "conocimientos/desarrollo/miguel/prompt-claude.md",
       "bytes": 3036,
       "sha256": "8bb5f1bd1a1340fc6cacdbbc6848901e7acfb28413440c812b2ee976cf2520a1"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/prompt-contacto-pedido-voucher.md",
+      "bytes": 7788,
+      "sha256": "58b476986d0b07cb479863a5ef153fa0249abe0e099ced9cc5d27d28610b4230"
     },
     {
       "path": "conocimientos/desarrollo/miguel/revision-integracion-andres.md",
@@ -550,6 +555,13 @@
       "bytes": 9545,
       "sha256": "24fc537733e893520522fb194fccc7df549b09e3fdd81c297f640f91aac349d2",
       "source_sha256": "24fc537733e893520522fb194fccc7df549b09e3fdd81c297f640f91aac349d2",
+      "sanitized": false
+    },
+    {
+      "path": "Backend/docs/despliegue-n8n.md",
+      "bytes": 6090,
+      "sha256": "0d2e785bb7f8e96f3d2391d174e998d3bc5f194446c78d0e8d8ba5e0ed80b303",
+      "source_sha256": "0d2e785bb7f8e96f3d2391d174e998d3bc5f194446c78d0e8d8ba5e0ed80b303",
       "sanitized": false
     },
     {
