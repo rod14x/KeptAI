@@ -39,7 +39,7 @@ La API key de Isabella se autentica por hash en integracion_servicio de la base 
 
 ## Migraciones antes del arranque de negocio
 
-Flyway permanece desactivado y Hibernate usa validate: la imagen no cambia el esquema. Aplicar migraciones por separado con rol migrador después de leer keptai.flyway_schema_history remoto. Código local requiere V1–V14.
+Flyway permanece desactivado y Hibernate usa validate: la imagen no migra la base ni cambia el esquema. Aplicar migraciones por separado con rol migrador después de leer keptai.flyway_schema_history remoto. Código local requiere V1–V14.
 
 Al revisar origin/main418dc65 se confirmó que el equipo ya conserva V10 contacto y V11 obligación de crédito. Esta entrega usa V10/V11 exactamente iguales a main, evitando diferencias de checksum. Esto resuelve la divergencia de numeración del código; no acredita qué migraciones están aplicadas en Supabase. V12 revisión de borradores, V13 metadatos privados y V14 crédito ADMIN son nuevas de esta entrega. No hacer repair ni editar históricos aplicados.
 

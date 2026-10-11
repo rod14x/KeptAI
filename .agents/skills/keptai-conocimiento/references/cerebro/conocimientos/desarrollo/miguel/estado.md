@@ -550,3 +550,7 @@ Miguel autoriza commit/push de la entrega. Rama backend-partefinal, base29995f1;
 Imagen keptai-backend:predeploy construida desde Backend/Dockerfile. Humo ejecutado con Backend/scripts/verificar-docker-local.py: prod+PostgreSQL desechable V1–V14/runtime sin bypass, healthUP, uid10001, raíz de solo lectura, sin capabilities; n8n401/401/400, panel401 y cero filas de negocio. Contenedores/red/env de prueba eliminados. Backend/compose.yaml validado con config --quiet; Backend/deploy/.env.example contiene solo marcadores, .env.production está ignorado por Git.
 
 Se conservan verify357/0/0, API/Supabase real30/30 y OpenAPI38/220/25; no hubo cambios de lógica después de esas pruebas. Guía vigente Backend/docs/despliegue-n8n.md. Próximo: comprobar historial de Supabase, aplicar release compatible, configurar hosting/HTTPS y aceptar workflows/frontend reales. Docker construido no significa desplegado ni cierre de aceptación externa.
+
+### Ajuste de CI de publicación
+
+La primera CI del commit8774c2b ejecutó357 pruebas:356 pasaron y una comprobación documental conservaba el requisito literal V10. Se actualiza a V1–V14 y se mantiene la comprobación de que la imagen no migra. Sin cambios de lógica del backend; prueba documental local y CI se vuelven a ejecutar antes de confirmar publicación validada.
