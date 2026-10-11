@@ -62,3 +62,40 @@ Enfoque en claridad operativa, densidad controlada y leyes de la Gestalt (proxim
 - Navegación por teclado en pestañas y controles segmentados con flechas (`ArrowLeft`, `ArrowRight`, `Home`, `End`).
 - `prefers-reduced-motion` respetado en todas las transiciones y gráficos.
 - Soporte para impresión (`@media print`) limpio sin barras laterales ni controles de interfaz.
+
+## 5. Pulido final de la interfaz · 11/10/2026
+
+Responsable de implementación: Codex, por solicitud del usuario, en la rama `frontend`.
+Alcance: acabado visual de la aplicación existente. Se conservan arquitectura, rutas, roles,
+fuentes de datos, cálculos y acciones. No es aprobación empresarial ni certificación del backend.
+
+### Criterios de cierre y decisiones visuales
+
+- **Identidad conservada:** azul de marca, Manrope, iconos Phosphor y ambos temas; dan continuidad a lo que ya usa el equipo. Energía 1, ritmo 1 y movimiento 1: una herramienta operativa tranquila.
+- **Encabezados comunes:** título, contexto y acciones se separan del contenido por un borde; las acciones se distribuyen en varias líneas cuando falta ancho, sin comprimir la descripción.
+- **Pedidos en móvil:** la misma tabla se presenta como filas de lectura vertical por debajo de 640px. Cliente, vencimiento, venta, saldo y estados permanecen visibles, con los mismos enlaces, búsqueda y paginación. Se conservan los roles semánticos de tabla.
+- **Clientes:** el kanban conserva sus cuatro estados; usa dos columnas en anchos intermedios y cuatro desde 1536px. Los nombres se pueden leer completos. Los filtros y el buscador se apilan antes de quedar estrechos.
+- **Alertas:** un borde y color semántico bastan para señalar el problema. Se retiran sombras y bordes redundantes; el texto sobre fondos de error usa `text-inverse` para mantener contraste en ambos temas.
+- **Controles:** altura de al menos 44px en los controles ajustados, foco interior en filtros para que no se recorte al desplazarlos, sin salto vertical al pasar el cursor sobre botones.
+- **Navegación:** barra lateral y menú móvil desplazables en pantallas bajas; el ancho reservado para la barra de desplazamiento evita saltos entre páginas cortas y largas.
+- **Tablas financieras extensas:** se conserva la comparación por columnas; Resultado indica el desplazamiento en móvil y permite enfocarlo por teclado.
+- **Movimiento reducido:** se conserva la configuración de Motion y se limita el ciclo CSS de animación cuando el sistema solicita menos movimiento.
+
+### Fuentes y límites
+
+- `cerebro/conocimientos/decisiones/decisiones-del-proyecto.md`, D-003: captura, conciliación, cobranza y caja como núcleo. Dirección del equipo, no nueva regla derivada del pulido.
+- `cerebro/conocimientos/decisiones/roadmap-german-frontend.md`, contexto y usuarios: revisión humana, diferencias entre margen, cobro y caja. El alcance histórico de tres pantallas no se usa para retirar pantallas actuales.
+- `cerebro/diagramas/keptai-der-v6.md`, «Lectura y alcance»: pedido, obligación y pago permanecen separados. No se modifican diagramas ni contratos de datos.
+- `src/App.tsx`, `src/components/layout/Sidebar.tsx` y componentes de las páginas: evidencia de la estructura existente que se preserva, incluidos kanban y permisos actuales.
+
+### Verificación local
+
+Entorno: Chrome local, Vite en `127.0.0.1:5179`, `VITE_API_MODE=mock`, datos ficticios y sesiones aisladas de pruebas.
+
+- Compilación de producción y TypeScript: PASS.
+- Contrato frontend: 43/43 pruebas PASS.
+- Recorrido funcional existente: 40/40 comprobaciones PASS, incluyendo conciliación, anticipo, despacho, crédito, permisos por rol y factor de cobro.
+- Diseño: 76/76 comprobaciones PASS, con temas claro/oscuro, móvil de 360/390px, tablet de 768/1024px y escritorio de 1440px; búsqueda vacía, paginación, pestañas, foco de diálogos y menú móvil, sin errores de consola.
+- Revisión visual de capturas: pedidos, clientes, conciliación y resumen en tamaños representativos. Capturas reproducibles en `e2e/shots/redesign/` (ignoradas por Git).
+
+Esta evidencia valida el frontend con su fuente de demostración. No acredita integración real con Spring, Supabase ni un despliegue productivo.

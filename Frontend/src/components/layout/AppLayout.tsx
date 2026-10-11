@@ -60,7 +60,7 @@ export function AppLayout() {
     <div className={cx("app-shell", !hasNav && "single-workspace")}>
       <a href="#main-content" className="skip-link">Ir al contenido</a>
       {hasNav && (
-        <aside className="app-sidebar sticky top-0 hidden h-[100dvh] lg:block">
+        <aside className="app-sidebar sticky top-0 hidden h-[100dvh] overflow-y-auto lg:block">
           <Sidebar />
         </aside>
       )}
@@ -75,7 +75,7 @@ export function AppLayout() {
               animate={DRAWER_SHOW}
               exit={DRAWER_IN}
               transition={softSpring}
-              className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] bg-card shadow-[var(--shadow-lift)]"
+              className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] overflow-y-auto bg-card shadow-[var(--shadow-lift)]"
             >
               <button
                 onClick={() => setDrawer(false)}
@@ -98,7 +98,8 @@ export function AppLayout() {
                 <button
                   onClick={() => setDrawer(true)}
                   aria-label="Abrir menú"
-                  className="flex size-11 items-center justify-center rounded-full ring-1 ring-line lg:hidden"
+                  aria-expanded={drawer}
+                  className="flex size-11 shrink-0 items-center justify-center rounded-lg ring-1 ring-line hover:bg-panel lg:hidden"
                 >
                   <List size={20} />
                 </button>
@@ -107,7 +108,7 @@ export function AppLayout() {
               <nav aria-label="Ruta" className="hidden items-center gap-2 text-sm lg:flex">
                 <span className="font-semibold">{sectionLabel(pathname, person?.role)}</span>
               </nav>
-              <div className="ml-auto flex items-center gap-3">
+              <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-3">
                 {person?.role !== "jefe_taller" && <SearchBox className="hidden w-60 md:block xl:w-72" />}
                 <ScopeSelector className="hidden lg:inline-flex" />
                 <ThemeToggle />

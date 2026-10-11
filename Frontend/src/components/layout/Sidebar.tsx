@@ -101,12 +101,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   };
 
   return (
-    <div className="flex h-full flex-col px-4 pb-5 pt-7">
+    <div className="flex min-h-full flex-col px-4 pb-5 pt-5">
       <div className="px-2">
         <Logo subtitle={false} />
       </div>
 
-      <div className="mx-2 mb-5 mt-10 border-b border-line pb-4">
+      <div className="mx-2 mb-5 mt-9 border-b border-line pb-4">
         <p className="text-sm font-semibold">Espacio de trabajo</p>
         <p className="mt-1 text-xs text-muted">{person && ROLE_LABEL[person.role]}</p>
       </div>
@@ -121,7 +121,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               const active = isItemActive(to, isActive);
               return cx(
                 "relative flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-150",
-                active ? "text-violet-ink" : "text-muted hover:bg-panel hover:text-ink",
+                active ? "font-semibold text-violet-ink" : "text-muted hover:bg-panel hover:text-ink",
               );
             }}
           >
@@ -146,7 +146,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </nav>
 
-      <div className="mt-auto flex flex-col gap-3">
+      <div className="mt-auto flex flex-col gap-3 pt-12">
         <div className="mx-2 border-t border-line pt-4">
           <p className="text-xs font-semibold text-muted">{IS_MOCK ? "Entorno de demostración" : "KeptAI · Cobros y caja"}</p>
           <p className="mt-1 text-xs leading-relaxed text-faint">{IS_MOCK ? "Los datos son ficticios." : "Cada pago, con su evidencia."}</p>

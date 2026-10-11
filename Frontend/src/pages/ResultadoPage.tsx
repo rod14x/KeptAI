@@ -160,7 +160,8 @@ function OrdersTable({ rows }: { rows: ResultRow[] }) {
           <EmptyState title="Sin pedidos con esta modalidad">Cambia el filtro o la vista de marca.</EmptyState>
         </div>
       ) : (
-        <div className="-mx-5 mt-4 overflow-x-auto px-5 sm:-mx-6 sm:px-6">
+        <div role="region" aria-label="Resultados por pedido, tabla desplazable" tabIndex={0} className="-mx-5 mt-4 overflow-x-auto px-5 sm:-mx-6 sm:px-6">
+          <p className="mb-3 text-xs leading-relaxed text-muted lg:hidden">Desliza la tabla para consultar costos, margen, cobros y saldo.</p>
           <table className="tabular w-full min-w-[860px] text-sm">
             <thead>
               <tr className="text-left text-[13px] text-muted">

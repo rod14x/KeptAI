@@ -119,7 +119,7 @@ function Detail({ d }: { d: CustomerDetailDTO }) {
         </motion.p>
       )}
 
-      <motion.section variants={listVariants} aria-label="Crédito" className="metric-strip grid md:grid-cols-2 lg:grid-cols-4">
+      <motion.section variants={listVariants} aria-label="Crédito" className="metric-strip metric-strip-four grid md:grid-cols-2 lg:grid-cols-4">
         <CreditStat
           label="Línea de referencia"
           value={<Money cents={c.creditLimitCents} />}
@@ -177,7 +177,7 @@ function CreditStat({ label, value, hint, bad, bar }: { label: string; value: Re
 
 function OrdersCard({ d }: { d: CustomerDetailDTO }) {
   return (
-    <Card className="p-5 sm:p-6">
+    <Card className="min-w-0 overflow-hidden p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-section font-bold">Órdenes</h2>
         <span className="text-[13px] text-muted">
@@ -189,11 +189,11 @@ function OrdersCard({ d }: { d: CustomerDetailDTO }) {
           <EmptyState title="Sin órdenes todavía" />
         </div>
       ) : (
-        <motion.ul variants={listVariants} className="mt-3 flex flex-col">
+        <motion.ul variants={listVariants} className="mt-3 flex min-w-0 flex-col">
           {d.orders.map((o) => (
-            <motion.li variants={itemVariants} key={o.id} className="border-t border-line-soft first:border-t-0">
-              <Link to={`/pedidos/${o.id}`} className="-mx-2 flex flex-col gap-2 rounded-xl px-2 py-3.5 hover:bg-panel">
-                <span className="flex w-full items-center gap-3">
+            <motion.li variants={itemVariants} key={o.id} className="min-w-0 border-t border-line-soft first:border-t-0">
+              <Link to={`/pedidos/${o.id}`} className="flex w-full min-w-0 flex-col gap-2 rounded-xl py-3.5 hover:bg-panel">
+                <div className="flex w-full min-w-0 items-center gap-3">
                   <span className="min-w-0 flex-1">
                     <span className="block font-bold">{o.ref}</span>
                     <span className="block truncate text-[13px] text-muted">{o.description}</span>
@@ -203,14 +203,14 @@ function OrdersCard({ d }: { d: CustomerDetailDTO }) {
                     <span className="block text-xs text-muted">de {formatMoney(o.saleCents)}</span>
                   </span>
                   <span className="hidden shrink-0 sm:flex">{o.estado === "despachada" ? <FinanceChip finance={o.finance} daysToDue={o.daysToDue ?? undefined} /> : <OrderStateChip estado={o.estado} />}</span>
-                </span>
-                <span className="tabular flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                </div>
+                <div className="tabular flex w-full min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                   <DateCell label="Pedido" date={o.issuedOn} />
                   <DateCell label="Despacho" date={o.despachoOn} />
                   <DateCell label={o.balanceCents > 0 && (o.daysToDue ?? 1) < 0 ? "Venció" : "Vence"} date={o.dueDate} strong={o.balanceCents > 0} />
                   {o.lastPaymentAt && <DateCell label="Último pago" date={o.lastPaymentAt} />}
                   {o.daysLate !== null && o.daysLate > 0 && <span className="font-semibold text-bad">cerró {o.daysLate} d tarde</span>}
-                </span>
+                </div>
               </Link>
             </motion.li>
           ))}
@@ -222,7 +222,7 @@ function OrdersCard({ d }: { d: CustomerDetailDTO }) {
 
 function DateCell({ label, date, strong }: { label: string; date: string | null; strong?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+    <span className="inline-flex shrink-0 items-center gap-1.5">
       <span className="text-faint">{label}</span>
       <span className={cx(strong ? "font-bold text-ink" : "font-medium text-muted")}>{date ? formatDate(date) : "Pendiente"}</span>
     </span>

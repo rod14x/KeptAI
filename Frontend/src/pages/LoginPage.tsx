@@ -143,7 +143,7 @@ function LoginForm({ from }: { from: string }) {
                 type="button"
                 onClick={() => setShow((s) => !s)}
                 aria-label={show ? "Ocultar contraseña" : "Mostrar contraseña"}
-                className="absolute right-1.5 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-muted hover:text-ink"
+                className="absolute right-0.5 top-1/2 flex size-11 -translate-y-1/2 items-center justify-center rounded-lg text-muted hover:bg-panel hover:text-ink"
               >
                 {show ? <EyeSlash size={20} /> : <Eye size={20} />}
               </button>

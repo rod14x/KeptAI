@@ -21,7 +21,10 @@ async function ready() {
   await page.waitForTimeout(450);
   await page.evaluate(() => document.fonts.ready);
 }
-async function capture(name) { await page.screenshot({ path: `${out}${name}.png`, fullPage: true }); }
+async function capture(name) {
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: `${out}${name}.png`, fullPage: true });
+}
 async function theme(value) {
   if (await page.locator("html").getAttribute("data-theme") !== value) await page.getByRole("button", { name: value === "dark" ? "Usar tema oscuro" : "Usar tema claro" }).click();
 }
@@ -68,6 +71,18 @@ try {
   await page.keyboard.press("Escape");
 
   await route("/pedidos", "pedidos-light");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await overflow("Pedidos móvil");
+  check(await page.getByRole("table", { name: "Pedidos y saldos" }).evaluate((el) => el.scrollWidth <= el.clientWidth), "Pedidos móvil: importes y estados sin desplazamiento horizontal");
+  check(await page.locator("tbody td").evaluateAll((cells) => cells.every((cell) => cell.getBoundingClientRect().right <= innerWidth && cell.getBoundingClientRect().left >= 0)), "Pedidos móvil: todas las celdas dentro de la pantalla");
+  const firstOrder = await page.locator("tbody tr a").first().innerText();
+  await page.getByRole("button", { name: "Página siguiente", exact: true }).click();
+  check(await page.locator("tbody tr a").first().innerText() !== firstOrder, "Paginación móvil conserva el cambio de pedidos");
+  await page.getByRole("button", { name: "Página anterior", exact: true }).click();
+  await capture("pedidos-mobile-light");
+  await theme("dark"); await capture("pedidos-mobile-dark");
+  await theme("light");
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole("textbox", { name: "Buscar pedido", exact: true }).fill("cliente inexistente xyz");
   check(await page.getByText("No hay pedidos que coincidan", { exact: true }).isVisible(), "Estado vacío de búsqueda");
   await page.getByRole("textbox", { name: "Buscar pedido", exact: true }).fill("ORD-001");
@@ -95,6 +110,12 @@ try {
     await theme("dark"); await capture(`${name}-dark`);
     await page.setViewportSize({ width: 390, height: 844 }); await ready(); await overflow(`${name} móvil oscuro`); await capture(`${name}-mobile-dark`);
     await theme("light"); await overflow(`${name} móvil claro`); await capture(`${name}-mobile-light`);
+    if (name === "clientes" || name === "cliente") {
+      for (const width of [768, 1024]) {
+        await page.setViewportSize({ width, height: 1024 }); await ready();
+        await overflow(`${name} ${width}px`); await capture(`${name}-${width}-light`);
+      }
+    }
     await page.setViewportSize({ width: 1440, height: 1000 });
   }
   await page.setViewportSize({ width: 390, height: 844 });

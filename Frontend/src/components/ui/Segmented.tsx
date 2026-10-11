@@ -34,7 +34,7 @@ export function Segmented<T extends string>({
     <div
       role={kind === "tab" ? "tablist" : "radiogroup"}
       aria-label={label}
-      className={cx("no-scrollbar relative flex max-w-full gap-1 overflow-x-auto rounded-lg p-1", solid ? "" : "bg-line-soft", className ?? "inline-flex")}
+      className={cx("segmented relative flex max-w-full gap-1 overflow-x-auto rounded-lg p-1", solid ? "" : "bg-line-soft", className ?? "inline-flex")}
     >
       {options.map((o) => {
         const active = o.value === value;
@@ -72,7 +72,7 @@ export function Segmented<T extends string>({
             )}
             <span className="relative z-10">{o.label}</span>
             {o.count !== undefined && (
-              <span className={cx("tabular relative z-10 rounded-full px-1.5 text-[11px]", active && solid ? "bg-white/20" : "bg-card")}>{o.count}</span>
+              <span className={cx("tabular relative z-10 min-w-5 rounded-md px-1.5 py-0.5 text-[11px]", active && solid ? "bg-inverse/10" : "bg-card")}>{o.count}</span>
             )}
           </button>
         );

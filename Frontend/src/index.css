@@ -89,6 +89,8 @@
   }
   html {
     -webkit-text-size-adjust: 100%;
+    scrollbar-gutter: stable;
+    scroll-padding-top: 144px;
   }
   body {
     @apply bg-app text-ink font-sans antialiased;
@@ -111,6 +113,8 @@
   button:disabled {
     cursor: not-allowed;
   }
+  svg { flex-shrink: 0; }
+  input, select, textarea { min-width: 0; max-width: 100%; }
   h1, h2, h3 { text-wrap: balance; }
   summary { cursor: pointer; }
 }
@@ -119,10 +123,17 @@
   .app-shell { min-height: 100dvh; }
   .app-sidebar { background: var(--color-card); border-right: 1px solid var(--color-line); }
   .app-topbar { background: var(--color-card); border-bottom: 1px solid var(--color-line); }
-  .page-heading { padding-bottom: 4px; }
+  .page-heading { padding-bottom: 24px; border-bottom: 1px solid var(--color-line); }
   .page-heading h1 { font-weight: 700; }
-  .primary-link { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; background: var(--color-action); color: var(--color-inverse); padding: 10px 20px; font-size: 14px; font-weight: 650; }
+  .page-actions > * { max-width: 100%; }
+  .primary-link { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; background: var(--color-action); color: var(--color-inverse); padding: 10px 20px; font-size: 14px; font-weight: 650; transition: background-color 150ms; }
   .primary-link:hover { background: var(--color-action-hover); }
+  .segmented { scrollbar-width: thin; scroll-padding-inline: 4px; }
+  .segmented button:focus-visible { outline-offset: -2px; }
+  .mobile-cell-label { display: none; }
+  .orders-table td { padding: 14px 12px; }
+  .orders-table .order-identity, .orders-table .order-status { padding-inline: 20px; }
+  .orders-table .order-amount { text-align: right; }
   .metric-strip { border: 1px solid var(--color-line); border-radius: 12px; background: var(--color-card); overflow: hidden; }
   .metric-strip > * { padding: 22px 24px; }
   .metric-strip > * + * { border-left: 1px solid var(--color-line); }
@@ -138,11 +149,16 @@
   .login-form-panel { display: flex; flex-direction: column; justify-content: center; padding: 40px clamp(24px, 5vw, 88px); background: var(--color-card); }
   .login-form-panel > section { width: 100%; max-width: 400px; margin: auto; }
   .login-form-panel input { background: var(--color-card); }
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .metric-strip-four > :nth-child(odd) { border-left: 0; }
+    .metric-strip-four > :nth-child(n+3) { border-top: 1px solid var(--color-line); }
+  }
   @media (min-width: 1024px) {
     .app-shell { display: grid; grid-template-columns: 224px minmax(0, 1fr); }
     .app-shell.single-workspace { grid-template-columns: minmax(0, 1fr); }
   }
   @media (max-width: 767px) {
+    .page-heading { padding-bottom: 20px; }
     .login-layout { display: flex; flex-direction: column; }
     .login-story { padding: 28px 24px; gap: 24px; }
     .login-story h1 { font-size: 30px; }
@@ -150,6 +166,18 @@
     .login-form-panel { padding: 32px 24px; flex: 1; }
     .metric-strip > * { padding: 18px; }
     .metric-strip > * + * { border-left: 0; border-top: 1px solid var(--color-line); }
+  }
+  @media (max-width: 639px) {
+    /* Una sola tabla y los mismos enlaces/datos: en móvil cada fila se lee completa. */
+    .orders-table, .orders-table tbody { display: block; width: 100%; }
+    .orders-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .orders-table tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 20px; padding: 20px; }
+    .orders-table td[role="cell"] { min-width: 0; padding: 0; text-align: left; }
+    .orders-table .order-identity, .orders-table .order-due, .orders-table .order-status { grid-column: 1 / -1; }
+    .orders-table .order-identity a { min-height: 44px; }
+    .orders-table .order-due { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; font-size: 13px; }
+    .orders-table .mobile-cell-label { display: block; margin-bottom: 4px; color: var(--color-muted); font-size: 12px; font-weight: 500; }
+    .orders-table .order-due .mobile-cell-label { margin-bottom: 0; }
   }
 }
 
@@ -170,7 +198,9 @@
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
