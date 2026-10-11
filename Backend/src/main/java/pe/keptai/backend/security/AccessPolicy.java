@@ -42,6 +42,8 @@ public final class AccessPolicy {
 
 	private static final String D007 = "Fuera del MVP (D-007): no se persiste captura de texto ni extracción; no implementar";
 
+	private static final String SEGREGACION = "Segregación registrar/verificar/aplicar pago sin decidir (matriz 5.5) y motor financiero de Andrés pendiente";
+
 	private static final String CONFIRMAR = "Confirmación por vendedorJid sin acuerdo (matriz 5.3, MIG-06): un servicio no firma como vendedor";
 
 	private static final String CALLBACK = "Alcance SCHEDULER del callback WF3 solo propuesto (matriz 5.4); credencial separada pendiente (D3)";
@@ -49,23 +51,21 @@ public final class AccessPolicy {
 	public static final List<Rule> RULES = List.of(
 		panel("getMyContext", HttpMethod.GET, "/api/v1/me", VENDEDOR, ADMIN, GERENTE, JEFE_TALLER),
 		closedPanel("createTextEvidence", HttpMethod.POST, "/api/v1/evidences/text", D007),
-		panel("uploadEvidenceFile", HttpMethod.POST, "/api/v1/evidences/files", VENDEDOR, ADMIN),
-		panel("listEvidences", HttpMethod.GET, "/api/v1/evidences", VENDEDOR, ADMIN),
-		panel("getEvidence", HttpMethod.GET, "/api/v1/evidences/{evidence_id}", VENDEDOR, ADMIN),
-		panel("getEvidenceDownloadLink", HttpMethod.GET, "/api/v1/evidences/{evidence_id}/download-link", VENDEDOR, ADMIN),
+		panel("uploadEvidenceFile", HttpMethod.POST, "/api/v1/evidences/files", ADMIN),
+		panel("listEvidences", HttpMethod.GET, "/api/v1/evidences", ADMIN),
+		panel("getEvidence", HttpMethod.GET, "/api/v1/evidences/{evidence_id}", ADMIN),
+		panel("getEvidenceDownloadLink", HttpMethod.GET, "/api/v1/evidences/{evidence_id}/download-link", ADMIN),
 		closedPanel("startExtraction", HttpMethod.POST, "/api/v1/evidences/{evidence_id}/extractions", D007),
 		closedPanel("getExtractionJob", HttpMethod.GET, "/api/v1/extraction-jobs/{job_id}", D007),
-		panel("listDrafts", HttpMethod.GET, "/api/v1/drafts", VENDEDOR, ADMIN),
-		panel("getDraft", HttpMethod.GET, "/api/v1/drafts/{draft_id}", VENDEDOR, ADMIN),
-		panel("correctDraft", HttpMethod.PATCH, "/api/v1/drafts/{draft_id}", VENDEDOR, ADMIN),
-		panel("confirmDraft", HttpMethod.POST, "/api/v1/drafts/{draft_id}/confirmation", VENDEDOR, ADMIN),
-		panel("discardDraft", HttpMethod.POST, "/api/v1/drafts/{draft_id}/discard", VENDEDOR, ADMIN),
+		panel("listDrafts", HttpMethod.GET, "/api/v1/drafts", ADMIN),
+		panel("getDraft", HttpMethod.GET, "/api/v1/drafts/{draft_id}", ADMIN),
+		panel("correctDraft", HttpMethod.PATCH, "/api/v1/drafts/{draft_id}", ADMIN),
+		panel("confirmDraft", HttpMethod.POST, "/api/v1/drafts/{draft_id}/confirmation", ADMIN),
+		panel("discardDraft", HttpMethod.POST, "/api/v1/drafts/{draft_id}/discard", ADMIN),
 		panel("listOrders", HttpMethod.GET, "/api/v1/orders", VENDEDOR, ADMIN, GERENTE, JEFE_TALLER),
 		panel("getOrder", HttpMethod.GET, "/api/v1/orders/{order_id}", VENDEDOR, ADMIN, GERENTE, JEFE_TALLER),
 		panel("listPayments", HttpMethod.GET, "/api/v1/payments", ADMIN, GERENTE),
 		panel("getPayment", HttpMethod.GET, "/api/v1/payments/{payment_id}", ADMIN, GERENTE),
-		// INT-FE-API-001: abiertas a ADMIN, el único escritor que fija MotorPagos (Andrés) y V4. La segregación
-		// registrar ≠ verificar ≠ aplicar sigue sin decidir (matriz 5.5): hoy ADMIN puede hacer las tres.
 		panel("getReconciliationCandidates", HttpMethod.GET, "/api/v1/payments/{payment_id}/reconciliation", ADMIN),
 		panel("registerPaymentVerification", HttpMethod.POST, "/api/v1/payments/{payment_id}/verifications", ADMIN),
 		panel("applyPayment", HttpMethod.POST, "/api/v1/payments/{payment_id}/applications", ADMIN),
@@ -80,9 +80,9 @@ public final class AccessPolicy {
 		panel("exportOrdersCsv", HttpMethod.GET, "/api/v1/reports/orders.csv", GERENTE),
 		panel("listAuditEvents", HttpMethod.GET, "/api/v1/audit-events", ADMIN, GERENTE),
 		panel("getCreditDecision", HttpMethod.GET, "/api/v1/orders/{order_id}/credit-decision", VENDEDOR, ADMIN, GERENTE),
-		panel("submitCreditDecision", HttpMethod.POST, "/api/v1/orders/{order_id}/credit-decision", VENDEDOR),
+		panel("submitCreditDecision", HttpMethod.POST, "/api/v1/orders/{order_id}/credit-decision", ADMIN),
 		panel("registerDispatch", HttpMethod.POST, "/api/v1/orders/{order_id}/dispatch", ADMIN, JEFE_TALLER),
-		// INT-FE-API-002: cierre manual de alertas y marca de duplicado (ADMIN, como escribe RLS) y bitácora de envíos.
+		// INT-FE-API-002: cierre manual de alertas, duplicado (MotorPagos) y bitácora de envíos (solo metadatos, D-007).
 		panel("resolveCollectionAlert", HttpMethod.POST, "/api/v1/collection-alerts/{alert_id}/resolution", ADMIN),
 		panel("markPaymentDuplicate", HttpMethod.POST, "/api/v1/payments/{payment_id}/duplicate", ADMIN),
 		panel("listNotifications", HttpMethod.GET, "/api/v1/notifications", VENDEDOR, ADMIN, GERENTE),

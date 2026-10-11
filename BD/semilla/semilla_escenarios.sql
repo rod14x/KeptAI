@@ -38,7 +38,10 @@ UPDATE usuario SET nombre = 'Patricia Zapata' WHERE id = '70000000-0000-4000-800
 UPDATE usuario SET nombre = 'Jorge Ipanaqué'  WHERE id = '70000000-0000-4000-8000-000000000004';  -- JEFE_TALLER
 INSERT INTO usuario (id, organizacion_id, auth_user_id, nombre, email, rol) VALUES
  ('70000000-0000-4000-8000-000000000005', '10000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000005',
-  'Luis Yarlequé', 'luis.yarleque.demo@keptai.invalid', 'VENDEDOR');                                  -- VENDEDOR Unicrack
+  'Luis Yarlequé', 'luis.yarleque.demo@keptai.invalid', 'VENDEDOR'),                                  -- VENDEDOR Unicrack
+ -- Segundo ADMIN: D-012 exige que aplique un pago alguien distinto de quien lo verificó.
+ ('70000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000001', '71000000-0000-4000-8000-000000000006',
+  'Rocío Calle', 'rocio.calle.demo@keptai.invalid', 'ADMIN');
 
 -- ---------------------------------------------------------------------------------------------------- catálogo
 UPDATE linea_producto SET nombre = 'Profesional' WHERE id = '14000000-0000-4000-8000-000000000001';

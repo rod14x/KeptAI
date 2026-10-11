@@ -15,6 +15,7 @@ public final class ContractEnums {
 	public enum DataOrigin {
 		@JsonProperty("demo_fixture") DEMO_FIXTURE,
 		@JsonProperty("manual_entry") MANUAL_ENTRY,
+		@JsonProperty("automated_extraction") AUTOMATED_EXTRACTION,
 		@JsonProperty("reviewed_extraction") REVIEWED_EXTRACTION
 	}
 

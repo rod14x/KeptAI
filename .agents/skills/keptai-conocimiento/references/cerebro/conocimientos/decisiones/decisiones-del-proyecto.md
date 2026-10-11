@@ -1,5 +1,19 @@
 # Decisiones, propuestas y arquitectura del proyecto
 
+### D-012 — Segregación financiera del panel: dos ADMIN distintos
+
+- Fecha: 11/10/2026. Responsable: Miguel. Fuente: respuesta expresa en este chat «ADMIN con dos usuarios distintos».
+- ADMIN puede registrar verificación y aplicar pagos por API, pero aplicado_por debe ser distinto de verificado_por. Identidad y rol se validan en PostgreSQL a partir del JWT, nunca en el cuerpo. La ejecución HTTP es idempotente y atómica junto a la liberación y auditoría.
+- El motor disponible registra simulated_demo; esta autorización no acredita conexión bancaria ni cambia las reglas de llamadas internas/SQL de los motores de Andrés. Dos ADMIN reales y recorrido n8n desplegado pendientes de aceptación.
+
+### D-013 — Revisión humana ADMIN sin vendedor WhatsApp registrado
+
+- Fecha: 11/10/2026. Responsable: Miguel. Fuente: respuesta expresa «Sí, ADMIN desde el panel».
+- ADMIN revisa/corrige/confirma/descarta pedidos y consulta vouchers de su organización. No se usa el número del cliente como autorización ni se inventa vendedor.
+- Confirmar la hoja no aprueba crédito ni verifica fondos; el pedido queda PENDIENTE_APROBACION. La aprobación de crédito de D-005 sigue reservada al vendedor. Hasta definir cartera/marca, VENDEDOR no consulta negocio en los nuevos servicios del panel; `/me` conserva identidad para los cuatro roles.
+- Ninguno de estos acuerdos abre la confirmación o callback de WhatsApp. Se mantienen pendientes hasta acordar identidad y alcance.
+
+
 > Corte documental: 10 de octubre de 2026. Versión: 1.2.
 > Este registro distingue instrucciones del usuario, recomendaciones de diseño y decisiones pendientes. La organización de documentos no acredita aprobación empresarial de la arquitectura.
 
@@ -411,3 +425,10 @@ Las prioridades, módulos, reglas, diagramas, fases y métricas de este document
 - Alcance: persistir pedidos, pagos, costos, decisiones y resúmenes estructurados necesarios al negocio; conservar vouchers privados. No guardar chats completos, transcript, audios, contenido saliente ni copias de esos datos en logs/auditoría/Storage/idempotencia. Metadatos mínimos de canal y envío sí permiten reintentos y confirmaciones.
 - SQL: V4/V5 y script Supabase Storage separado. No modificar ni aplicar las migraciones históricas remotamente sin revisar historial y datos.
 - IA: n8n procesa chat/audio/imágenes de forma transitoria; configurar también retención y poda de ejecuciones n8n antes de la prueba real.
+
+## D-014 — ADMIN autoriza crédito durante el MVP
+
+- Fecha 11/10/2026. Responsable Miguel; dirección explícita en revisión de cierre: «ADMIN autoriza crédito desde el panel durante el MVP».
+- Sustituye la exclusividad del vendedor de D-005 en esta etapa. ADMIN de la organización puede aprobar/rechazar desde el panel; n8n no autoriza y el vendedor existente no se modifica ni se inventa.
+- Política API y RLS V14; autoría desde PostgreSQL, idempotencia por autor/contenido y obligación/auditoría en una transacción. Mora informativa reconocida antes de decidir. Segregación de verificación/aplicación por dos ADMIN de D-012 se conserva.
+- Sin migración en base activa ni aceptación remota implícita. Acceso general de vendedores/cartera continúa sin definir y cerrado.

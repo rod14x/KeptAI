@@ -10,9 +10,9 @@ import pe.keptai.backend.web.BusinessException;
  * estricta, tamaño acotado ANTES de decodificar y tipo real por firma y cierre del formato (JPEG, PNG o PDF);
  * el MIME o la extensión declarados por quien llama no se usan. El SHA-256 se calcula sobre los bytes decodificados.
  */
-record VoucherFile(byte[] bytes, String extension, String contentType, String sha256) {
+public record VoucherFile(byte[] bytes, String extension, String contentType, String sha256) {
 
-	static VoucherFile decode(String base64, long maxFileBytes) {
+	public static VoucherFile decode(String base64, long maxFileBytes) {
 		if (base64 == null || base64.isEmpty()) {
 			throw new BusinessException(HttpStatus.BAD_REQUEST, "IMAGE_REQUIRED", "Falta imagen_base64");
 		}

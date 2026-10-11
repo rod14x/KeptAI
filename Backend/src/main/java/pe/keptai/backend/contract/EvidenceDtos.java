@@ -32,18 +32,18 @@ public final class EvidenceDtos {
 			@JsonProperty("text_preview") @Size(max = 200) String textPreview,
 			@JsonProperty("label") @Size(max = 120) String label,
 			@JsonProperty("data_origin") @NotNull DataOrigin dataOrigin,
-			@JsonProperty("uploaded_by_user_id") @NotNull UUID uploadedByUserId,
+			@JsonProperty("uploaded_by_user_id") UUID uploadedByUserId,
 			@JsonProperty("created_at") @NotNull OffsetDateTime createdAt) {
 
-		/** Los archivos privados llevan hash y tamano; el texto no es un archivo. */
+		/** Los archivos privados llevan hash; tamaño y tipo históricos desconocidos permanecen null. */
 		@JsonIgnore
-		@AssertTrue(message = "voucher/audio requieren sha256, size_bytes y content_type; el texto no requiere archivo")
+		@AssertTrue(message = "voucher/audio requieren sha256; el texto no requiere archivo")
 		public boolean isFileMetadataConsistentWithKind() {
 			if (kind == null) {
 				return true;
 			}
 			boolean file = kind != EvidenceKind.TEXT_CHAT;
-			return !file || (sha256 != null && sizeBytes != null && contentType != null);
+			return !file || sha256 != null; // tamaño/tipo históricos desconocidos quedan null, no se inventan
 		}
 	}
 

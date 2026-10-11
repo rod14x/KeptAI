@@ -1,5 +1,7 @@
 # KeptAI: instrucciones compartidas
 
+- Publicación autorizada11/10/2026 en backend-partefinal: backend MVP verify357/0/0, API con Auth/Storage Supabase reales30/30, OpenAPI38/220/25. Docker construido y humo prod/rootfs readonly/uid10001/runtime sin bypass OK; Compose y plantilla sin secretos validados. V10/V11 iguales a origin/main418dc65; V12–V14 nuevas, sin aplicar a base activa. D-014 crédito ADMIN y dos ADMIN para verificar/aplicar. Pendientes historial remoto, despliegue y aceptación WF1/WF2/frontend. Detalle Backend/docs/despliegue-n8n.md, entrega-backend-final-local.md y estado.md.
+
 Estas instrucciones aplican a este repositorio KeptAI: cerebro/ conserva conocimiento; Backend/, BD/ y Frontend/ son las carpetas preparadas por el equipo.
 
 - Responder en español. El cliente inicial descrito es Corpotex; KeptAI es el proyecto.

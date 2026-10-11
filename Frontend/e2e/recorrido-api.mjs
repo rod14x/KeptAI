@@ -69,13 +69,8 @@ async function session(role, visits) {
 
 // Semilla base (P-001/P-002, V-001..V-003) + escenarios (P-003..P-016, V-004..V-014): BD/semilla/semilla_escenarios.sql.
 const ORDER = (n) => `/pedidos/a0000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
-await session("vendedor", [
-  ["/", ["P-015"]],
-  ["/pedidos", ["P-015", "P-016"]],
-  ["/clientes", ["Constructora Huancabamba Norte", "Agroindustrias Sullana Verde"]],
-  [ORDER(15), ["Pedido P-015", "Polo piqué con logo bordado", "Rosa Chunga", "Ítems"]],
-]);
-await session("vendedor2", [[ORDER(13), ["Pedido P-013", "Este cliente está en mora", "Luis Yarlequé"]], ["/clientes/22222222-2222-4222-8222-222222222222", ["Club Deportivo Tallán", "Persona"]]]);
+// D-014: en modo api la cartera del vendedor sigue sin definir; solo ve su sesión (Spring responde 403 a su cartera).
+await session("vendedor", [["/", ["Mi sesión", "pendiente de definir"]]]);
 await session("administracion", [
   ["/", []],
   ["/conciliacion", ["V-014", "V-013"]],
@@ -85,6 +80,8 @@ await session("administracion", [
   ["/cobranza?vista=mensajes", ["Bitácora de envíos", "Evolution API no confirmó"]],
   ["/cobranza?vista=alertas", ["Carmen Ramos"]],
   [`${ORDER(4)}?tab=pagos`, ["Pedido P-004", "Transferencia", "V-005", "Carmen Ramos"]],
+  // D-014: ADMIN decide el crédito; ve el aviso de mora del cliente.
+  [ORDER(13), ["Pedido P-013", "Este cliente está en mora", "Confirmar orden"]],
 ]);
 await session("gerencia", [
   ["/", ["Margen conjunto", "pedidos con costeo cerrado"]],

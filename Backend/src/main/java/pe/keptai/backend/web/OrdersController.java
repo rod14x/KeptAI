@@ -64,15 +64,15 @@ public class OrdersController {
 	}
 
 	@PostMapping(value = "/api/v1/orders/{order_id}/credit-decision", consumes = MediaType.APPLICATION_JSON_VALUE)
-	public CreditAuthorization submitCreditDecision(@PathVariable("order_id") String orderId, @RequestBody String body) {
+	public CreditAuthorization submitCreditDecision(@PathVariable("order_id") String orderId, @RequestBody String body, @org.springframework.web.bind.annotation.RequestHeader("Idempotency-Key") String key) {
 		CreditDecisionRequest req = requests.body(body, CreditDecisionRequest.class,
 				Set.of(CreditDecisionService.TERM_RULE_PROPERTY));
-		return credit.decide(uuid(orderId, "order_id"), req);
+		return credit.decide(uuid(orderId, "order_id"), req, key);
 	}
 
 	@PostMapping(value = "/api/v1/orders/{order_id}/dispatch", consumes = MediaType.APPLICATION_JSON_VALUE)
-	public Order dispatch(@PathVariable("order_id") String orderId, @RequestBody String body) {
-		return commands.dispatch(uuid(orderId, "order_id"), requests.body(body, DispatchRequest.class));
+	public Order dispatch(@PathVariable("order_id") String orderId, @RequestBody String body, @org.springframework.web.bind.annotation.RequestHeader("Idempotency-Key") String key) {
+		return commands.dispatch(uuid(orderId, "order_id"), requests.body(body, DispatchRequest.class), key);
 	}
 
 }

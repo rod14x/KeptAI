@@ -14,6 +14,11 @@ public class GlobalExceptionHandler {
 
 	private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+	@ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+	ResponseEntity<ApiError> handleMultipartLimit(org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+		return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(ApiError.of("PAYLOAD_TOO_LARGE", "Voucher demasiado grande"));
+	}
+
 	/** Body ausente o ilegible: no exponer fragmentos de JSON ni causas de Jackson. */
 	@ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
 	ResponseEntity<ApiError> handleUnreadableBody(org.springframework.http.converter.HttpMessageNotReadableException ex) {
@@ -52,7 +57,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(pe.keptai.backend.finanzas.MotorFinancieroException.class)
 	ResponseEntity<ApiError> handleMotor(pe.keptai.backend.finanzas.MotorFinancieroException ex) {
 		HttpStatus status = pe.keptai.backend.panel.PanelErrors.status(ex.codigo());
-		String message = status == HttpStatus.FORBIDDEN ? "Operación no autorizada para tu rol" : ex.getMessage();
+		String message = status == HttpStatus.FORBIDDEN ? "Operación no autorizada para tu rol" : "La operación financiera no cumple sus condiciones";
 		return ResponseEntity.status(status).body(ApiError.of(ex.codigo().name(), message));
 	}
 

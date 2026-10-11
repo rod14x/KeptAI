@@ -78,6 +78,19 @@ public final class ResultsDtos {
 			@JsonProperty("missing_cost_components") @NotNull @Size(max = 4) List<@NotNull CostComponent> missingCostComponents,
 			@JsonProperty("orders_count") @NotNull @Min(0) @Max(1_000_000) Integer ordersCount,
 			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("perceived_margin") @Valid Money perceivedMargin) {
+		public MarginRow(
+			@JsonProperty("group_key") @NotBlank @Size(max = 200) String groupKey,
+			@JsonProperty("group_id") UUID groupId,
+			@JsonProperty("production_mode") ProductionMode productionMode,
+			@JsonProperty("revenue") @NotNull @Valid NonNegativeMoney revenue,
+			@JsonProperty("total_cost") @Valid NonNegativeMoney totalCost,
+			@JsonProperty("margin") @Valid Money margin,
+			@JsonProperty("cost_status") @NotNull CostStatus costStatus,
+			@JsonProperty("missing_cost_components") @NotNull @Size(max = 4) List<@NotNull CostComponent> missingCostComponents,
+			@JsonProperty("orders_count") @NotNull @Min(0) @Max(1_000_000) Integer ordersCount) {
+			this(groupKey, groupId, productionMode, revenue, totalCost, margin, costStatus, missingCostComponents, ordersCount, null);
+		}
+
 
 		@JsonIgnore
 		@AssertTrue(message = "costos incompletos: total_cost y margin deben ser null y listar lo que falta")

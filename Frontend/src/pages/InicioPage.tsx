@@ -18,6 +18,11 @@ export function InicioPage() {
       <header>
         <h1 className="text-title font-extrabold">Mi sesión</h1>
         <p className="mt-1 text-[15px] text-muted">Tu identidad la resuelve el servidor con tu sesión de Supabase Auth (GET /api/v1/me).</p>
+        {person.role === "vendedor" && (
+          <p className="mt-3 rounded-xl bg-panel px-4 py-3 text-[13px] text-ink-soft ring-1 ring-line">
+            La cartera del vendedor está pendiente de definir (D-014): en esta etapa Administración revisa los pedidos y decide el crédito.
+          </p>
+        )}
       </header>
 
       <section aria-labelledby="identidad-titulo" className="rounded-[var(--radius-card)] bg-card p-6 ring-1 ring-line">

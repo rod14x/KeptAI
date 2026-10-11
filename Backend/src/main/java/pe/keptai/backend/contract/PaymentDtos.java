@@ -43,6 +43,15 @@ public final class PaymentDtos {
 			@JsonProperty("verified_at") @NotNull OffsetDateTime verifiedAt,
 			@JsonProperty("note") @Size(max = 500) String note,
 			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("verified_by_name") @Size(max = 200) String verifiedByName) {
+		public PaymentVerification(
+			@JsonProperty("method") @NotNull VerificationMethod method,
+			@JsonProperty("is_simulated") @NotNull Boolean simulated,
+			@JsonProperty("verified_by_user_id") @NotNull UUID verifiedByUserId,
+			@JsonProperty("verified_at") @NotNull OffsetDateTime verifiedAt,
+			@JsonProperty("note") @Size(max = 500) String note) {
+			this(method, simulated, verifiedByUserId, verifiedAt, note, null);
+		}
+
 
 		@JsonIgnore
 		@AssertTrue(message = "la verificacion simulada debe rotularse is_simulated=true y no puede ser otra")
@@ -76,6 +85,28 @@ public final class PaymentDtos {
 			@JsonProperty("data_origin") @NotNull DataOrigin dataOrigin,
 			@JsonProperty("created_at") @NotNull OffsetDateTime createdAt,
 			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("applications") @Size(max = 20) List<@Valid PaymentAllocation> applications) {
+		public Payment(
+			@JsonProperty("id") @NotNull UUID id,
+			@JsonProperty("display_code") @Pattern(regexp = OrderDtos.LABEL_REGEX) String displayCode,
+			@JsonProperty("phase") @NotNull PaymentPhase phase,
+			@JsonProperty("reconciliation_status") @NotNull ReconciliationStatus reconciliationStatus,
+			@JsonProperty("channel") @NotNull PaymentChannel channel,
+			@JsonProperty("operation_reference") @Size(max = 100) String operationReference,
+			@JsonProperty("payer_name") @Size(max = 200) String payerName,
+			@JsonProperty("paid_at") OffsetDateTime paidAt,
+			@JsonProperty("received_amount") @NotNull @Valid PositiveMoney receivedAmount,
+			@JsonProperty("verified_amount") @Valid NonNegativeMoney verifiedAmount,
+			@JsonProperty("applied_amount") @NotNull @Valid NonNegativeMoney appliedAmount,
+			@JsonProperty("unapplied_amount") @NotNull @Valid NonNegativeMoney unappliedAmount,
+			@JsonProperty("duplicate_of_payment_id") UUID duplicateOfPaymentId,
+			@JsonProperty("evidence_ids") @NotNull @Size(max = 20) List<@NotNull UUID> evidenceIds,
+			@JsonProperty("verification") @Valid PaymentVerification verification,
+			@JsonProperty("model_reported_confidence_permille") @Min(0) @Max(1000) Integer modelReportedConfidencePermille,
+			@JsonProperty("data_origin") @NotNull DataOrigin dataOrigin,
+			@JsonProperty("created_at") @NotNull OffsetDateTime createdAt) {
+			this(id, displayCode, phase, reconciliationStatus, channel, operationReference, payerName, paidAt, receivedAmount, verifiedAmount, appliedAmount, unappliedAmount, duplicateOfPaymentId, evidenceIds, verification, modelReportedConfidencePermille, dataOrigin, createdAt, null);
+		}
+
 
 		/** Forma de cada fase (no recalcula saldos): solo recibido sin verificar; solo verificado puede aplicarse. */
 		@JsonIgnore

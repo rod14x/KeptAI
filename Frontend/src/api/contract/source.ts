@@ -74,21 +74,23 @@ function cached<T>(key: string, load: () => Promise<T>): Promise<T> {
 // Roles que pueden leer cada recurso (AccessPolicy de Spring). Spring decide; aquí solo se evita pedir lo que el rol
 // no puede ver, para no generar un 403 en cada carga. Si /me falla, se intenta igual y el 403 se degrada.
 type ApiRole = S.UserContextT["role"];
+// D-014: la cartera del vendedor sigue sin definir (PanelContext responde 403 a VENDEDOR), así que no se le pide nada.
 const READS = {
+  orders: ["ADMIN", "GERENTE", "JEFE_TALLER"],
   payments: ["ADMIN", "GERENTE"],
   reconciliation: ["ADMIN"],
-  receivables: ["VENDEDOR", "ADMIN", "GERENTE"],
-  alerts: ["VENDEDOR", "ADMIN"],
-  credit: ["VENDEDOR", "ADMIN", "GERENTE"],
-  notifications: ["VENDEDOR", "ADMIN", "GERENTE"],
-  drafts: ["VENDEDOR", "ADMIN"],
+  receivables: ["ADMIN", "GERENTE"],
+  alerts: ["ADMIN"],
+  credit: ["ADMIN", "GERENTE"],
+  notifications: ["ADMIN", "GERENTE"],
+  drafts: ["ADMIN"],
   results: ["GERENTE"],
   audit: ["ADMIN", "GERENTE"],
 } satisfies Record<string, ApiRole[]>;
 type Read = keyof typeof READS;
 
-/** MIG-06: Spring todavía no expone /drafts (responde 404). Pasar a true cuando exista el endpoint. */
-const DRAFTS_IN_SPRING = false;
+/** Revisión de borradores (D-013): implementada en Spring para ADMIN. */
+const DRAFTS_IN_SPRING = true;
 
 const loadMe = () => cached("me", () => endpoints.getMyContext());
 
@@ -100,7 +102,7 @@ async function readIf<T>(what: Read, load: () => Promise<T>, fallback: T): Promi
   return (await canRead(what)) ? soft(load(), fallback) : fallback;
 }
 
-const loadOrders = () => cached("orders", () => all.orders());
+const loadOrders = () => cached("orders", () => readIf("orders", () => all.orders(), [] as S.OrderT[]));
 const loadReceivables = () => cached("receivables", () => readIf("receivables", () => all.receivables(), [] as S.ReceivableT[]));
 const loadPayments = () => cached("payments", () => readIf("payments", () => all.payments(), [] as S.PaymentT[]));
 const loadAlerts = () => cached("alerts", () => readIf("alerts", () => all.alerts(), [] as S.CollectionAlertT[]));
@@ -692,6 +694,7 @@ export const apiSource: DataSource = {
     retryMessages: false,
     editPaymentFields: false,
     markDuplicate: true,
+    applyBySameVerifier: false,
     discardPayment: false,
     manualOrderCapture: false,
     voucherNeedsFile: true,
@@ -960,12 +963,13 @@ export const apiSource: DataSource = {
   async getEvidence(id) {
     const p = await soft(endpoints.getPayment(id), null);
     if (!p) return null;
-    const [rec, link, payments, ctx] = await Promise.all([
+    const [rec, link, payments, ctx, me] = await Promise.all([
       // La clasificación y los candidatos solo cambian mientras el pago no está aplicado.
       p.phase !== "applied" ? readIf("reconciliation", () => endpoints.getReconciliationCandidates(id), null) : Promise.resolve(null),
       p.evidence_ids[0] ? soft(endpoints.getEvidenceDownloadLink(p.evidence_ids[0]), null) : Promise.resolve(null),
       loadPayments(),
       context(),
+      soft(loadMe(), null),
     ]);
     const ev = paymentToEvidence(p);
     const candidates = (rec?.candidates ?? []).filter((c) => c.balance.amount_cents > 0);
@@ -1002,6 +1006,7 @@ export const apiSource: DataSource = {
       duplicateOfId: p.duplicate_of_payment_id ?? original?.id ?? null,
       duplicateOfRef: original?.display_code ?? null,
       duplicateMarked: p.reconciliation_status === "duplicate",
+      verifiedByMe: !!me && p.verification?.verified_by_user_id === me.user_id,
       order: orderId
         ? {
             id: orderId,

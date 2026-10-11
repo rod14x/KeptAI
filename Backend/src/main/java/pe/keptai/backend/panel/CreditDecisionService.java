@@ -14,19 +14,7 @@ import pe.keptai.backend.contract.ReceivableDtos.CreditDecisionRequest;
 import pe.keptai.backend.tenancy.TenantIdentity;
 import pe.keptai.backend.web.RequestIdFilter;
 
-/**
- * POST /orders/{id}/credit-decision (D-005): el vendedor decide cómo se cobra el pedido; la mora avisa, no bloquea.
- * <ul>
- * <li>{@code approved} con {@code credit_term_days}: CREDITO (o ANTICIPO si además trae {@code advance_pct_bps} &gt; 0).
- * La aprobación queda en {@code aprobacion_credito}; con crédito puro la orden pasa a LIBERADA (gate V5).</li>
- * <li>{@code approved} sin plazo: CONTADO. No es una aprobación de crédito ({@code ck_decision_plazo} exige plazo), así
- * que no se inserta en {@code aprobacion_credito}; la orden queda RETENIDA hasta cobrarse completa.</li>
- * <li>ANTICIPO también queda RETENIDA hasta aplicar el anticipo (lo libera {@link PaymentCommands}).</li>
- * <li>{@code rejected}: aprobación RECHAZADO y orden CANCELADA.</li>
- * </ul>
- * La obligación de cobro la crea {@code keptai_private.crear_obligacion_orden} (V11) por el total, sin vencimiento hasta
- * el acta de despacho. Autor = usuario del JWT (trigger de autoría V7); historial en {@code evento_auditoria}.
- */
+/** D-014: ADMIN decide el crédito durante el MVP; mora informativa, autoría real y obligación atómica. */
 @Service
 public class CreditDecisionService {
 
@@ -42,7 +30,24 @@ public class CreditDecisionService {
 		this.queries = queries;
 	}
 
-	public CreditAuthorization decide(UUID orderId, CreditDecisionRequest req) {
+	public CreditAuthorization decide(UUID orderId, CreditDecisionRequest req, String key) {
+        if(key==null || !key.matches("[A-Za-z0-9._:-]{8,128}")) throw PanelException.badRequest("Falta Idempotency-Key válida");
+        return panel.write(() -> {
+            if(!"ADMIN".equals(panel.jdbc().queryForObject("SELECT keptai_private.actor_actual()",String.class)))
+                throw PanelException.forbidden("Solo ADMIN decide el crédito durante el MVP");
+            var json=pe.keptai.backend.contract.ContractJson.newMapper();
+            var store=new pe.keptai.backend.n8n.IdempotencyStore(panel.jdbc());
+            String hash=pe.keptai.backend.security.ApiKeyAuthenticationFilter.sha256(panel.identity().usuarioId()+":"+orderId+":"+json.writeValueAsString(req));
+            var reserved=store.reservar("PANEL_CREDITO",key,hash);
+            if(reserved.resultado()==pe.keptai.backend.n8n.IdempotencyStore.Resultado.CONFLICTO)
+                throw new PanelException(org.springframework.http.HttpStatus.CONFLICT,"IDEMPOTENCY_CONFLICT","La clave ya se usó con otro contenido o autor");
+            if(reserved.resultado()==pe.keptai.backend.n8n.IdempotencyStore.Resultado.REPETIDA)
+                return json.readValue(reserved.respuestaJson(),CreditAuthorization.class);
+            CreditAuthorization result=decideInTransaction(orderId,req);
+            store.completar("PANEL_CREDITO",key,json.writeValueAsString(result));return result;
+        });
+    }
+    private CreditAuthorization decideInTransaction(UUID orderId, CreditDecisionRequest req) {
 		TenantIdentity actor = panel.identity();
 		return panel.write(() -> {
 			var jdbc = panel.jdbc();
@@ -64,10 +69,6 @@ public class CreditDecisionService {
 			if (!"PENDIENTE_APROBACION".equals(o.get("estado"))) {
 				throw PanelException.conflict("Solo se decide una orden pendiente de aprobación");
 			}
-			UUID vendedor = (UUID) o.get("vendedor_id");
-			if (vendedor != null && !vendedor.equals(actor.usuarioId())) {
-				throw PanelException.forbidden("Solo el vendedor asignado decide el crédito de esta orden");
-			}
 			BigDecimal vencido = (BigDecimal) o.get("vencido");
 			boolean mora = vencido != null && vencido.signum() > 0;
 			if (mora && !Boolean.TRUE.equals(req.arrearsNoticeAcknowledged())) {
@@ -81,8 +82,8 @@ public class CreditDecisionService {
 			if (req.decision() == CreditDecisionValue.REJECTED) {
 				upsertDecision(orderId, actor.usuarioId(), "RECHAZADO", mora, vencido, req.creditTermDays(), null, motivo);
 				jdbc.update("""
-						UPDATE keptai.orden SET estado = 'CANCELADA', vendedor_id = coalesce(vendedor_id, ?),
-						       actualizado_en = now(), version = version + 1 WHERE id = ?""", actor.usuarioId(), orderId);
+						UPDATE keptai.orden SET estado = 'CANCELADA',
+						       actualizado_en = now(), version = version + 1 WHERE id = ?""", orderId);
 				audit(actor, "CREDITO_RECHAZADO", orderId, Map.of("motivo", motivo == null ? "" : motivo), requestId);
 				return queries.creditDecisionInTx(orderId);
 			}
@@ -98,8 +99,8 @@ public class CreditDecisionService {
 					: BigDecimal.ZERO;
 			jdbc.update("""
 					UPDATE keptai.orden SET condicion_pago = ?, plazo_dias = ?, anticipo_requerido = ?,
-					       vendedor_id = coalesce(vendedor_id, ?), actualizado_en = now(), version = version + 1
-					 WHERE id = ?""", condicion, plazo, anticipo, actor.usuarioId(), orderId);
+					       actualizado_en = now(), version = version + 1
+					 WHERE id = ?""", condicion, plazo, anticipo, orderId);
 			if ("CONTADO".equals(condicion)) {
 				jdbc.update("""
 						UPDATE keptai.orden SET estado = 'RETENIDA', actualizado_en = now(), version = version + 1
@@ -148,19 +149,14 @@ public class CreditDecisionService {
 	}
 
 	private void audit(TenantIdentity actor, String operacion, UUID orderId, Map<String, String> cambios, String requestId) {
-		StringBuilder json = new StringBuilder("{");
-		cambios.forEach((k, v) -> {
-			if (json.length() > 1) {
-				json.append(',');
-			}
-			json.append('"').append(k).append("\":\"").append(v.replace("\\", "\\\\").replace("\"", "\\\"")).append('"');
-		});
-		json.append('}');
+        String json;
+        try { json=pe.keptai.backend.contract.ContractJson.newMapper().writeValueAsString(cambios); }
+        catch(Exception e) { throw new IllegalStateException("No se pudo serializar auditoría"); }
 		panel.jdbc().update("""
 				INSERT INTO keptai.evento_auditoria (organizacion_id, usuario_id, actor, operacion, entidad, entidad_id,
 				       cambios, request_id)
 				VALUES (keptai.app_organizacion_actual(), ?, 'USUARIO', ?, 'orden', ?, CAST(? AS jsonb), ?)""",
-				actor.usuarioId(), operacion, orderId, json.toString(), requestId);
+				actor.usuarioId(), operacion, orderId, json, requestId);
 	}
 
 }

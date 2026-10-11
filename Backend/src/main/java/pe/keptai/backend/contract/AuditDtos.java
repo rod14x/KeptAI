@@ -38,6 +38,19 @@ public final class AuditDtos {
 			@JsonProperty("request_id") String requestId,
 			@JsonProperty("changes") @NotNull @Size(max = 50) List<@Valid AuditChange> changes,
 			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("actor_name") @Size(max = 200) String actorName) {
+		public AuditEvent(
+			@JsonProperty("id") @NotNull UUID id,
+			@JsonProperty("occurred_at") @NotNull OffsetDateTime occurredAt,
+			@JsonProperty("actor") @NotNull AuditActor actor,
+			@JsonProperty("actor_user_id") UUID actorUserId,
+			@JsonProperty("operation") @NotNull @Pattern(regexp = "[A-Z][A-Z0-9_]*") @Size(max = 80) String operation,
+			@JsonProperty("entity_type") @NotNull @Pattern(regexp = "[a-z][a-z0-9_]*") @Size(max = 60) String entityType,
+			@JsonProperty("entity_id") @NotNull UUID entityId,
+			@JsonProperty("request_id") String requestId,
+			@JsonProperty("changes") @NotNull @Size(max = 50) List<@Valid AuditChange> changes) {
+			this(id, occurredAt, actor, actorUserId, operation, entityType, entityId, requestId, changes, null);
+		}
+
 
 		/** evento_auditoria.usuario_id es nulo cuando actua el sistema (n8n, scheduler); un usuario siempre se identifica. */
 		@JsonIgnore

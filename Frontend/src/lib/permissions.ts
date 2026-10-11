@@ -1,4 +1,5 @@
 import type { Role } from "../api/model";
+import { IS_MOCK } from "../config";
 
 // Matriz de permisos alineada con los "Roles propuestos" de Backend/docs/contrato-api.md.
 // Spring es quien autoriza (y RLS V4 aísla por organización); la UI solo oculta o explica.
@@ -49,8 +50,16 @@ const MATRIX: Record<Role, Permission[]> = {
   jefe_taller: ["registrar_despacho", "cambiar_vista"],
 };
 
+// Modo api: decisiones vigentes del backend. D-014: ADMIN autoriza el crédito durante el MVP y la cartera del vendedor
+// sigue sin definir (Spring responde 403 a sus lecturas del panel), así que el vendedor solo ve su sesión.
+const API_MATRIX: Record<Role, Permission[]> = {
+  ...MATRIX,
+  vendedor: [],
+  administracion: [...MATRIX.administracion, "aprobar_credito"],
+};
+
 export function can(role: Role | undefined, permission: Permission) {
-  return role ? MATRIX[role].includes(permission) : false;
+  return role ? (IS_MOCK ? MATRIX : API_MATRIX)[role].includes(permission) : false;
 }
 
 export const ROLES: Role[] = ["vendedor", "administracion", "gerencia", "jefe_taller"];

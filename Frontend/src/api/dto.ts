@@ -36,6 +36,8 @@ export type Capabilities = {
   editPaymentFields: boolean;
   /** Marcar un pago como duplicado de otro (API: POST /payments/{id}/duplicate). */
   markDuplicate: boolean;
+  /** La misma persona puede verificar y aplicar un pago (demo). En la API, D-012 exige dos ADMIN distintos. */
+  applyBySameVerifier: boolean;
   /** Descartar un pago: sin endpoint en el contrato. */
   discardPayment: boolean;
   /** Alta manual de pedidos: createTextEvidence está fuera del MVP. */
@@ -243,6 +245,8 @@ export type EvidenceDetailDTO = {
   duplicateOfRef: string | null;
   /** Ya quedó marcado como duplicado (en revisión, sin descontar); false si solo se detectó. */
   duplicateMarked: boolean;
+  /** Lo verificó el usuario actual (D-012: otro ADMIN debe aplicarlo). */
+  verifiedByMe: boolean;
   order: { id: string; ref: string; customer: string; line: string | null; saleCents: number | null; balanceCents: number; daysToDue: number | null; dueDate: string | null; seller: string | null } | null;
   missing: string[];
   /** Órdenes con saldo para vincular (mock) o candidatos de conciliación (API). */
