@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "0b6ac4e14489661c5d03949046ac98b7d61917fe",
+  "source_head_at_generation": "02104b0286c21a9310a51ed7c32b4e2082519f81",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -11,7 +11,8 @@
   ],
   "source_changes_at_generation": [
     "M cerebro/conocimientos/desarrollo/miguel/estado.md",
-    " M cerebro/conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md"
+    " M cerebro/conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md",
+    " M cerebro/conocimientos/desarrollo/miguel/plan-continuacion-backend-integrado.md"
   ],
   "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
   "interview_ids": [
@@ -112,8 +113,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/estado.md",
-      "bytes": 89002,
-      "sha256": "f0d63bf19728363487530adaa7a256437aa870b7e36e3151830bc989416c2f84"
+      "bytes": 91199,
+      "sha256": "931af42ca7fb3d6c342eb01fae1366e26ca9c253599919f715d229c1f4389362"
     },
     {
       "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
@@ -122,13 +123,13 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md",
-      "bytes": 16421,
-      "sha256": "e20583033512fc6e62d93d442f36e0bc6b36a80e21d2555a33c01f4335b5dbd2"
+      "bytes": 17142,
+      "sha256": "249dd4c34694bb3ee366bed7a28eca01081c19cfab28b4e93016fa7c91be91f2"
     },
     {
       "path": "conocimientos/desarrollo/miguel/plan-continuacion-backend-integrado.md",
-      "bytes": 3901,
-      "sha256": "45784eb63231703ee80f1c99a2d469ff862159e0329d76a84a2758bbbf8e9abf"
+      "bytes": 4378,
+      "sha256": "8a42f4a2a615ed8d3003c5645744de22a514061d337d4cd1449d51faa2b0679e"
     },
     {
       "path": "conocimientos/desarrollo/miguel/plan-implementacion.md",
@@ -596,9 +597,9 @@
     },
     {
       "path": "Backend/docs/prueba-auth-real-local.md",
-      "bytes": 5274,
-      "sha256": "28930a8969f488e67921c4c5282bd43046f521a14b46cd6da0cc7f884ce8ab14",
-      "source_sha256": "28930a8969f488e67921c4c5282bd43046f521a14b46cd6da0cc7f884ce8ab14",
+      "bytes": 7484,
+      "sha256": "458f0694fab77541ac8ddcee993a4f58a132800a6ec903c3c4c52d23c9088be4",
+      "source_sha256": "458f0694fab77541ac8ddcee993a4f58a132800a6ec903c3c4c52d23c9088be4",
       "sanitized": false
     },
     {

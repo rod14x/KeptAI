@@ -112,3 +112,7 @@ Siguiente entrega acotada: AUTH-FE-03. En modo api, el inicio y la navegación s
 106 tests, build OK y e2e api 31/31 con fixtures. Reintentar accesible tras fallo temporal sin Escape. Configuración local de Supabase ya existe y es coherente (URL/issuer/JWKS); no repetir el montaje de env ni exigir MCP.
 Pendiente real: cuenta Auth probada y membresía PostgreSQL local, que actualmente tiene 0 organizaciones y 0 usuarios. Continuar AUTH-FE-01/04 y MIG-03-E; no activar api todavía por la mera existencia de claves.
 Se puede preparar la integración de código con Andrés en una rama revisable cuando Miguel indique rama/commit/alcance; el merge por sí solo no cierra la conexión real ni habilita módulos de negocio.
+
+
+### Aceptación real local (11/10/2026)
+Supabase Auth remoto + Spring8081 + Vite5174 api + PostgreSQL5433: sin membresía7/7; tras alta local autorizada (Liliana, Corpotex, ADMIN), con membresía15/15. JWT real, /me403 y200, identidad exacta, recarga, módulo bloqueado y logout probados sin fixtures. Credenciales ignoradas por Git. npm test106 y build OK; observador e2e corregido para esperar cabeceras y signOut diferido. Servidores8080/5173 conservados; frontend habitual sigue mock. Cuenta/membresía ya no son bloqueo. Renovación real del token,409/otros roles/fallo real de infraestructura siguen pendientes; no cerrar VAL-03 ni módulos de negocio. Detalle Backend/docs/prueba-auth-real-local.md y estado.md.

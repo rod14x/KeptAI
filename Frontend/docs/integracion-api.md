@@ -155,3 +155,7 @@ npm test: 89 pruebas sin fallos (43 contrato + 39 sesión + 7 adaptador). npm ru
 ### Revisión AUTH-FE-03 (11/10/2026)
 Pruebas finales: 106 tests, build OK, e2e api 31/31 con fixtures en Chrome. Se cierra automáticamente el diálogo ante fallo reintentable en api para acceder al aviso sin Escape. El e2e espera la animación y prueba el botón directamente.
 Configuración Supabase local existente/coherente y JWKS público accesible, pero el modo sigue mock y PostgreSQL local no tiene organizaciones ni usuarios. Auth real, membresía y recorrido contra Spring real siguen pendientes. No confundir claves configuradas con login o Storage operativo.
+
+
+### Aceptación real local (11/10/2026)
+Supabase Auth remoto + Spring8081 + Vite5174 api + PostgreSQL5433: sin membresía7/7; tras alta local autorizada (Liliana, Corpotex, ADMIN), con membresía15/15. JWT real, /me403 y200, identidad exacta, recarga, módulo bloqueado y logout probados sin fixtures. Credenciales ignoradas por Git. npm test106 y build OK; observador e2e corregido para esperar cabeceras y signOut diferido. Servidores8080/5173 conservados; frontend habitual sigue mock. Cuenta/membresía ya no son bloqueo. Renovación real del token,409/otros roles/fallo real de infraestructura siguen pendientes; no cerrar VAL-03 ni módulos de negocio. Detalle Backend/docs/prueba-auth-real-local.md y estado.md.

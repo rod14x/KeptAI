@@ -101,9 +101,16 @@ const consoleErrors = [];
 page.on("pageerror", (e) => consoleErrors.push(String(e)));
 page.on("console", (m) => m.type() === "error" && !/Failed to load resource/.test(m.text()) && consoleErrors.push(m.text()));
 const apiCalls = [];
-page.on("request", async (req) => {
+const headerReads = [];
+page.on("request", (req) => {
   const u = new URL(req.url());
-  if (u.origin === API) apiCalls.push({ method: req.method(), path: u.pathname, bearer: Boolean((await req.allHeaders()).authorization?.startsWith("Bearer ")), status: null, req });
+  if (u.origin !== API) return;
+  // Registrar antes de esperar las cabeceras: response puede llegar durante allHeaders().
+  const call = { method: req.method(), path: u.pathname, bearer: false, status: null, req };
+  apiCalls.push(call);
+  headerReads.push(req.allHeaders().then((headers) => {
+    call.bearer = Boolean(headers.authorization?.startsWith("Bearer "));
+  }));
 });
 page.on("response", (res) => {
   const c = apiCalls.find((x) => x.req === res.request());
@@ -136,6 +143,9 @@ if (PHASE === "sin-membresia") {
   await openLogin();
   await submit(cfg.E2E_EMAIL, cfg.E2E_PASSWORD);
   await page.waitForSelector("text=no tiene un rol asignado", { timeout: 25000 }).catch(() => {});
+  // La interfaz informa el rechazo antes de que signOut diferido borre la sesión.
+  await page.waitForFunction(() => !Object.keys(localStorage).some((k) => k.includes("auth-token")), undefined, { timeout: 10000 }).catch(() => {});
+  await Promise.all(headerReads);
   const t = await body();
   const me = apiCalls.filter((c) => c.path === "/api/v1/me");
   check(2, "login real válido pero sin membresía local: /me responde 403", me.length >= 1 && me.every((c) => c.status === 403 && c.bearer), JSON.stringify(me.map((c) => [c.status, c.bearer])));
@@ -145,6 +155,7 @@ if (PHASE === "sin-membresia") {
   await openLogin();
   await submit(cfg.E2E_EMAIL, cfg.E2E_PASSWORD);
   await page.waitForSelector('[data-testid="inicio-identidad"]', { timeout: 25000 }).catch(() => {});
+  await Promise.all(headerReads);
   let t = await body();
   const ok = await page.locator('[data-testid="inicio-identidad"]').count();
   check(2, "login real y /me 200: aparece el inicio de identidad en /", ok === 1 && new URL(page.url()).pathname === "/");
@@ -172,6 +183,7 @@ if (PHASE === "sin-membresia") {
   await page.getByRole("button", { name: /Menú de/ }).click();
   await page.getByRole("menuitem", { name: "Cerrar sesión" }).click();
   await page.waitForURL(/login/, { timeout: 15000 }).catch(() => {});
+  await page.waitForFunction(() => !Object.keys(localStorage).some((k) => k.includes("auth-token")), undefined, { timeout: 10000 }).catch(() => {});
   check(4, "logout: vuelve al acceso y no queda sesión de Supabase", new URL(page.url()).pathname === "/login" && !(await hasSupabaseSession()));
   await page.goto(`${WEB}/`);
   await page.waitForURL(/login/, { timeout: 15000 }).catch(() => {});

@@ -21,3 +21,7 @@ No aplicar automáticamente V8/V9 o seed a una base activa, ni reiniciar proceso
 
 ## Flujo con Claude
 Una entrega delimitada por vez, leer skill/AGENTS y estado vigente, conservar fuentes y propiedad del motor de Andrés. Claude entrega diff/evidencia sin commit/push; Codex revisa y publica cuando lo autoriza Miguel. Fixtures y resultados reales separados. Si faltan datos Auth/membresía, preparar procedimiento parametrizado y pedir solo los datos indispensables; nunca imprimir claves o tokens.
+
+
+## Avance11/10/2026: primer recorrido real completado
+Aceptación básica de etapa1 acreditada: sin-membresia7/7 y con-membresia15/15 (ADMIN de Corpotex), Auth remoto y Spring/PostgreSQL locales reales. Provisión aprobada realizada. Renovación real del token,409/otros roles/infraestructura real pendientes como cobertura ampliada; no confundir con VAL-03 completo. Continuar etapa2 MIG-03-D3, conservando servidores habituales y separación mock/api. Evidencia estado.md.
