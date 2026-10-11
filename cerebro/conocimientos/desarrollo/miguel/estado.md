@@ -235,3 +235,16 @@ MIG-03-A completa dentro de su alcance: propiedades, CORS y matriz; JWT/API key/
 - Entrega: `MotorCostos` y `ResultadosCostos`. Registrar costo (moneda de la orden), asignar costo a ítem (manual), repartir costos REAL por UNIDADES o VALOR_VENTA (centavos por mayor residuo, determinista), registrar y anular cargo interno, y cerrar costeo REAL/TEORICO con avisos (faltantes, asignación). Todo auditado y registrado por autoconfiguración. Doc: sección en `Backend/docs/motor-pagos.md`.
 - Verificación: `MotorCostosTests` 5/5 (100/3 → 33.34/33.33/33.33; por valor 16.67/33.33/50.00; límites, ítem de otra orden, cargo único activo, cierre y reapertura, roles). Suite completa **206 tests, 0 fallos**.
 - Límite conocido: el cierre del costeo solo lo hace ADMIN, porque JEFE_TALLER no escribe la orden por RLS (V7).
+
+## AND-QA-001 — Semilla en Supabase, recorrido integrado y evidencia D-009 (11/10/2026, Andrés)
+
+- Commit `f4f9958` (MotorCostos) publicado.
+- Semilla demo cargada en Supabase con `execute_sql` en 4 transacciones. Con cargas de 10 KB o más, el MCP devuelve `Invalid or expired requestState` sin aplicar nada (verificado en cada intento). Cifras verificadas en el remoto: P-001 PAGADA y P-002 MORA con saldo 400; cobrado 400, saldo 400; margen −40/150; 4 asignaciones por 690; cargo interno 320; V-003 duplicado. Los `auth_user_id` siguen siendo marcadores: reemplazarlos al crear los usuarios en Supabase Auth.
+- `RecorridoDemoTests` (roadmap B7, motores): P-040 completo con costos por etapa, despacho (vence 31/10), reparto por valor, cargo interno, cierre, voucher verificado y aplicado parcial (saldo 350), duplicado, job de cobranza idempotente, márgenes por línea, centro productivo (−20/220/200), resumen (1400/650/750/1090/310), CSV, caja sin doble conteo, anulación y reaplicación, aislamiento y 10 operaciones auditadas.
+- `BD/validaciones-pre-supabase.md`: evidencia de VAL-01..06 actualizada (local vs. Supabase). Ninguna está cerrada en el destino.
+- Suite completa **207 tests, 0 fallos**.
+- Lo que sigue depende de otros o de credenciales:
+  - MIG-03/05/07 (Miguel): JWT, contexto, endpoints, idempotencia y montos con signo;
+  - crear `keptai_app` en Supabase (requiere contraseña: `BD/supabase/deploy.sh runtime`, hoy en un stash de GitHub Desktop);
+  - usuarios de Supabase Auth;
+  - n8n, despliegue Render/Cloudflare y aceptación por UI.
