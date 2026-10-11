@@ -18,6 +18,10 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       PORT: "8080"
+      VIRTUAL_HOST: keptai.ejesxyz.com
+      VIRTUAL_PORT: "8080"
+      LETSENCRYPT_HOST: keptai.ejesxyz.com
+      LETSENCRYPT_EMAIL: isa.pasco01@gmail.com
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:?Configurar JDBC de destino}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:?Configurar login runtime}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:?Configurar password runtime}
