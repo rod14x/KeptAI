@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "bea047883eb62cabc397cf1175297c75c5cb4f4f",
+  "source_head_at_generation": "8865518232e40237b299646314a05d483ac546d1",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -12,8 +12,7 @@
   "source_changes_at_generation": [
     "M cerebro/conocimientos/INDICE.md",
     " M cerebro/conocimientos/desarrollo/miguel/estado.md",
-    " M cerebro/conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md",
-    "?? cerebro/conocimientos/desarrollo/miguel/plan-mig-03-c.md"
+    "?? cerebro/conocimientos/desarrollo/miguel/plan-mig-03-d.md"
   ],
   "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
   "interview_ids": [
@@ -64,8 +63,8 @@
   "files": [
     {
       "path": "conocimientos/INDICE.md",
-      "bytes": 6944,
-      "sha256": "54b2c734c095cd4234d531f1ea5a1dacdcaaaaeaecb55cdb852d57a06e435900"
+      "bytes": 7097,
+      "sha256": "ed2d2a4a52644429f66f34156bb8b81ac4e8bbc2668c7fd39eb2b346911a558f"
     },
     {
       "path": "conocimientos/decisiones/actores-flujos-y-der-mvp.md",
@@ -114,8 +113,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/estado.md",
-      "bytes": 47671,
-      "sha256": "e487e6d7db0524e15846fd41a7cf1ce389f2eaf6dbb4fc37674a00574b434f9b"
+      "bytes": 51899,
+      "sha256": "40c149a6032bd57ea8cefe2865aee7981b863dfd1de5ce3881b8e3eeffedbd04"
     },
     {
       "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
@@ -136,6 +135,11 @@
       "path": "conocimientos/desarrollo/miguel/plan-mig-03-c.md",
       "bytes": 6491,
       "sha256": "0dee647fdb1e61dc56ebd1f0b0ecb178ff4a4f4093b667a8af7d496d296baa25"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/plan-mig-03-d.md",
+      "bytes": 7140,
+      "sha256": "850707b46b8a4cb89427b9419170edae26da67dfc334095f482a1262a32de489"
     },
     {
       "path": "conocimientos/desarrollo/miguel/preparacion-supabase-rls.md",
@@ -505,9 +509,9 @@
     },
     {
       "path": "Backend/docs/matriz-acceso.md",
-      "bytes": 12795,
-      "sha256": "a87b19a35d8ae36c4156a69da2fee0eb6a846f8db40a5cf79e58b2b98a0910d9",
-      "source_sha256": "a87b19a35d8ae36c4156a69da2fee0eb6a846f8db40a5cf79e58b2b98a0910d9",
+      "bytes": 14539,
+      "sha256": "55a801e779ab13689f8dc125e3fcdb9d20b7e47ae8da26ab75ee8109e4c6ad1f",
+      "source_sha256": "55a801e779ab13689f8dc125e3fcdb9d20b7e47ae8da26ab75ee8109e4c6ad1f",
       "sanitized": false
     },
     {

@@ -27,6 +27,10 @@ Estas instrucciones aplican a este repositorio KeptAI: cerebro/ conserva conocim
 
 ## Resumen vigente de Miguel
 
+- Revision Codex MIG-03-C 11/10/2026:192 tests verify sin fallos/errores/omitidos; contexto usuario/REQUIRED revisado. Servicios8080/5173 responden200 y5433 accesible, sin reinicio. Siguiente solo D1 de plan-mig-03-d.md: API key/principal/contexto servicio; despues D2 rutas y D3 webhooks. Auth real, frontend, Storage y motor pendientes. No afirmar soporte REQUIRES_NEW ni VAL-03 completa.
+
+- MIG-03-C completada (11/10/2026): tenancy/TenantTransaction+TenantContext fijan app.organizacion_id y app.usuario_id (fila usuario, no sub) con set_config(...,true) en la misma transaccion/conexion; servicio_id vacio; solo usuario SINGLE, resolver_usuario sigue como bootstrap. 10 tests PostgreSQL desechable con login runtime y pool=1 (aislamiento, commit/rollback, transaccion unida); verify via sg docker: 192 tests, 0 fallos. Sin V1-V7/RLS/frontend/servicios/Storage/motor. Pendiente: MIG-03-D (servicios y roles por ruta), Auth real, AUTH-FE-01..04.
+
 - Verificacion Codex 11/10/2026: ./mvnw -o verify con sg docker y JDK Linux dio182 tests, cero fallos/errores/omitidos. Fallo Docker de auditoria Claude fue de esa sesion.
 
 - Auditoria contrastada 11/10/2026: siguiente MIG-03-C segun plan-mig-03-c.md. Correccion H1: INSERT de pago/comprobante ya admite INGESTA con limites; no abrir RLS por ese supuesto. JwtMembershipIntegrationTests ya usa login runtime real; falta contexto negocio/pool/rollback. MCP personal descartado; AUTH-FE/servicios/Storage/motor siguen pendientes.

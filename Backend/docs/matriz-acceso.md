@@ -1,6 +1,6 @@
 # Matriz de acceso — MIG-03-A
 
-Fecha: 10/10/2026. Rama backend-migueltarea2y3. Estado: matriz y configuración (MIG-03-A) más **validación de JWT y `GET /api/v1/me` (MIG-03-B, probados con JWKS de prueba y PostgreSQL real; Auth real pendiente)**. Sin JWT configurado todo responde 401 salvo `/actuator/health/**`. Siguen sin implementar: `X-Api-Key` (MIG-03-D), contexto JDBC por transacción (MIG-03-C) y los demás endpoints. Fuentes: `BD/migrations/V4` y `V7` (D-010), `BD/definicion-base-datos.md`, `BD/revision-sql-rls.md`, `contrato-api.md`, `openapi.yaml`, `alineacion-bd-n8n.md`. Las filas marcadas *propuesta* no son aprobaciones del equipo.
+Fecha: 10/10/2026. Rama backend-migueltarea2y3. Estado: matriz y configuración (MIG-03-A) más **validación de JWT y `GET /api/v1/me` (MIG-03-B, probados con JWKS de prueba y PostgreSQL real; Auth real pendiente)**. Sin JWT configurado todo responde 401 salvo `/actuator/health/**`. **Contexto JDBC transaccional de usuario (MIG-03-C, §6.2) implementado y probado con PostgreSQL desechable.** Siguen sin implementar: `X-Api-Key` (MIG-03-D) y los demás endpoints. Fuentes: `BD/migrations/V4` y `V7` (D-010), `BD/definicion-base-datos.md`, `BD/revision-sql-rls.md`, `contrato-api.md`, `openapi.yaml`, `alineacion-bd-n8n.md`. Las filas marcadas *propuesta* no son aprobaciones del equipo.
 
 ## 1. Tres credenciales distintas (una por operación)
 
@@ -89,5 +89,13 @@ INGESTA lee en V7: hoja_resumen, cliente, canal_whatsapp, envio_notificacion, or
 - `/api/v1/**` del panel exige una única membresía resuelta; el control por rol y recurso llega en MIG-03-D.
 - Límite del modelo: V1–V7 no tienen estado «inactivo» para `organizacion` (solo `usuario.activo`); una organización inactiva no es representable y no se inventó.
 
+## 6.2 MIG-03-C — contexto JDBC transaccional (usuarios del panel)
+Paquete `pe.keptai.backend.tenancy`. **Frontera única:** `TenantTransaction.execute/executeReadOnly(Supplier)`, que usa el `PlatformTransactionManager` de la aplicación (JpaTransactionManager con JPA; JDBC y EntityManager comparten conexión) con propagación REQUIRED: se une a una transacción existente o abre una, fija el contexto como primera acción y solo después ejecuta el trabajo. `TenantContext.apply()` ejecuta `set_config('app.organizacion_id', …, true)`, `set_config('app.usuario_id', …, true)` y `set_config('app.servicio_id', '', true)` (equivalente a SET LOCAL: expira en commit y rollback) sobre la conexión vinculada a la transacción; sin transacción real, o con conexión no vinculada, falla.
+- La identidad sale solo de `KeptaiAuthentication` SINGLE (`Membership`): `usuario_id` es la fila de `keptai.usuario`, **no** el `sub` de Auth; roles de servicio y NONE/MULTIPLE/anónimo fallan cerrado (`TenantContextException`) antes de cualquier consulta. El rol no se fija: PostgreSQL lo lee de la fila del usuario (`actor_actual`).
+- Una segunda identidad en la misma transacción se rechaza (queda rollback-only). Reaplicar la misma es idempotente. `requireApplied()` es la guardia para futuros repositorios.
+- `resolver_usuario(sub)` sigue siendo el bootstrap previo al contexto (JdbcMembershipResolver, sin cambios).
+- Uso futuro: los servicios de negocio llaman a `tenant.execute(() -> repositorio…)`; no usar conexiones directas del pool, REQUIRES_NEW ni SET de sesión.
+- Alcance: solo usuarios del panel. Contexto de servicio (`app.servicio_id`, INGESTA/SCHEDULER) queda para MIG-03-D.
+
 ## 7. Qué no cubre esta entrega
-Contexto JDBC (`SET LOCAL`, MIG-03-C), filtro de `X-Api-Key` (MIG-03-D), controllers distintos de `/me`, Storage, motor financiero, cambios en V1–V7 ni Supabase remoto. Las pruebas usan un JWKS local de prueba y PostgreSQL de Testcontainers: **no acreditan** integración con Supabase Auth real.
+Contexto de servicio y filtro de `X-Api-Key` (MIG-03-D), controllers distintos de `/me`, Storage, motor financiero, cambios en V1–V7 ni Supabase remoto. Las pruebas usan un JWKS local de prueba y PostgreSQL de Testcontainers: **no acreditan** integración con Supabase Auth real.
