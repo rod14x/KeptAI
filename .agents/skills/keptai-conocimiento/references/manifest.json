@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "6279f8bdc261b624bf96ff528a709c8d53632f69",
+  "source_head_at_generation": "89a4947c9cda5cd33f08b9d33b22fc87ee315ea5",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -10,9 +10,7 @@
     "diagramas/keptai-roadmap-fuentes.md"
   ],
   "source_changes_at_generation": [
-    "M cerebro/conocimientos/INDICE.md",
-    " M cerebro/conocimientos/desarrollo/miguel/estado.md",
-    "?? cerebro/conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md"
+    "M cerebro/conocimientos/desarrollo/miguel/estado.md"
   ],
   "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
   "interview_ids": [
@@ -113,8 +111,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/estado.md",
-      "bytes": 41458,
-      "sha256": "205cddacf0dc4564e3dbb14040c7f122697d2716e201d17733b1f565cec29a74"
+      "bytes": 43490,
+      "sha256": "118119953922011275d22fc1da0eeab4b237ac3921ab59ca689942b7751f87a5"
     },
     {
       "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
@@ -474,6 +472,13 @@
       "bytes": 4815,
       "sha256": "85acab094bf0490059df401be00972ce0af5403fee3630341330e838c0f0f3f2",
       "source_sha256": "85acab094bf0490059df401be00972ce0af5403fee3630341330e838c0f0f3f2",
+      "sanitized": false
+    },
+    {
+      "path": "Backend/docs/configuracion-supabase-local.md",
+      "bytes": 6279,
+      "sha256": "426a5a36665ffb19b90cf0273cd76b2cc94b7318823485842fb908c927c66427",
+      "source_sha256": "426a5a36665ffb19b90cf0273cd76b2cc94b7318823485842fb908c927c66427",
       "sanitized": false
     },
     {

@@ -212,3 +212,15 @@ MIG-03-A completa dentro de su alcance: propiedades, CORS y matriz; JWT/API key/
 Entrega Claude revisada y publicada como 6279f8b. Reejecución ./mvnw -o verify: 182 tests sin fallos/errores/skips; OpenAPI38/214/25 correcto. Frontend esquemas UserContext coinciden con /me; cliente Supabase/Bearer existe, pero modo activo mock y Auth real/provisión no acreditados.
 
 MIG-FE-AUTH-001 en plan-conexion-frontend-auth.md define AUTH-FE-01 a04: configuración y membresía real, estado de sesión/errores, inicio conectado sin APIs ausentes y aceptación en navegador. No implementado por esta entrega documental. No se cambiaron frontend, secretos, servidores, migraciones ni Supabase remoto. MIG-03-C/D y motor pendientes.
+
+
+## MIG-CONFIG-001 — Preparacion Auth/Storage local (10/10/2026)
+Solicitud de Miguel: entender claves/env/bucket y preparar configuracion antes de Claude. Backend/.env y Frontend/.env.local ignorados creados sin claves privadas, URL real publica; frontend sigue mock. scripts/run-local.sh importa Backend/.env y conserva JDBC local. JWKS publico HTTP200 EC/ES256. Bucket observado en captura, privacidad/RLS remoto no inspeccionados. Uploader aun NO implementado; variables Storage reservadas MIG-04. Guia en Backend/docs/configuracion-supabase-local.md. No cambios remoto, migraciones, Git ni servicios del usuario. Validacion: bash -n y git diff --check correctos; ambos env ignorados por Git; launcher en instancia propia18081 devolvio health200/UP y fue detenido, sin tocar servidores del usuario. Skill regenerada y check correcto. Advertencias Maven de metadata401 no impidieron arranque. No se probo login ni upload real.
+
+
+## Reanudacion tras env / MCP — 10/10/2026
+Solicitud de Miguel: verificar/commitear preparacion y conectar Claude antes de retomar el plan.
+Env guardados: claves con prefijos correspondientes y variables unicas, URL/bucket/issuer/JWKS correctos; no secreto en frontend, ambos ignorados por Git. No se imprimieron valores ni se probaron credenciales privilegiadas. Revocacion de clave expuesta en captura no acreditada.
+Servicios comprobados: health8080 HTTP200/UP, frontend5173 HTTP200, TCP5433 accesible. Frontend sigue mock. No se detuvieron servidores.
+claude mcp list detecto Supabase Needs authentication y dos endpoints en project/local. .mcp.json se unifico a proyecto/solo lectura y se retiro duplicado local con CLI; OAuth personal pendiente en /mcp. No sustituir OAuth por secret key ni commitear credenciales.
+AUTH-FE-01 parcial por configuracion; falta inspeccion, cuenta/membresia local y login real. AUTH-FE-02/03/04, MIG-03-C/D y MIG-04 pendientes. Retomar el plan-conexion-frontend-auth.md con Claude; documentar evidencia por entrega sin afirmar que los env cierran integracion.

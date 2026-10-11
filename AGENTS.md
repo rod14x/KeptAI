@@ -27,6 +27,10 @@ Estas instrucciones aplican a este repositorio KeptAI: cerebro/ conserva conocim
 
 ## Resumen vigente de Miguel
 
+- Reanudacion: env guardados/verificados sin divulgar claves; .mcp.json unificado a Supabase solo lectura, duplicado local retirado, OAuth en Claude pendiente. AUTH-FE-01 parcial; seguir AUTH-FE-01..04. No Storage implementado ni revocacion de clave expuesta acreditados.
+
+- MIG-CONFIG-001: env locales ignorados preparados sin secretos; launcher Backend/scripts/run-local.sh importa Backend/.env y conserva JDBC local. JWKS publico EC/ES256 comprobado. Front sigue mock; Auth real/membresia y Storage pendientes. Guia Backend/docs/configuracion-supabase-local.md. No usar secret/service_role en frontend ni confiar en RLS con uploader privilegiado.
+
 - MIG-03-B publicada6279f8b: 182tests verify sin fallos y /me compatible con UserContext frontend. Próxima entrega solicitada: AUTH-FE-01..04 en cerebro/conocimientos/desarrollo/miguel/plan-conexion-frontend-auth.md; Auth real/config/membresía y vista conectada pendientes. No mezclar mock con rol real ni cargar APIs aún ausentes. MIG-03-C/D siguen pendientes.
 
 - MIG-03-B completada (10/10/2026) con fixtures: Resource Server valida JWT (RS256/ES256, issuer, audiencia, exp, nbf, sub UUID) con keptai.security.jwt.*; membresía por keptai_private.resolver_usuario con login runtime; GET /api/v1/me implementado (1 membresía 200; sin membresía 403; varias 409 ORGANIZATION_SELECTION_REQUIRED sin elegir, caso no completo; base caída 503). JWT de usuario no autentica rutas n8n. 182 tests sin fallos con JWKS de prueba y PostgreSQL de Testcontainers; Supabase Auth real, contexto JDBC (MIG-03-C) y X-Api-Key (MIG-03-D) pendientes. Siguiente: MIG-03-C.
