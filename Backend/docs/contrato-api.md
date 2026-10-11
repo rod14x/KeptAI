@@ -1,6 +1,6 @@
 # Contrato API KeptAI — MIG-02 alineado
 
-Fecha: 10/10/2026. Entrega técnica de contrato y DTOs; endpoints, JWT, RLS desde Spring y motor **no implementados**. Ejemplos ficticios. Se completó la alineación con archivos de Andrés, sin inventar aprobación personal ni despliegue remoto. Ver [alineación](alineacion-bd-n8n.md). Claude inició; Codex continuó al agotarse la sesión de Claude (reset anunciado 22:50 Lima).
+Fecha inicial: 10/10/2026. Contrato y DTOs versionados. Actualización11/10: JWT, contexto usuario/servicio y permisos implementados y probados; /me disponible. /ordenes/ingesta ahora solo recibe/valida y responde200 sin persistir/procesar; creación201 e idempotencia de MIG-05 y motor siguen pendientes. Ejemplos ficticios. Se completó la alineación con archivos de Andrés, sin inventar aprobación personal ni despliegue remoto. Ver [alineación](alineacion-bd-n8n.md). Claude inició; Codex continuó al agotarse la sesión de Claude (reset anunciado 22:50 Lima).
 
 ## Matriz de operaciones
 
@@ -8,7 +8,7 @@ Los cuatro roles son los de `usuario.rol`; `service_n8n` es una credencial técn
 
 | operationId | Método | Ruta | Dueño | Tarea | Roles propuestos | Estado |
 |---|---|---|---|---|---|---|
-| `getMyContext` | GET | `/api/v1/me` | `miguel` | MIG-03 | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | Propuesta, no implementado |
+| `getMyContext` | GET | `/api/v1/me` | `miguel` | MIG-03 | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | Propuesta; implementado en MIG-03-B con JWKS de prueba, Auth real pendiente |
 | `createTextEvidence` | POST | `/api/v1/evidences/text` | `miguel` | MIG-04 | VENDEDOR, ADMIN | Propuesta, no implementado (fuera del MVP) |
 | `uploadEvidenceFile` | POST | `/api/v1/evidences/files` | `miguel` | MIG-04 | VENDEDOR, ADMIN | Propuesta, no implementado |
 | `listEvidences` | GET | `/api/v1/evidences` | `miguel` | MIG-04 | VENDEDOR, ADMIN | Propuesta, no implementado |
@@ -41,7 +41,7 @@ Los cuatro roles son los de `usuario.rol`; `service_n8n` es una credencial técn
 | `getCreditDecision` | GET | `/api/v1/orders/{order_id}/credit-decision` | `miguel_adapter_andres_engine` | MIG-07 | VENDEDOR, ADMIN, GERENTE | Propuesta, no implementado |
 | `submitCreditDecision` | POST | `/api/v1/orders/{order_id}/credit-decision` | `miguel_adapter_andres_engine` | MIG-07 | VENDEDOR | Propuesta, no implementado |
 | `registerDispatch` | POST | `/api/v1/orders/{order_id}/dispatch` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN, JEFE_TALLER | Propuesta, no implementado |
-| `n8nIngestOrder` | POST | `/api/v1/ordenes/ingesta` | `miguel` | MIG-05 | service_n8n | Propuesta, no implementado |
+| `n8nIngestOrder` | POST | `/api/v1/ordenes/ingesta` | `miguel` | MIG-05 | service_n8n | Propuesta de creación201/idempotencia pendiente MIG-05; recepción validada HTTP200 implementada |
 | `n8nConfirmOrder` | POST | `/api/v1/ordenes/confirmar` | `miguel_adapter_andres_engine` | MIG-06 | service_n8n | Propuesta, no implementado |
 | `n8nReceiveVoucher` | POST | `/api/v1/pagos/voucher` | `miguel_adapter_andres_engine` | MIG-07 | service_n8n | Propuesta, no implementado |
 | `n8nReportMessageStatus` | POST | `/api/v1/mensajes/{id}/estado` | `miguel_adapter_andres_engine` | MIG-07 | service_n8n | Propuesta, no implementado |

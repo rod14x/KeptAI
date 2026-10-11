@@ -6,7 +6,7 @@ Código: `Backend/src/main/java/pe/keptai/backend/finanzas/`. El bean `MotorPago
 
 ## Contrato Java
 
-Todas las operaciones reciben un `ContextoFinanciero` que Spring ya autenticó (MIG-03): organización + exactamente un usuario **o** un servicio. El motor fija `app.organizacion_id`, `app.usuario_id` y `app.servicio_id` como contexto local de **su propia transacción** y comprueba el rol con `keptai_private.actor_actual()`. El adapter no debe tomar esos valores del cuerpo de la petición.
+Todas las operaciones reciben un `ContextoFinanciero` que Spring ya autenticó (MIG-03): organización + exactamente un usuario **o** un servicio. El motor usa propagación REQUIRED y fija el contexto mediante la guardia compartida `TenantContext.applyIdentity` en la conexión transaccional; si ya existe una identidad, solo admite exactamente la misma. Comprueba el rol con `keptai_private.actor_actual()`. No abre una transacción independiente ni puede reemplazar el tenant fijado por `TenantTransaction`. El adapter no debe tomar esos valores del cuerpo de la petición.
 
 | Método | Rol | Endpoint del contrato | Qué hace |
 |---|---|---|---|

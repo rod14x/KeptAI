@@ -1,25 +1,16 @@
 import { NavLink } from "react-router";
 import { motion } from "motion/react";
 import { spring } from "../motion/primitives";
-import { ArrowCounterClockwise, Bell, ChartPieSlice, Factory, Kanban, Receipt, SquaresFour, UploadSimple, UsersThree } from "../ui/icons";
-import type { Role } from "../../api/model";
+import { ArrowCounterClockwise } from "../ui/icons";
 import { Logo } from "./Logo";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { capabilities, commands } from "../../api/client";
-import { can } from "../../lib/permissions";
+import { isModuleAvailable } from "../../lib/availability";
+import { NAV } from "./nav";
 import { cx } from "../../lib/format";
 
-export const NAV: Array<{ to: string; label: string; icon: typeof SquaresFour; end: boolean; show?: (r: Role) => boolean }> = [
-  { to: "/", label: "Dashboard", icon: SquaresFour, end: true, show: (r) => can(r, "ver_comercial") },
-  { to: "/pedidos", label: "Pedidos", icon: Kanban, end: false, show: (r) => can(r, "ver_comercial") },
-  { to: "/clientes", label: "Clientes", icon: UsersThree, end: false, show: (r) => can(r, "ver_comercial") },
-  { to: "/conciliacion", label: "Conciliación", icon: Receipt, end: false, show: (r) => can(r, "verificar") || can(r, "ver_pagos") },
-  { to: "/cobranza", label: "Cobranza", icon: Bell, end: false, show: (r) => can(r, "ver_cobranza") },
-  { to: "/taller", label: "Taller", icon: Factory, end: false, show: (r) => can(r, "registrar_despacho") || can(r, "ver_resultado") },
-  { to: "/captura", label: "Carga manual", icon: UploadSimple, end: false, show: (r) => can(r, "captura") },
-  { to: "/resultado", label: "Resultado", icon: ChartPieSlice, end: false, show: (r) => can(r, "ver_resultado") },
-];
+export { NAV };
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { person } = useAuth();
@@ -34,7 +25,20 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
       <nav aria-label="Principal" className="mt-8 flex flex-col gap-1">
         <p className="px-3 pb-2 text-xs font-semibold text-faint">Menú</p>
-        {items.map(({ to, label, icon: Icon, end }) => (
+        {items.map(({ to, label, icon: Icon, end, module }) =>
+          !isModuleAvailable(module) ? (
+            // Módulo pendiente: no es un enlace, no navega ni dispara cargas.
+            <span
+              key={to}
+              aria-disabled="true"
+              title="Aún no disponible: depende de endpoints del backend pendientes"
+              className="flex h-11 cursor-not-allowed items-center gap-3 rounded-xl px-3 text-sm font-semibold text-faint"
+            >
+              <Icon size={20} />
+              <span>{label}</span>
+              <span className="ml-auto text-[11px] font-semibold">Pronto</span>
+            </span>
+          ) : (
           <NavLink
             key={to}
             to={to}
@@ -62,7 +66,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               </>
             )}
           </NavLink>
-        ))}
+          ),
+        )}
       </nav>
 
       <div className="mt-auto flex flex-col gap-3">

@@ -65,7 +65,7 @@ Solo vouchers como evidencia persistente y datos estructurados del negocio. No g
 
 ## Supabase: estado y traspaso
 
-Miguel confirmó conexión del equipo mediante MCP; no hay `.env` de la app ni conexión Spring acreditada. Consultar [preparación Supabase/RLS](references/cerebro/conocimientos/desarrollo/miguel/preparacion-supabase-rls.md): distinguir administración por MCP de JDBC/Auth/Storage, verificar roles y contexto por transacción; las políticas versionadas no acreditan aislamiento probado en el proyecto remoto.
+Miguel tiene archivos de entorno locales ignorados y conexión Spring a PostgreSQL local; Auth real y Storage siguen pendientes. Andrés conserva el acceso remoto por MCP; Miguel descartó conectar su Claude personalmente (11/10/2026). Consultar [preparación Supabase/RLS](references/cerebro/conocimientos/desarrollo/miguel/preparacion-supabase-rls.md): distinguir administración por MCP de JDBC/Auth/Storage, verificar roles y contexto por transacción; las políticas versionadas no acreditan aislamiento probado en el proyecto remoto.
 
 ## Grafo opcional (Graphify)
 
@@ -83,3 +83,6 @@ python3 .agents/skills/keptai-conocimiento/scripts/sincronizar.py --repo .
 ```
 
 El primer comando verifica integridad y, cuando encuentra el repo original, equivalencia con sus fuentes. El segundo regenera después de una actualización autorizada. En una instalación independiente, `--check` verifica el paquete sin inventar que se consultó el remoto. Publicar o actualizar Git se hace por separado cuando el usuario lo pide.
+
+## Integración vigente de backend (11/10/2026)
+La rama padre-nuestro reúne el motor financiero de Andrés y la seguridad/API/frontend de Miguel. Consultar BD/migrations V8/V9, DER V9, Backend/docs/motor-pagos.md y la bitácora combinada. TenantContext.applyIdentity es la guardia transaccional compartida: no permitir cambios de identidad en una transacción. El motor Java implementado no acredita endpoints HTTP, Auth real, Storage o aceptación por frontend. No aplicar semilla/migraciones a una base activa como efecto implícito de leer esta skill.

@@ -1,4 +1,4 @@
-# KeptAI — Base de datos vigente (V6)
+# KeptAI — Base de datos vigente (V9)
 
 **Punto de entrada para desarrollar:** [Definicion canonica DB-DEF-001](definicion-base-datos.md). Alcance, 27 tablas V5, RLS, transacciones, vouchers y extensiones pendientes para margen por linea/centro.
 
@@ -9,6 +9,9 @@ Revisión de Miguel/Codex, 10/10/2026, basada en Actores/flujos/DER, D-005 y D-0
 
 
 - [Guia local](local/README.md): Docker, Flyway, 127.0.0.1:5433 y perfil Spring local.
+- [Semilla demo](semilla/semilla_demo.sql) (Andrés, roadmap §6): datos **ficticios** reiniciables con los mismos UUID e importes de `Backend/docs/openapi.yaml`. Incluye P-001 (propia, costo 340, margen −40) y P-002 (tercerizada, costo 350, margen 150), V-001/V-002 aplicados y V-003 duplicado, saldo 400, mora, alertas, caja (apertura 100, egresos 250/300) y una segunda organización para probar aislamiento. Cargar con `./BD/local/db.sh seed` sobre V7. Solo borra y recrea organizaciones `DEMO …`, exige `SET keptai.permitir_semilla='demo'` y no crea comprobantes sin archivo. Incluye costos por etapa, asignaciones por ítem y el cargo interno de 320 (V9). Falta `display_code` de pagos (no hay columna). Pruebas: `SemillaDemoTests` y `RecorridoDemoTests`. **Cargada también en Supabase** (11/10/2026, mismas cifras verificadas).
+- [V9](migrations/V9__asignacion_costos_transferencia_interna.sql) (Andrés, AND-RESULTADOS-001): `asignacion_costo_item` (reparto de costos por ítem, C-05) y `transferencia_interna` (cargo interno del taller, C-06), con RLS, autoría e invariantes. Queda en 27 tablas. **Aplicada en local y en Supabase** (historial Flyway con el mismo checksum).
+- [V8](migrations/V8__despacho_vencimiento_cobranza.sql) (Andrés, AND-COBRANZA-001): el despacho fija el vencimiento (D-005). Trigger DEFINER: orden liberada o en producción → DESPACHADA y `vence_en = fecha_despacho + plazo`; el acta no cambia de fecha ni de orden. Añade `keptai_private.actualizar_estados_cobranza()` (solo ADMIN o SCHEDULER de su organización) para recalcular MORA, PAGADA, etc. Sin tablas ni columnas nuevas. **Aplicada en local y en Supabase** (historial Flyway con el mismo checksum).
 - [V7](migrations/V7__autorizacion_critica.sql): DB-REV-003. Crédito solo VENDEDOR, autoría no suplantable, padres financieros congelados con aplicaciones vigentes, INGESTA limitada a borradores y lecturas por mínimo privilegio. Sin cambios de tablas. Ver [revisión](revision-sql-rls.md).
 - [V6](migrations/V6__mvp_25_tablas.sql): aprobacion D-008, 25 tablas; excluye contacto/notas solo si estan vacias, sin CASCADE.
 
@@ -24,19 +27,19 @@ V4 requiere permiso CREATE ROLE para crear keptai_runtime NOLOGIN (sin contrase�
 
 ## DER visible
 
-Las imágenes se ven sin soporte Mermaid. [Abrir las tres láminas y la fuente editable](../cerebro/diagramas/keptai-der-v6.md).
+Las imágenes se ven sin soporte Mermaid. [Abrir las tres láminas y la fuente editable (V9, 27 tablas)](../cerebro/diagramas/keptai-der-v9.md). El [DER V6](../cerebro/diagramas/keptai-der-v6.md) se conserva como antecedente.
 
 ### Pedidos, vouchers y cobranza
 
-![DER V6: Pedidos, vouchers y cobranza](../cerebro/diagramas/keptai-der-v6-01.png)
+![DER V9: Pedidos, vouchers y cobranza](../cerebro/diagramas/keptai-der-v9-01.png)
 
 ### Catalogo, produccion y costos
 
-![DER V6: Catalogo, produccion y costos](../cerebro/diagramas/keptai-der-v6-02.png)
+![DER V9: Catalogo, produccion y costos](../cerebro/diagramas/keptai-der-v9-02.png)
 
 ### Organizacion, identidad y soporte
 
-![DER V6: Organizacion, identidad y soporte](../cerebro/diagramas/keptai-der-v6-03.png)
+![DER V9: Organizacion, identidad y soporte](../cerebro/diagramas/keptai-der-v9-03.png)
 
 ## Modelo vigente
 

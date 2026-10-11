@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { getVersion, subscribe } from "../api/events";
 import { getState } from "../api/mock/store";
 import { endpoints } from "../api/contract/endpoints";
@@ -7,7 +7,8 @@ import type { Person } from "../api/model";
 import { IS_MOCK } from "../config";
 import { ROLE_FROM_API, ROLE_LABEL } from "../lib/permissions";
 import { supabase } from "../lib/supabase";
-import { todayIso } from "../lib/dates";
+import { SESSION_MESSAGES, SessionController, SessionFailure, type AuthClient, type SessionError, type SessionIdentity } from "./session";
+import { createSupabaseAuthClient } from "./supabase-auth";
 
 // Sesión.
 // - mock: cuentas de demostración de la semilla (MOCK, eliminar al integrar). Solo se guarda el id.
@@ -15,7 +16,7 @@ import { todayIso } from "../lib/dates";
 
 const KEY = "keptai-session-v2";
 
-type AuthValue = {
+export type AuthValue = {
   person: Person | null;
   /** false mientras se restaura la sesión de Supabase al abrir la app. */
   ready: boolean;
@@ -23,9 +24,15 @@ type AuthValue = {
   signedOut: boolean;
   signIn: (email: string, password: string) => Promise<Person>;
   signOut: () => void;
+  /** Identidad resuelta por /me (user_id, organization_id y role del backend); null en mock y sin sesión. */
+  identity: SessionIdentity | null;
+  /** Último problema de sesión (credenciales aparte): sesión inválida, sin membresía, varias organizaciones, servicio no disponible... */
+  error: SessionError | null;
+  /** Reintenta /me tras un fallo temporal conservando la sesión. */
+  retry: () => void;
 };
 
-const AuthContext = createContext<AuthValue | null>(null);
+export const AuthContext = createContext<AuthValue | null>(null);
 
 function readId(): string | null {
   try {
@@ -72,60 +79,78 @@ function MockAuthProvider({ children }: { children: ReactNode }) {
     setUserId(null);
   };
 
-  return <AuthContext.Provider value={{ person, ready: true, signedOut, signIn, signOut }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ person, ready: true, signedOut, signIn, signOut, identity: null, error: null, retry: () => undefined }}>{children}</AuthContext.Provider>;
 }
 
 /* ---------- Modo api (Supabase) ---------- */
 
-async function loadPerson(email: string): Promise<Person> {
-  const ctx = await endpoints.getMyContext();
-  const role = ROLE_FROM_API[ctx.role];
-  // El contrato no expone nombre ni marca del usuario: se usa el correo y la marca la filtra Spring/RLS.
-  return { id: ctx.user_id, name: email.split("@")[0], email, role, title: ROLE_LABEL[role], brand: null, since: todayIso() };
+// La lógica de sesión vive en session.ts (SessionController, probado con fixtures). Aquí solo se conecta a
+// Supabase Auth, al cliente HTTP y a React.
+
+async function supabaseAuthClient(): Promise<AuthClient> {
+  return createSupabaseAuthClient((await supabase()).auth);
+}
+
+/** El cliente de Supabase se carga bajo demanda; el controlador lo espera sin llamar a Auth antes de tiempo. */
+const lazyAuth: AuthClient = (() => {
+  let inner: Promise<AuthClient> | null = null;
+  const get = () => (inner ??= supabaseAuthClient().catch((error) => {
+    inner = null;
+    throw error;
+  }));
+  return {
+    getSession: async () => (await get()).getSession(),
+    signInWithPassword: async (e, p) => (await get()).signInWithPassword(e, p),
+    signOut: async () => (await get()).signOut(),
+    onAuthStateChange: (cb) => {
+      let off: (() => void) | null = null;
+      let cancelled = false;
+      void get().then((c) => {
+        if (!cancelled) off = c.onAuthStateChange(cb);
+      }).catch(() => undefined);
+      return () => {
+        cancelled = true;
+        off?.();
+      };
+    },
+  };
+})();
+
+function personFrom(identity: SessionIdentity): Person {
+  const role = ROLE_FROM_API[identity.role];
+  // El contrato no expone nombre, marca ni fecha de alta: el nombre visible sale del correo de la sesión; marca y fecha quedan sin dato.
+  return { id: identity.userId, name: identity.email.split("@")[0] || "Usuario", email: identity.email, role, title: ROLE_LABEL[role], brand: null, since: null };
 }
 
 function ApiAuthProvider({ children }: { children: ReactNode }) {
-  const [person, setPerson] = useState<Person | null>(null);
-  const [ready, setReady] = useState(false);
-  const [signedOut, setSignedOut] = useState(false);
+  const [controller] = useState(() => new SessionController({ auth: lazyAuth, getMe: () => endpoints.getMyContext() }));
+  const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
 
+  // El proveedor del Bearer se registra en el efecto, justo antes de start(): en StrictMode el inicializador de useState
+  // se ejecuta dos veces y el segundo controlador se descarta, así que registrarlo allí dejaba el Bearer apuntando a un controlador muerto.
   useEffect(() => {
-    setAccessTokenProvider(async () => (await (await supabase()).auth.getSession()).data.session?.access_token ?? null);
-    let alive = true;
-    supabase()
-      .then((sb) => sb.auth.getSession())
-      .then(async ({ data }) => {
-        const email = data.session?.user.email;
-        if (email) setPerson(await loadPerson(email));
-      })
-      .catch(() => alive && setPerson(null))
-      .finally(() => alive && setReady(true));
-    return () => {
-      alive = false;
-    };
-  }, []);
+    setAccessTokenProvider(controller.accessToken);
+    return controller.start();
+  }, [controller]);
 
-  const signIn = async (email: string, password: string) => {
-    const { data, error } = await (await supabase()).auth.signInWithPassword({ email: email.trim(), password });
-    if (error || !data.session) throw new Error("Correo o contraseña incorrectos.");
-    try {
-      const p = await loadPerson(data.session.user.email ?? email);
-      setPerson(p);
-      setSignedOut(false);
-      return p;
-    } catch {
-      await (await supabase()).auth.signOut();
-      throw new Error("Tu usuario no tiene un rol asignado en KeptAI. Pídelo a gerencia.");
-    }
+  const person = useMemo(() => (state.status === "authenticated" ? personFrom(state.identity) : null), [state]);
+  const value: AuthValue = {
+    person,
+    identity: state.status === "authenticated" ? state.identity : null,
+    ready: state.status !== "loading",
+    signedOut: state.status === "signed-out" && state.explicit,
+    error: state.status === "signed-out" || state.status === "degraded" ? state.error : null,
+    signIn: async (email, password) => {
+      try {
+        return personFrom(await controller.signIn(email, password));
+      } catch (e) {
+        throw new Error(e instanceof SessionFailure ? e.error.message : SESSION_MESSAGES.unavailable);
+      }
+    },
+    signOut: () => controller.signOut(),
+    retry: () => void controller.retry(),
   };
-
-  const signOut = () => {
-    void supabase().then((sb) => sb.auth.signOut());
-    setSignedOut(true);
-    setPerson(null);
-  };
-
-  return <AuthContext.Provider value={{ person, ready, signedOut, signIn, signOut }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export const AuthProvider = IS_MOCK ? MockAuthProvider : ApiAuthProvider;

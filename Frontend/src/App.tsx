@@ -7,6 +7,10 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { EmptyState, Skeleton } from "./components/ui/States";
 // El login es la puerta de entrada: va en el bundle inicial para evitar una descarga encadenada.
 import { LoginPage } from "./pages/LoginPage";
+import { InicioPage } from "./pages/InicioPage";
+import { ModuloNoDisponiblePage } from "./pages/ModuloNoDisponiblePage";
+import { IS_MOCK } from "./config";
+import { isModuleAvailable, type ModuleKey } from "./lib/availability";
 
 // Cada pantalla se descarga al abrirla: el primer render no paga Recharts ni páginas que el rol no usa.
 const page = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, name: K) => lazy(() => load().then((m) => ({ default: m[name] })));
@@ -37,7 +41,8 @@ function RequireSession() {
   const { person, ready, signedOut } = useAuth();
   const location = useLocation();
   if (!ready) return <PageFallback />;
-  if (!person) return <Navigate to="/login" replace state={signedOut ? null : { from: location.pathname + location.search }} />;
+  // En modo api no se recuerda la ruta de origen: el único destino disponible es el inicio de identidad.
+  if (!person) return <Navigate to="/login" replace state={signedOut || !IS_MOCK ? null : { from: location.pathname + location.search }} />;
   return <Outlet />;
 }
 
@@ -62,11 +67,16 @@ function RequirePermission({ permission, children }: { permission: Permission | 
 /** El Jefe de taller no ve la parte comercial: su inicio es el taller. */
 function Home() {
   const { person } = useAuth();
+  if (!IS_MOCK) return <InicioPage />;
   if (person?.role === "jefe_taller") return <Navigate to="/taller" replace />;
   return <DashboardPage />;
 }
 
-const gate = (permission: Permission | Permission[], el: ReactNode) => <RequirePermission permission={permission}>{el}</RequirePermission>;
+// Una ruta de módulo solo monta su pantalla si el módulo está disponible en el modo actual; en modo api muestra
+// "no disponible" y la pantalla de negocio (con sus hooks de datos) nunca se renderiza ni se descarga.
+const gate = (module: ModuleKey, permission: Permission | Permission[], el: ReactNode) =>
+  isModuleAvailable(module) ? <RequirePermission permission={permission}>{el}</RequirePermission> : <ModuloNoDisponiblePage module={module} />;
+const moduleOnly = (module: ModuleKey, el: ReactNode) => (isModuleAvailable(module) ? el : <ModuloNoDisponiblePage module={module} />);
 
 function NotFound() {
   return (
@@ -80,35 +90,42 @@ function NotFound() {
   );
 }
 
+/** Rutas de la aplicación; se exporta separada de los proveedores para poder probar la navegación. */
+export function AppRoutes() {
+  return (
+    <Suspense fallback={<PageFallback />}>
+      <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route element={<RequireSession />}>
+                <Route element={<AppLayout />}>
+                  <Route index element={<Home />} />
+                  <Route path="pedidos" element={gate("pedidos", "ver_comercial", <PedidosPage />)} />
+                  <Route path="pedidos/:ref" element={gate("pedidos", "ver_comercial", <OrdenDetailPage />)} />
+                  <Route path="clientes" element={gate("clientes", "ver_comercial", <ClientesPage />)} />
+                  <Route path="clientes/:id" element={gate("clientes", "ver_comercial", <ClienteDetailPage />)} />
+                  <Route path="clientes/:id/estado-cuenta" element={gate("clientes", "ver_estado_cuenta", <EstadoCuentaPage />)} />
+                  <Route path="conciliacion" element={gate("conciliacion", ["verificar", "ver_pagos"], <ConciliacionPage />)} />
+                  <Route path="conciliacion/:id" element={gate("conciliacion", ["verificar", "ver_pagos"], <ConciliacionPage />)} />
+                  <Route path="cobranza" element={gate("cobranza", "ver_cobranza", <CobranzaPage />)} />
+                  <Route path="taller" element={gate("taller", ["registrar_despacho", "ver_resultado"], <TallerPage />)} />
+                  <Route path="captura" element={gate("captura", "captura", <CapturaPage />)} />
+                  <Route path="resultado" element={gate("resultado", "ver_resultado", <ResultadoPage />)} />
+                  <Route path="perfil" element={moduleOnly("perfil", <PerfilPage />)} />
+                  <Route path="*" element={<NotFound />} />
+                </Route>
+              </Route>
+            </Routes>
+    </Suspense>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <ScopeProvider>
           <ToastProvider>
-            <Suspense fallback={<PageFallback />}>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route element={<RequireSession />}>
-                <Route element={<AppLayout />}>
-                  <Route index element={<Home />} />
-                  <Route path="pedidos" element={gate("ver_comercial", <PedidosPage />)} />
-                  <Route path="pedidos/:ref" element={gate("ver_comercial", <OrdenDetailPage />)} />
-                  <Route path="clientes" element={gate("ver_comercial", <ClientesPage />)} />
-                  <Route path="clientes/:id" element={gate("ver_comercial", <ClienteDetailPage />)} />
-                  <Route path="clientes/:id/estado-cuenta" element={gate("ver_estado_cuenta", <EstadoCuentaPage />)} />
-                  <Route path="conciliacion" element={gate(["verificar", "ver_pagos"], <ConciliacionPage />)} />
-                  <Route path="conciliacion/:id" element={gate(["verificar", "ver_pagos"], <ConciliacionPage />)} />
-                  <Route path="cobranza" element={gate("ver_cobranza", <CobranzaPage />)} />
-                  <Route path="taller" element={gate(["registrar_despacho", "ver_resultado"], <TallerPage />)} />
-                  <Route path="captura" element={gate("captura", <CapturaPage />)} />
-                  <Route path="resultado" element={gate("ver_resultado", <ResultadoPage />)} />
-                  <Route path="perfil" element={<PerfilPage />} />
-                  <Route path="*" element={<NotFound />} />
-                </Route>
-              </Route>
-            </Routes>
-            </Suspense>
+            <AppRoutes />
           </ToastProvider>
         </ScopeProvider>
       </AuthProvider>

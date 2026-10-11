@@ -29,6 +29,8 @@ class MotorPagosTests {
  static final ContextoFinanciero COBRANZA=ContextoFinanciero.usuario(A,ADMIN), VENTAS=ContextoFinanciero.usuario(A,VENDEDOR);
  static String semilla;
  static MotorPagos motor;
+ static DriverManagerDataSource runtimeDs;
+ static DataSourceTransactionManager runtimeTm;
 
  static UUID u(String s){return UUID.fromString(s);}
  static BigDecimal s(String v){return new BigDecimal(v);}
@@ -39,7 +41,9 @@ class MotorPagosTests {
   semilla=Files.readString(Path.of("../BD/semilla/semilla_demo.sql"));
   try(Connection c=owner()){exec(c,"CREATE ROLE motor_app LOGIN PASSWORD 'motor' NOSUPERUSER NOBYPASSRLS IN ROLE keptai_runtime");}
   DriverManagerDataSource ds=new DriverManagerDataSource(PG.getJdbcUrl(),"motor_app","motor");
-  motor=new MotorPagos(new JdbcTemplate(ds),new DataSourceTransactionManager(ds));
+  runtimeDs=ds;
+  runtimeTm=new DataSourceTransactionManager(ds);
+  motor=new MotorPagos(new JdbcTemplate(ds),runtimeTm);
  }
  @AfterAll static void stop(){PG.stop();}
  @BeforeEach void reiniciarSemilla()throws SQLException{try(Connection c=owner()){exec(c,"SET keptai.permitir_semilla='demo'");exec(c,semilla);}}
@@ -58,6 +62,63 @@ class MotorPagosTests {
  }
  interface ThrowingCallable extends org.assertj.core.api.ThrowableAssert.ThrowingCallable{}
  static BigDecimal saldoP002(){return motor.saldo(COBRANZA,OBL_P002).saldo();}
+
+
+ @AfterEach void limpiarAutenticacion(){
+  org.springframework.security.core.context.SecurityContextHolder.clearContext();
+ }
+ static pe.keptai.backend.tenancy.TenantContext contextoTenant(){
+  var beans=new org.springframework.beans.factory.support.DefaultListableBeanFactory();
+  beans.registerSingleton("dataSource",runtimeDs);
+  return new pe.keptai.backend.tenancy.TenantContext(beans.getBeanProvider(javax.sql.DataSource.class));
+ }
+ static pe.keptai.backend.tenancy.TenantTransaction fronteraTenant(pe.keptai.backend.tenancy.TenantContext ctx){
+  var beans=new org.springframework.beans.factory.support.DefaultListableBeanFactory();
+  beans.registerSingleton("transactionManager",runtimeTm);
+  return new pe.keptai.backend.tenancy.TenantTransaction(
+   beans.getBeanProvider(org.springframework.transaction.PlatformTransactionManager.class),ctx);
+ }
+ static void autenticar(UUID organizationId,UUID user){
+  var jwt=org.springframework.security.oauth2.jwt.Jwt.withTokenValue("fixture")
+   .header("alg","RS256").subject(UUID.randomUUID().toString()).build();
+  org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+   new pe.keptai.backend.security.KeptaiAuthentication(jwt,List.of(
+    new pe.keptai.backend.security.Membership(user,organizationId,pe.keptai.backend.security.AccessRole.ADMIN))));
+ }
+ @Test void tenantYMotorCompartenIdentidadYConexion(){
+  var ctx=contextoTenant();var tenant=fronteraTenant(ctx);var jdbc=new JdbcTemplate(runtimeDs);
+  autenticar(A,ADMIN);
+  tenant.execute(()->{
+   int pid=jdbc.queryForObject("SELECT pg_backend_pid()",Integer.class);
+   assertThat(motor.saldo(COBRANZA,OBL_P002).saldo()).isEqualByComparingTo("400");
+   assertThat(jdbc.queryForObject("SELECT pg_backend_pid()",Integer.class)).isEqualTo(pid);
+   assertThat(ctx.requireApplied().usuarioId()).isEqualTo(ADMIN);
+   return null;
+  });
+  assertThatThrownBy(ctx::requireApplied).isInstanceOf(pe.keptai.backend.tenancy.TenantContextException.class);
+ }
+ @Test void motorNoPuedeCambiarEmpresaUsuarioOServicioDeLaTransaccionTenant(){
+  var ctx=contextoTenant();var tenant=fronteraTenant(ctx);
+  for(var ajeno:List.of(ContextoFinanciero.usuario(B,ADMIN_B),VENTAS,
+    ContextoFinanciero.servicio(A,UUID.randomUUID()))){
+   autenticar(A,ADMIN);
+   rechaza(Codigo.FORBIDDEN,()->tenant.execute(()->motor.saldo(ajeno,OBL_P002)));
+   assertThatThrownBy(ctx::requireApplied).isInstanceOf(pe.keptai.backend.tenancy.TenantContextException.class);
+   assertThat(saldoP002()).isEqualByComparingTo("400");
+  }
+ }
+ @Test void contextoInicialDelMotorTambienImpideCambioPosteriorPorTenant(){
+  var ctx=contextoTenant();var tenant=fronteraTenant(ctx);
+  var tx=new org.springframework.transaction.support.TransactionTemplate(runtimeTm);
+  autenticar(B,ADMIN_B);
+  assertThatThrownBy(()->tx.execute(status->{
+   motor.saldo(COBRANZA,OBL_P002);
+   return tenant.execute(()->"no debe ejecutarse");
+  })).isInstanceOf(pe.keptai.backend.tenancy.TenantContextException.class);
+  assertThatThrownBy(ctx::requireApplied).isInstanceOf(pe.keptai.backend.tenancy.TenantContextException.class);
+  autenticar(A,ADMIN);
+  assertThat(tenant.execute(()->motor.saldo(COBRANZA,OBL_P002).saldo())).isEqualByComparingTo("400");
+ }
 
  @Test void qa03VoucherRecibidoNoReduceSaldo()throws Exception{
   UUID x=pagoRecibido(CLIENTE_DOS,"100","DEMO-OP-0100","2026-10-09");

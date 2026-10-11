@@ -28,13 +28,18 @@ const DEMO_ACCOUNTS = [
 ];
 
 export function LoginPage() {
-  const { person } = useAuth();
+  const { person, error, retry, signOut } = useAuth();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? "/";
+  // En modo api el único destino disponible es el inicio de identidad; no se vuelve a rutas de negocio guardadas.
+  const from = IS_MOCK ? ((location.state as { from?: string } | null)?.from ?? "/") : "/";
   const [open, setOpen] = useState(Boolean((location.state as { from?: string } | null)?.from));
 
   // Mientras la persona escribe, se descarga el dashboard: entrar es inmediato.
-  useEffect(() => prefetch(["dashboard"]), []);
+  useEffect(() => (IS_MOCK ? prefetch(["dashboard"]) : undefined), []);
+  // Tras un fallo temporal, dejar accesibles las acciones de la sesión conservada.
+  useEffect(() => {
+    if (!IS_MOCK && error?.retryable) setOpen(false);
+  }, [error]);
 
   if (person) return <Navigate to={from} replace />;
 
@@ -53,6 +58,22 @@ export function LoginPage() {
           </Button>
         </nav>
 
+        {error && (
+          <div role="alert" className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-white/90 px-4 py-3 text-sm ring-1 ring-line">
+            <p className="min-w-0 flex-1">{error.message}</p>
+            {error.retryable && (
+              <>
+                <Button size="sm" onClick={retry}>
+                  Reintentar
+                </Button>
+                <Button size="sm" variant="secondary" onClick={signOut}>
+                  Cerrar sesión
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+
         <Stagger className="grid items-center gap-12 py-12 lg:min-h-[calc(100dvh-104px)] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:py-16">
           {/* El mensaje entra en orden de lectura: titular, explicación y acción. */}
           <motion.section variants={listVariants} className="max-w-xl">
@@ -69,6 +90,8 @@ export function LoginPage() {
             </Item>
           </motion.section>
 
+          {/* La vista previa usa cifras de demostración: solo en modo mock, nunca junto a un acceso real. */}
+          {IS_MOCK && (
           <motion.section variants={itemVariants} aria-label="Vista previa del panel" className="relative">
             <div className="rounded-[28px] bg-white/70 p-2.5 shadow-[var(--shadow-lift)] ring-1 ring-white lg:rotate-[-1.2deg]">
               <div className="rounded-[22px] bg-card p-5 ring-1 ring-line/70 sm:p-6">
@@ -87,6 +110,7 @@ export function LoginPage() {
               </div>
             </div>
           </motion.section>
+          )}
         </Stagger>
       </div>
 

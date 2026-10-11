@@ -11,6 +11,9 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import pe.keptai.backend.finanzas.MotorFinancieroException.Codigo;
 import pe.keptai.backend.web.RequestIdFilter;
+import pe.keptai.backend.tenancy.TenantContext;
+import pe.keptai.backend.tenancy.TenantIdentity;
+import pe.keptai.backend.tenancy.TenantContextException;
 
 abstract class TransaccionFinanciera {
 
@@ -25,10 +28,8 @@ abstract class TransaccionFinanciera {
 	protected <T> T enTransaccion(ContextoFinanciero ctx, Set<String> roles, Supplier<T> trabajo) {
 		try {
 			return tx.execute(estado -> {
-				jdbc.queryForObject("""
-						SELECT set_config('app.organizacion_id', ?, true) || set_config('app.usuario_id', ?, true)
-						       || set_config('app.servicio_id', ?, true)""", String.class,
-						ctx.organizacionId().toString(), texto(ctx.usuarioId()), texto(ctx.servicioId()));
+				TenantContext.applyIdentity(
+						new TenantIdentity(ctx.organizacionId(), ctx.usuarioId(), ctx.servicioId()), jdbc.getDataSource());
 				String actor = jdbc.queryForObject("SELECT keptai_private.actor_actual()", String.class);
 				if (actor == null) {
 					throw new MotorFinancieroException(Codigo.FORBIDDEN,
@@ -39,15 +40,13 @@ abstract class TransaccionFinanciera {
 				}
 				return trabajo.get();
 			});
+		} catch (TenantContextException e) {
+			throw new MotorFinancieroException(Codigo.FORBIDDEN, "Contexto transaccional incompatible", e);
 		} catch (MotorFinancieroException e) {
 			throw e;
 		} catch (DataAccessException e) {
 			throw traducir(e);
 		}
-	}
-
-	private static String texto(UUID id) {
-		return id == null ? "" : id.toString();
 	}
 
 	protected void auditar(ContextoFinanciero ctx, String operacion, String entidad, UUID entidadId, String cambiosSql,

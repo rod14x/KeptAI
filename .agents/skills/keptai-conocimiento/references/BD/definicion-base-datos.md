@@ -22,7 +22,7 @@ Las últimas consideraciones son:
 - Stock, cotizaciones y recompra pertenecen a fase 2. Costos, margen, cobranza y caja pertenecen al núcleo actual.
 - El 80% y el significado del 30% siguen sin verificación empresarial; no son reglas ni datos iniciales del motor.
 
-La sección DER histórica de Actores/flujos no sustituye el [DER físico V6 visible](../cerebro/diagramas/keptai-der-v6.md). Ante diferencias, contrastar migraciones/diccionario con esta definición y corregir mediante una migración nueva; no hacer que una contradicción desaparezca solo cambiando documentación.
+La sección DER histórica de Actores/flujos no sustituye el [DER físico vigente V9](../cerebro/diagramas/keptai-der-v9.md). Ante diferencias, contrastar migraciones/diccionario con esta definición y corregir mediante una migración nueva; no hacer que una contradicción desaparezca solo cambiando documentación.
 
 ## 2. Arquitectura de acceso
 

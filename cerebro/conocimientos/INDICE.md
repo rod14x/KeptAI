@@ -43,6 +43,12 @@ Dirección técnica vigente: D-004, Spring Boot por experiencia del equipo; MVP 
 
 ## Desarrollo de Miguel — Claude Code y OpenCode
 
+- [MIG-03-D por bloques](desarrollo/miguel/plan-mig-03-d.md): comenzar D1 identidad de servicio/contexto; D2 permisos, D3 webhooks despues de revision.
+
+- [MIG-03-C: contexto JDBC por transaccion](desarrollo/miguel/plan-mig-03-c.md): siguiente tarea tras auditoria contrastada; aislamiento con login runtime real y pruebas de pool/rollback.
+
+- [Conexión frontend/Auth/Spring MIG-FE-AUTH-001](desarrollo/miguel/plan-conexion-frontend-auth.md): login y /me; no endpoints financieros ni mezcla con mocks.
+
 - [Tarea general y entregables](desarrollo/miguel/tarea-general.md).
 - [Plan de implementación y delegación](desarrollo/miguel/plan-implementacion.md): etapas A–F, un escritor por archivo y gates reales.
 - [Tareas pequeñas MIG-00..08](desarrollo/miguel/tareas.md).

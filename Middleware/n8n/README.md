@@ -1,6 +1,8 @@
 <!-- Versión 1.0.0 | 2026-10-10 | Autor: Isabelita -->
 # Lazo – Integración n8n ↔ Spring Boot ↔ Evolution API
 
+> Actualización 11/10/2026: Isabella mantiene los workflows en su propio entorno según Miguel. Los JSON de esta carpeta no se han contrastado con su export actual. Ver [muestra WF1 y acuerdos de integración](../../Backend/docs/integracion-n8n-isabella.md) y el contrato vigente en Backend/docs/openapi.yaml. Los ejemplos y reglas históricos de abajo no sustituyen D-005/D-007/D-010; no activarlos automáticamente.
+
 Principio: **n8n solo mueve datos y llama a la IA. Toda regla de negocio (fechas, crédito, conciliación, cadencia de recordatorios) vive en Spring.**
 
 ## Flujos
@@ -42,25 +44,36 @@ sequenceDiagram
 
 Auth: n8n→backend `X-Api-Key`; backend→WF3 `X-Api-Secret`.
 
-### POST /api/v1/ordenes/ingesta
+### POST /api/v1/ordenes/ingesta — recepción disponible
+El nodo final WF1 debe usar POST, Content-Type: application/json y X-Api-Key de un servicio INGESTA activo. La instancia del JSON debe coincidir con la registrada para esa clave. Body: un objeto, no el array de items de la vista n8n.
+
+Ejemplo ficticio de extracción incompleta, válido para probar recepción:
 ```json
 {
-  "origen": "WHATSAPP", "instancia": "ventas-01",
-  "chatId": "51999111222@s.whatsapp.net", "vendedorJid": "51988777666@s.whatsapp.net",
-  "clienteNombreChat": "Colegio San José",
+  "origen": "whatsapp",
+  "instancia": "isabel",
+  "chatId": "51900000001@s.whatsapp.net",
+  "vendedorJid": "51900000002@s.whatsapp.net",
+  "clienteNombreChat": "DEMO",
   "extraccion": {
-    "cliente": "Colegio San José", "marca": "UNICRACK",
-    "items": [{"descripcion":"Polo deportivo","cantidad":120,"talla":"mix","tela":"dry-fit","logo":"bordado pecho","precio_unit":28.5}],
-    "total": 3420, "moneda": "PEN",
-    "condicion_pago": {"tipo":"CREDITO","plazo_dias":30,"anticipo_monto":1000,"anticipo_pct":null},
-    "fecha_entrega_solicitada": "2026-11-15",
-    "pagos_mencionados": [], "observaciones": "", "faltantes": ["tallas"], "confianza": 0.82
+    "faltantes": ["datos_pedido"],
+    "confianza": 0
   },
-  "hojaResumenMd": "# Hoja de resumen ...", "transcript": "[10/10 09:12] CLIENTE: ...",
-  "mensajesProcesados": 143, "generadoEn": "2026-10-10T14:30:00-05:00"
+  "hojaResumenMd": "Faltan datos del pedido",
+  "transcript": "",
+  "mensajesProcesados": 4,
+  "generadoEn": "2026-10-11T05:38:18.770Z"
 }
 ```
-Respuesta sugerida: `201 {ordenId, ref:"ORD-123", estado:"PENDIENTE_APROBACION", bloqueos:[...]}`.
+La confianza=0 de este fixture no debe copiarse como valor de una extracción exitosa. Los nombres del contrato para datos extraídos son cliente={nombre,ruc,tipo}, marca=CORPOTEX/UNICRACK_SPORT/UNICRACK_UNIFORMES e items con detalle_tallas, logo_diseno y precio_unitario. El ejemplo anterior cliente string/UNICRACK/talla/logo/precio_unit era antecedente y no cumple el contrato actual.
+
+Respuesta actual: HTTP200 con estado VALIDADO_SIN_PERSISTIR, persistido=false, procesado=false y request_id. Solo valida recepción: no crea pedido ni encola trabajo; Isabella no debe interpretar el 200 como venta guardada. La respuesta201 con ordenId/ref/BORRADOR e idempotencia sigue pendiente de MIG-05. No hay autoría humana resuelta por vendedorJid en esta etapa.
+
+Errores:401 sin clave válida,403 con alcance/instancia incorrectos,400 por JSON/validación (incluido extraccion={} o array),415 si no es application/json,503 si no puede resolverse la credencial. No registrar body/transcript ni credenciales.
+
+URL local de Miguel: http://localhost:8080/api/v1/ordenes/ingesta. Si n8n está en otro equipo/servidor, localhost apunta a ese entorno, no a Miguel: el apiUrl debe ser una dirección alcanzable de Spring acordada por el equipo. No se publicó ni abrió un túnel desde esta tarea.
+
+La clave requiere provisión según Backend/docs/provision-servicios-local.md; no se creó una credencial real ni se modificó la base activa.
 
 ### POST /api/v1/ordenes/confirmar
 `{ "ref":"ORD-123", "instancia":"ventas-01", "chatId":"...", "vendedorJid":"...", "mensajeId":"..." }`

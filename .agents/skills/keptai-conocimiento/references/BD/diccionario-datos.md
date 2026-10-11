@@ -310,3 +310,18 @@ Sin tablas ni columnas nuevas. Agrega funciones, triggers y políticas:
   - Lecturas por mínimo privilegio: caja solo ADMIN/GERENTE/SCHEDULER; INGESTA sin obligaciones, aplicaciones ni créditos; JEFE_TALLER solo órdenes liberadas y auditoría de `orden`, `orden_etapa`, `costo_orden` y `despacho`.
   - `evento_auditoria.actor` coherente con la identidad: USUARIO+propio, SISTEMA sin usuario, N8N/SCHEDULER según servicio.
 - **`v_margen_orden`:** mismas columnas; solo devuelve filas a VENDEDOR, ADMIN y GERENTE.
+
+## Cambios vigentes V8 (AND-COBRANZA-001)
+
+Sin tablas ni columnas nuevas.
+- **`keptai_private.aplicar_despacho()`** (trigger `tg_despacho_vencimiento`, AFTER INSERT en `despacho`, DEFINER): exige orden LIBERADA/EN_PRODUCCION y fecha no anterior al inicio de producción; pasa la orden a DESPACHADA (el gate de liberación sigue aplicando) y fija `obligacion_cobro.vence_en = fecha_despacho + plazo_dias`.
+- **`keptai_private.proteger_despacho()`** (trigger `tg_despacho_proteger`): el despacho registrado no cambia de orden, fecha ni organización.
+- **`keptai_private.recalcular_obligaciones(org, orden)`** (interna, sin EXECUTE runtime): estado = PAGADA si el saldo es 0; MORA si vence antes de la fecha local de la organización; PARCIAL si hay cobro; PENDIENTE en otro caso. No toca las ANULADA.
+- **`keptai_private.actualizar_estados_cobranza()`** (EXECUTE runtime): wrapper limitado a ADMIN/SCHEDULER y a la organización del contexto.
+
+## Cambios vigentes V9 (AND-RESULTADOS-001)
+
+27 tablas.
+- **`asignacion_costo_item`:** costo_id y orden_item_id de la misma orden, organización y moneda; `monto` ≥ 0; `metodo` MANUAL/UNIDADES/VALOR_VENTA; `fuente`; `registrado_por` (autoría). Única por (organización, costo, ítem). La suma por costo no supera el costo (con bloqueo del costo). RLS: lectura ADMIN/GERENTE/JEFE_TALLER, escritura ADMIN/JEFE_TALLER.
+- **`transferencia_interna`:** orden (FK con moneda), `unidad_origen_id` solo TALLER_INTERNO, `monto` ≥ 0, `criterio` y `fuente` obligatorios, `registrado_por`. Inmutable salvo una anulación con autor y motivo. Una activa por (organización, orden, unidad). No es pago, factura ni caja. RLS: lectura ADMIN/GERENTE, escritura ADMIN.
+- **Triggers:** `tg_asignacion_validar`, `tg_transferencia_validar`, `tg_costo_asignado_proteger` (un costo no baja de lo asignado), `tg_asignacion_invalidar` y `tg_transferencia_invalidar` (cualquier cambio reabre `costos_reales_completos`).
