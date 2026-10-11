@@ -67,15 +67,15 @@ class AccessMatrixTests {
 	}
 
 	@Test
-	void creditDecisionIsOnlyForVendedorAndMatchesV7Policies() throws IOException {
+	void creditDecisionIsOnlyForAdminAndMatchesV14WithV7Authorship() throws IOException {
 		Op submit = operations(OpenApiSpec.load()).stream().filter(o -> o.id().equals("submitCreditDecision")).findFirst().orElseThrow();
 		List<String> roles = new ArrayList<>();
 		submit.node().path("x-keptai-proposed-roles").forEach(r -> roles.add(r.asString()));
-		assertThat(roles).containsExactly("VENDEDOR");
-		String sql = read(V7);
+		assertThat(roles).containsExactly("ADMIN");
+		String sql = read(Path.of("..","BD","migrations","V14__credito_admin_mvp.sql"));
 		assertThat(sql).contains("CREATE POLICY p_insercion ON aprobacion_credito")
-			.contains("(SELECT keptai_private.actor_actual())='VENDEDOR'")
-			.contains("validar_autoria('aprobado_por')");
+			.contains("(SELECT keptai_private.actor_actual())='ADMIN'");
+        assertThat(read(V7)).contains("validar_autoria('aprobado_por')");
 	}
 
 	@Test

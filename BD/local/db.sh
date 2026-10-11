@@ -55,7 +55,8 @@ case "$command_name" in
    GERENTE) usuario=70000000-0000-4000-8000-000000000003 ;;
    JEFE_TALLER) usuario=70000000-0000-4000-8000-000000000004 ;;
    VENDEDOR2) usuario=70000000-0000-4000-8000-000000000005 ;;
-   *) echo "Uso: ./BD/local/db.sh link-auth {VENDEDOR|VENDEDOR2|ADMIN|GERENTE|JEFE_TALLER} <uuid-de-Auth>"; exit 1 ;;
+   ADMIN2) usuario=70000000-0000-4000-8000-000000000006 ;;
+   *) echo "Uso: ./BD/local/db.sh link-auth {VENDEDOR|VENDEDOR2|ADMIN|ADMIN2|GERENTE|JEFE_TALLER} <uuid-de-Auth>"; exit 1 ;;
   esac
   [[ "$sub" =~ ^[0-9a-fA-F-]{36}$ ]] || { echo "El segundo argumento debe ser el UUID (sub) del usuario en Supabase Auth"; exit 1; }
   # Una cuenta = un usuario: si el sub ya estaba en otro usuario, ese vuelve a su marcador de la semilla (71...).

@@ -57,6 +57,23 @@ public final class ReceivableDtos {
 			@JsonProperty("days_overdue") @NotNull @Min(0) @Max(36_500) Integer daysOverdue,
 			@JsonProperty("status") @NotNull ReceivableStatus status,
 			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("applications") @Size(max = 50) List<@Valid ReceivableApplication> applications) {
+		public Receivable(
+			@JsonProperty("id") @NotNull UUID id,
+			@JsonProperty("order_id") @NotNull UUID orderId,
+			@JsonProperty("order_code") @NotNull @Pattern(regexp = OrderDtos.LABEL_REGEX) String orderCode,
+			@JsonProperty("customer") @NotNull @Valid CustomerRef customer,
+			@JsonProperty("original_amount") @NotNull @Valid PositiveMoney originalAmount,
+			@JsonProperty("applied_amount") @NotNull @Valid NonNegativeMoney appliedAmount,
+			@JsonProperty("balance") @NotNull @Valid NonNegativeMoney balance,
+			@JsonProperty("credit_term_days") @NotNull @Min(0) @Max(365) Integer creditTermDays,
+			@JsonProperty("term_start_event") @NotNull TermStartEvent termStartEvent,
+			@JsonProperty("due_date") LocalDate dueDate,
+			@JsonProperty("due_bucket") @NotNull DueBucket dueBucket,
+			@JsonProperty("days_overdue") @NotNull @Min(0) @Max(36_500) Integer daysOverdue,
+			@JsonProperty("status") @NotNull ReceivableStatus status) {
+			this(id, orderId, orderCode, customer, originalAmount, appliedAmount, balance, creditTermDays, termStartEvent, dueDate, dueBucket, daysOverdue, status, null);
+		}
+
 
 		@JsonIgnore
 		@AssertTrue(message = "days_overdue solo es mayor que 0 cuando due_bucket=overdue")
@@ -138,6 +155,19 @@ public final class ReceivableDtos {
 			@JsonProperty("closed_at") OffsetDateTime closedAt,
 			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("responsible_name") @Size(max = 200) String responsibleName,
 			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("resolution_note") @Size(max = 500) String resolutionNote) {
+		public CollectionAlert(
+			@JsonProperty("id") @NotNull UUID id,
+			@JsonProperty("receivable_id") UUID receivableId,
+			@JsonProperty("payment_id") UUID paymentId,
+			@JsonProperty("rule") @NotNull AlertRule rule,
+			@JsonProperty("status") @NotNull AlertStatus status,
+			@JsonProperty("responsible_user_id") UUID responsibleUserId,
+			@JsonProperty("resolution") AlertResolution resolution,
+			@JsonProperty("created_at") @NotNull OffsetDateTime createdAt,
+			@JsonProperty("closed_at") OffsetDateTime closedAt) {
+			this(id, receivableId, paymentId, rule, status, responsibleUserId, resolution, createdAt, closedAt, null, null);
+		}
+
 
 		@JsonIgnore
 		@AssertTrue(message = "la alerta apunta a una obligacion o a un pago")
@@ -172,6 +202,18 @@ public final class ReceivableDtos {
 			@JsonProperty("reason") @Size(max = 500) String reason,
 			@JsonProperty("decided_at") OffsetDateTime decidedAt,
 			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("responsible_name") @Size(max = 200) String responsibleName) {
+		public CreditAuthorization(
+			@JsonProperty("status") @NotNull CreditAuthorizationStatus status,
+			@JsonProperty("responsible_user_id") UUID responsibleUserId,
+			@JsonProperty("arrears_notice_shown") @NotNull Boolean arrearsNoticeShown,
+			@JsonProperty("overdue_balance_reference") @Valid NonNegativeMoney overdueBalanceReference,
+			@JsonProperty("credit_term_days") @Min(0) @Max(365) Integer creditTermDays,
+			@JsonProperty("advance_pct_bps") @Min(0) @Max(10_000) Integer advancePctBps,
+			@JsonProperty("reason") @Size(max = 500) String reason,
+			@JsonProperty("decided_at") OffsetDateTime decidedAt) {
+			this(status, responsibleUserId, arrearsNoticeShown, overdueBalanceReference, creditTermDays, advancePctBps, reason, decidedAt, null);
+		}
+
 
 		@JsonIgnore
 		@AssertTrue(message = "aprobada o rechazada exige responsable y fecha de decision")

@@ -1,4 +1,8 @@
+> Revisión de cierre 11/10/2026: ADMIN autoriza crédito durante el MVP (D-014), nueva V14 y API idempotente. Plan vigente de cierre: Backend/docs/plan-cierre-backend.md; entrega y evidencia: Backend/docs/entrega-backend-final-local.md. Las notas inferiores son antecedentes.
+
 # Continuación después de integrar los backends
+
+> Actualización vigente 11/10/2026: ejecución MIG-04/06/07 y QA local en backend-partefinal, base 29995f1. Autorización Miguel: dos ADMIN distintos para verificar/aplicar; ADMIN revisa pedidos desde panel, vendedor WhatsApp aún pendiente. Auth real previo acreditado, no repetir alta. Detalle: Backend/docs/entrega-backend-final-local.md. Sin backend público, aceptación real n8n/MIG-08 sigue pendiente. Historial posterior se conserva como antecedente.
 ID: MIG-INTEGRADO-001. Fecha: 11/10/2026. Responsable: Miguel.
 Base: integración215bcad en padre-nuestro, incorporada a main con el frontend vigente. Estado final y commit en estado.md.
 

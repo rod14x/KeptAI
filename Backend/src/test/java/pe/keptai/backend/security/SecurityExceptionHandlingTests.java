@@ -52,8 +52,8 @@ class SecurityExceptionHandlingTests {
 	@RestController
 	static class Probe {
 
-		@GetMapping("/api/v1/drafts/{draft_id}")
-		String order(@PathVariable("draft_id") String id, @RequestParam String mode) {
+		@GetMapping(value="/api/v1/orders/{order_id}",params="mode")
+		String order(@PathVariable("order_id") String id, @RequestParam String mode) {
 			return throwFor(mode);
 		}
 
@@ -96,7 +96,7 @@ class SecurityExceptionHandlingTests {
 	}
 
 	private MvcResult panel(String mode, int expected, String code) throws Exception {
-		MvcResult r = mvc.perform(get("/api/v1/drafts/" + UUID.randomUUID()).param("mode", mode).with(authentication(vendedor())))
+		MvcResult r = mvc.perform(get("/api/v1/orders/" + UUID.randomUUID()).param("mode", mode).with(authentication(vendedor())))
 			.andExpect(status().is(expected)).andExpect(jsonPath("$.code").value(code)).andExpect(jsonPath("$.request_id").isNotEmpty())
 			.andExpect(header().exists("X-Request-Id")).andReturn();
 		String body = r.getResponse().getContentAsString();
@@ -107,7 +107,7 @@ class SecurityExceptionHandlingTests {
 
 	@Test
 	void theProbeAnswersNormallyWhenNothingIsThrown() throws Exception {
-		mvc.perform(get("/api/v1/drafts/" + UUID.randomUUID()).param("mode", "ok").with(authentication(vendedor()))).andExpect(status().isOk());
+		mvc.perform(get("/api/v1/orders/" + UUID.randomUUID()).param("mode", "ok").with(authentication(vendedor()))).andExpect(status().isOk());
 	}
 
 	@Test
@@ -155,9 +155,9 @@ class SecurityExceptionHandlingTests {
 	@Test
 	void theRouteGateStillRunsBeforeTheControllerSoItNeverThrowsForUnauthorizedActors() throws Exception {
 		// JEFE_TALLER ve órdenes; GERENTE de pagos no ve esta ruta; un servicio no entra al panel: 403 sin ejecutar el probe.
-		mvc.perform(get("/api/v1/drafts/" + UUID.randomUUID()).param("mode", "unexpected").with(authentication(ingesta()))).andExpect(status().isForbidden());
+		mvc.perform(get("/api/v1/orders/" + UUID.randomUUID()).param("mode", "unexpected").with(authentication(ingesta()))).andExpect(status().isForbidden());
 		mvc.perform(post("/api/v1/pagos/voucher").param("mode", "unexpected").with(authentication(vendedor()))).andExpect(status().isForbidden());
-		mvc.perform(get("/api/v1/drafts/" + UUID.randomUUID()).param("mode", "unexpected")).andExpect(status().isUnauthorized());
+		mvc.perform(get("/api/v1/orders/" + UUID.randomUUID()).param("mode", "unexpected")).andExpect(status().isUnauthorized());
 	}
 
 }

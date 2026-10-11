@@ -44,9 +44,11 @@ public class PaymentCommands {
 	}
 
 	/** Verificación de fondos: el motor la registra rotulada como simulada (sin conexión bancaria). */
-	public Payment verify(UUID paymentId) {
-		motorPagos().verificarPago(panel.financiero(), paymentId);
-		return queries.payment(paymentId);
+	public Payment verify(UUID paymentId, String key) {
+		return idempotent("PANEL_VERIFICAR", key, paymentId.toString(), Payment.class, () -> {
+			motorPagos().verificarPago(panel.financiero(), paymentId);
+			return queries.paymentInTx(paymentId);
+		});
 	}
 
 	/**
@@ -58,25 +60,50 @@ public class PaymentCommands {
 		return queries.payment(paymentId);
 	}
 
-	public PaymentApplicationResult apply(UUID paymentId, ApplyPaymentRequest req) {
-		ContextoFinanciero ctx = panel.financiero();
-		Aplicacion a = motorPagos().aplicarPago(ctx, paymentId, req.receivableId(),
-				PanelMapping.soles(req.amount().amountCents()));
-		releaseCoveredOrder(req.receivableId());
-		PaymentApplication application = new PaymentApplication(a.aplicacionId(), paymentId, req.receivableId(),
+	public PaymentApplicationResult apply(UUID paymentId, ApplyPaymentRequest req, String key) {
+		return idempotent("PANEL_APLICAR", key, paymentId + ":" + req.receivableId() + ":" + req.amount().amountCents(), PaymentApplicationResult.class, () -> {
+			ContextoFinanciero ctx = panel.financiero();
+			var rows = panel.jdbc().queryForList("SELECT verificado_por FROM keptai.pago WHERE id=? AND organizacion_id=keptai.app_organizacion_actual() FOR UPDATE", paymentId);
+			if (rows.isEmpty()) throw PanelException.notFound("Pago no encontrado");
+			if (ctx.usuarioId().equals(rows.getFirst().get("verificado_por")))
+				throw PanelException.forbidden("La aplicación requiere un ADMIN distinto de quien verificó");
+			Aplicacion a = motorPagos().aplicarPago(ctx, paymentId, req.receivableId(), PanelMapping.soles(req.amount().amountCents()));
+			releaseCoveredOrder(req.receivableId());
+			PaymentApplication application = new PaymentApplication(a.aplicacionId(), paymentId, req.receivableId(),
 				PositiveMoney.pen(PanelMapping.cents(a.montoAplicado())), PanelMapping.lima(a.aplicadoEn()), ctx.usuarioId());
-		return panel.read(() -> new PaymentApplicationResult(application, queries.paymentInTx(paymentId),
-				queries.receivableInTx(req.receivableId()), a.alertasResueltas()));
+			return new PaymentApplicationResult(application, queries.paymentInTx(paymentId), queries.receivableInTx(req.receivableId()), a.alertasResueltas());
+		});
 	}
 
-	public Order dispatch(UUID orderId, DispatchRequest req) {
-		MotorCobranza motor = cobranza.getIfAvailable();
-		if (motor == null) {
-			throw PanelException.unavailable();
-		}
-		motor.registrarDespacho(panel.financiero(), orderId, req.dispatchDate(), null);
-		return queries.order(orderId);
+	private <T> T idempotent(String operation, String key, String content, Class<T> type, java.util.function.Supplier<T> work) {
+		if (key == null || !key.matches("[A-Za-z0-9._:-]{8,128}")) throw PanelException.badRequest("Falta Idempotency-Key válida (8 a 128 caracteres)");
+		return idempotent(operation,key,content,type,java.util.Set.of("ADMIN"),work);
 	}
+
+	private <T> T idempotent(String operation,String key,String content,Class<T> type,java.util.Set<String> roles,java.util.function.Supplier<T> work) {
+		if (key == null || !key.matches("[A-Za-z0-9._:-]{8,128}")) throw PanelException.badRequest("Falta Idempotency-Key válida");
+		return panel.write(() -> {
+			if (!roles.contains(panel.jdbc().queryForObject("SELECT keptai_private.actor_actual()", String.class))) throw PanelException.forbidden("Acceso denegado");
+			var store = new pe.keptai.backend.n8n.IdempotencyStore(panel.jdbc());
+			String hash = pe.keptai.backend.security.ApiKeyAuthenticationFilter.sha256(panel.identity().usuarioId() + ":" + content);
+			var reserved = store.reservar(operation,key,hash);
+			if (reserved.resultado() == pe.keptai.backend.n8n.IdempotencyStore.Resultado.CONFLICTO)
+				throw new PanelException(org.springframework.http.HttpStatus.CONFLICT,"IDEMPOTENCY_CONFLICT","La clave ya se usó con otra operación o autor");
+			var json = pe.keptai.backend.contract.ContractJson.newMapper();
+			if (reserved.resultado() == pe.keptai.backend.n8n.IdempotencyStore.Resultado.REPETIDA) return json.readValue(reserved.respuestaJson(),type);
+			T result = work.get();
+			store.completar(operation,key,json.writeValueAsString(result));
+			return result;
+		});
+	}
+
+	public Order dispatch(UUID orderId, DispatchRequest req, String key) {
+        return idempotent("PANEL_DESPACHAR",key,orderId+":"+req.dispatchDate(),Order.class,java.util.Set.of("ADMIN","JEFE_TALLER"),()-> {
+            MotorCobranza motor=cobranza.getIfAvailable();if(motor==null)throw PanelException.unavailable();
+            motor.registrarDespacho(panel.financiero(),orderId,req.dispatchDate(),null);
+            return queries.orderInTx(orderId);
+        });
+    }
 
 	private void releaseCoveredOrder(UUID receivableId) {
 		panel.write(() -> {

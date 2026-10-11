@@ -85,8 +85,10 @@ describe("modo api: módulos conectados (INT-FE-API-001)", () => {
 
   it("el menú de cada rol enlaza sus módulos conectados, como en la demostración", async () => {
     const { render } = await load(false);
+    // D-014: la cartera del vendedor sigue sin definir; en modo api su menú no enlaza módulos de cartera.
     const vendedor = render("/sesion", "VENDEDOR");
-    for (const to of ["/pedidos", "/clientes"]) expect(vendedor).toContain(`href="${to}"`);
+    for (const to of ["/pedidos", "/clientes"]) expect(vendedor).not.toContain(`href="${to}"`);
+    expect(vendedor).toContain("pendiente de definir");
     const admin = render("/sesion", "ADMIN");
     for (const to of ["/conciliacion", "/cobranza", "/pedidos"]) expect(admin).toContain(`href="${to}"`);
     const gerencia = render("/sesion", "GERENTE");

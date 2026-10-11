@@ -56,15 +56,17 @@ public class PaymentsController {
 	}
 
 	@PostMapping(value = "/api/v1/payments/{payment_id}/verifications", consumes = MediaType.APPLICATION_JSON_VALUE)
-	public Payment verify(@PathVariable("payment_id") String paymentId, @RequestBody String body) {
-		requests.body(body, RegisterVerificationRequest.class);
-		return commands.verify(uuid(paymentId, "payment_id"));
+	public Payment verify(@PathVariable("payment_id") String paymentId, @RequestBody String body, @org.springframework.web.bind.annotation.RequestHeader("Idempotency-Key") String key) {
+		var req = requests.body(body, RegisterVerificationRequest.class);
+        if (req.method()!=pe.keptai.backend.contract.ContractEnums.VerificationMethod.SIMULATED_DEMO)
+            throw pe.keptai.backend.panel.PanelException.badRequest("Solo verificación simulated_demo disponible; no existe conexión bancaria");
+		return commands.verify(uuid(paymentId, "payment_id"), key);
 	}
 
 	@PostMapping(value = "/api/v1/payments/{payment_id}/applications", consumes = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseStatus(HttpStatus.CREATED)
-	public PaymentApplicationResult apply(@PathVariable("payment_id") String paymentId, @RequestBody String body) {
-		return commands.apply(uuid(paymentId, "payment_id"), requests.body(body, ApplyPaymentRequest.class));
+	public PaymentApplicationResult apply(@PathVariable("payment_id") String paymentId, @RequestBody String body, @org.springframework.web.bind.annotation.RequestHeader("Idempotency-Key") String key) {
+		return commands.apply(uuid(paymentId, "payment_id"), requests.body(body, ApplyPaymentRequest.class), key);
 	}
 
 	/** markPaymentDuplicate (INT-FE-API-002): sin cuerpo; el motor busca el pago original. */

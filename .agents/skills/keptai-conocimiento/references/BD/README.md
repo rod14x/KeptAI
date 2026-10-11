@@ -1,4 +1,6 @@
-# KeptAI — Base de datos vigente (V10)
+# KeptAI — Base de datos del árbol local (V14)
+
+> Juego local de migraciones probado solo en PostgreSQL desechable. Antes de desplegar, reconciliar con Andrés la colisión V10 contacto/crédito mediante historial remoto real; no asumir V13 aplicado en Supabase.
 
 **Punto de entrada para desarrollar:** [Definicion canonica DB-DEF-001](definicion-base-datos.md). Alcance, 27 tablas V5, RLS, transacciones, vouchers y extensiones pendientes para margen por linea/centro.
 
@@ -10,6 +12,9 @@ Revisión de Miguel/Codex, 10/10/2026, basada en Actores/flujos/DER, D-005 y D-0
 
 - [Guia local](local/README.md): Docker, Flyway, 127.0.0.1:5433 y perfil Spring local.
 - [Semilla demo](semilla/semilla_demo.sql) (Andrés, roadmap §6): datos **ficticios** reiniciables con los mismos UUID e importes de `Backend/docs/openapi.yaml`. Incluye P-001 (propia, costo 340, margen −40) y P-002 (tercerizada, costo 350, margen 150), V-001/V-002 aplicados y V-003 duplicado, saldo 400, mora, alertas, caja (apertura 100, egresos 250/300) y una segunda organización para probar aislamiento. Cargar con `./BD/local/db.sh seed` sobre V7. Solo borra y recrea organizaciones `DEMO …`, exige `SET keptai.permitir_semilla='demo'` y no crea comprobantes sin archivo. Incluye costos por etapa, asignaciones por ítem y el cargo interno de 320 (V9). Falta `display_code` de pagos (no hay columna). Pruebas: `SemillaDemoTests` y `RecorridoDemoTests`. **Cargada también en Supabase** (11/10/2026, mismas cifras verificadas).
+- [V13](migrations/V13__metadatos_voucher_privado.sql): MIME/tamaño reales, autor humano opcional y etiqueta de comprobantes; FK tenant y trigger de autoría. Históricos desconocidos permanecen NULL. Solo probado en desechables.
+- [V12](migrations/V12__revision_borradores.sql): descartar borradores incompletos sin inventar campos; DELETE de items reservado a ADMIN mientras el pedido siga BORRADOR, para reemplazo humano atómico. Solo probado en desechables.
+- [V11](migrations/V11__obligacion_al_aprobar_credito.sql): conserva SQL de V10 de crédito de origin/develop181a30e bajo la siguiente versión del juego local. No renumera ni altera una migración aplicada; integración remota pendiente de historial y acuerdo con Andrés.
 - [V10](migrations/V10__contacto_whatsapp.sql) (D-011, dirección de Miguel 11/10/2026): `contacto` (cliente, nombre, JID canónico, activo; solo metadatos) con RLS (INGESTA solo lee activos de su organización; alta/cambio ADMIN); `canal_whatsapp.contacto_id` y FKs compuestas que impiden canal/orden/pago cruzados entre contacto, cliente, canal y organización; `pago.canal_id` y `pago.orden_contexto_id` (asociación contextual, no aplicación). No reescribe V1–V9. Aplicar con el rol migrador: la imagen Docker NO migra la base al arrancar.
 - [V9](migrations/V9__asignacion_costos_transferencia_interna.sql) (Andrés, AND-RESULTADOS-001): `asignacion_costo_item` (reparto de costos por ítem, C-05) y `transferencia_interna` (cargo interno del taller, C-06), con RLS, autoría e invariantes. Queda en 27 tablas. **Aplicada en local y en Supabase** (historial Flyway con el mismo checksum).
 - [V8](migrations/V8__despacho_vencimiento_cobranza.sql) (Andrés, AND-COBRANZA-001): el despacho fija el vencimiento (D-005). Trigger DEFINER: orden liberada o en producción → DESPACHADA y `vence_en = fecha_despacho + plazo`; el acta no cambia de fecha ni de orden. Añade `keptai_private.actualizar_estados_cobranza()` (solo ADMIN o SCHEDULER de su organización) para recalcular MORA, PAGADA, etc. Sin tablas ni columnas nuevas. **Aplicada en local y en Supabase** (historial Flyway con el mismo checksum).
@@ -55,3 +60,7 @@ La vista diferencia margen_venta_real y margen_real_cobrado. Un costo ausente/in
 ## Verificar localmente
 
 Desde Backend/: `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ./mvnw -o test -Dtest=SchemaRlsTests`. Docker debe responder. Testcontainers aplica V1–V7 en PostgreSQL 17 efímero y elimina el contenedor al terminar. No requiere .env ni proyecto remoto. El test Storage usa catálogos mínimos emulados: acredita SQL/políticas, no el servicio Supabase real.
+
+### V14 — crédito ADMIN durante el MVP (D-014)
+
+Nueva política de inserción/actualización de aprobacion_credito: solo ADMIN de la organización, conservando el trigger de autoría de V7. No se reescriben migraciones ni aprobaciones históricas. API idempotente, no asigna un ADMIN como vendedor. Probada en base desechable; el orden de release remoto requiere revisar el historial y la colisión V10.

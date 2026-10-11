@@ -51,7 +51,7 @@ export const Evidence = z
     text_preview: z.string().nullable(),
     label: z.string().nullable(),
     data_origin: DataOrigin,
-    uploaded_by_user_id: Uuid,
+    uploaded_by_user_id: Uuid.nullable(),
     created_at: IsoDateTime,
   })
   .strict();
@@ -101,7 +101,8 @@ export const VoucherDraftFields = z
 export const ExtractionDraft = z
   .object({
     id: Uuid,
-    evidence_id: Uuid,
+    // Null en borradores que llegan por n8n sin archivo (ingesta de pedido).
+    evidence_id: Uuid.nullable(),
     draft_type: DraftType,
     status: z.enum(["pending_review", "confirmed", "discarded"]),
     revision: z.number().int(),

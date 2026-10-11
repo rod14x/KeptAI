@@ -57,7 +57,8 @@ export function sectionLabel(pathname: string, role: Role | undefined) {
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { person } = useAuth();
   const toast = useToast();
-  const items = person ? NAV_BY_ROLE[person.role] : [];
+  // D-014: en modo api el vendedor no tiene módulos de cartera todavía.
+  const items = person && (IS_MOCK || person.role !== "vendedor") ? NAV_BY_ROLE[person.role] : [];
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
   // Bugfix: Ajuste de threshold y rootMargin del IntersectionObserver para evitar

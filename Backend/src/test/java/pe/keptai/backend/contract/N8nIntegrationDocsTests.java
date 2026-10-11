@@ -52,7 +52,7 @@ class N8nIntegrationDocsTests {
 		assertThat(voucher).contains("CONTACT_NOT_REGISTERED", "CONTACT_JID_MISMATCH", "ORDEN_AMBIGUA", "orden_contexto_id", "SIN_ORDEN", "congelada");
 		assertThat(OpenApiSpec.load().root().path("components").path("schemas").path("N8nPagoVoucherResponse").path("properties").has("avisos")).isTrue();
 		assertThat(read("docs", "provision-servicios-local.md")).contains("provisionar-contacto-local.sh", "NO APLICADO", "no migra");
-		assertThat(read("docs", "despliegue-n8n.md")).contains("La base debe estar en V10", "no migra");
+		assertThat(read("docs", "despliegue-n8n.md")).contains("Código local requiere V1–V14", "Flyway permanece desactivado");
 		assertThat(Files.isExecutable(Path.of("scripts", "provisionar-contacto-local.sh"))).isTrue();
 		assertThat(Files.readString(Path.of("..", "BD", "migrations", "V10__contacto_whatsapp.sql"))).contains("CREATE TABLE contacto", "ENABLE ROW LEVEL SECURITY", "p_lectura_ingesta");
 	}

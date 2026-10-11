@@ -10,20 +10,20 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * que dos solicitudes simultáneas nunca crean dos pedidos/pagos. Guarda solo el hash del contenido funcional y la
  * respuesta estructurada (ids y estados), nunca el cuerpo, el transcript ni el Base64.
  */
-final class IdempotencyStore {
+public final class IdempotencyStore {
 
-	enum Resultado { NUEVA, REPETIDA, CONFLICTO }
+	public enum Resultado { NUEVA, REPETIDA, CONFLICTO }
 
-	record Reserva(Resultado resultado, String respuestaJson) {
+	public record Reserva(Resultado resultado, String respuestaJson) {
 	}
 
 	private final JdbcTemplate jdbc;
 
-	IdempotencyStore(JdbcTemplate jdbc) {
+	public IdempotencyStore(JdbcTemplate jdbc) {
 		this.jdbc = jdbc;
 	}
 
-	Reserva reservar(String operacion, String clave, String hashContenido) {
+	public Reserva reservar(String operacion, String clave, String hashContenido) {
 		int n = jdbc.update("""
 				INSERT INTO keptai.solicitud_idempotente (organizacion_id, operacion, clave, hash_contenido)
 				VALUES (keptai.app_organizacion_actual(), ?, ?, ?) ON CONFLICT DO NOTHING""", operacion, clave, hashContenido);
@@ -40,7 +40,7 @@ final class IdempotencyStore {
 		return new Reserva(Resultado.REPETIDA, fila.get(0)[1]);
 	}
 
-	void completar(String operacion, String clave, String respuestaJson) {
+	public void completar(String operacion, String clave, String respuestaJson) {
 		jdbc.update("""
 				UPDATE keptai.solicitud_idempotente SET respuesta = ?::jsonb
 				 WHERE organizacion_id = keptai.app_organizacion_actual() AND operacion = ? AND clave = ?""", respuestaJson, operacion, clave);

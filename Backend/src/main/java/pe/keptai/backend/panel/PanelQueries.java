@@ -92,7 +92,7 @@ public class PanelQueries {
 	}
 
 	public IdentityNames identityNames() {
-		return panel.read(() -> panel.jdbc().query("""
+		return panel.readOwnIdentity(() -> panel.jdbc().query("""
 				SELECT u.nombre, org.nombre
 				  FROM keptai.usuario u JOIN keptai.organizacion org ON org.id = u.organizacion_id
 				 WHERE u.id = nullif(current_setting('app.usuario_id', true), '')::uuid""",

@@ -46,6 +46,12 @@ public final class OrderDtos {
 			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("type") CustomerType type,
 			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("tax_id") @Size(max = 11) String taxId,
 			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("credit_limit") @Valid NonNegativeMoney creditLimit) {
+		public CustomerRef(
+			@JsonProperty("id") @NotNull UUID id,
+			@JsonProperty("name") @NotBlank @Size(max = 200) String name) {
+			this(id, name, null, null, null);
+		}
+
 
 		/** Referencia sin ficha (estado de cuenta, candidatos). */
 		public static CustomerRef of(UUID id, String name) {
@@ -90,6 +96,30 @@ public final class OrderDtos {
 			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("seller") @Valid PersonRef seller,
 			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("items") @Size(max = 100) List<@Valid OrderItem> items,
 			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("dispatched_by") @Valid PersonRef dispatchedBy) {
+		public Order(
+			@JsonProperty("id") @NotNull UUID id,
+			@JsonProperty("display_code") @NotNull @Pattern(regexp = LABEL_REGEX) String displayCode,
+			@JsonProperty("customer") @Valid CustomerRef customer,
+			@JsonProperty("brand") @Size(max = 100) String brand,
+			@JsonProperty("product_line") @Size(max = 100) String productLine,
+			@JsonProperty("production_mode") @NotNull ProductionMode productionMode,
+			@JsonProperty("sale") @Valid PositiveMoney sale,
+			@JsonProperty("status") @NotNull OrderStatus status,
+			@JsonProperty("source") @NotNull OrderSource source,
+			@JsonProperty("payment_condition") PaymentCondition paymentCondition,
+			@JsonProperty("credit_term_days") @Min(0) @Max(365) Integer creditTermDays,
+			@JsonProperty("advance_required") @NotNull @Valid NonNegativeMoney advanceRequired,
+			@JsonProperty("requested_delivery_date") LocalDate requestedDeliveryDate,
+			@JsonProperty("production_start_date") LocalDate productionStartDate,
+			@JsonProperty("dispatch_date") LocalDate dispatchDate,
+			@JsonProperty("receivable_status") ReceivableStatus receivableStatus,
+			@JsonProperty("due_date") LocalDate dueDate,
+			@JsonProperty("source_evidence_id") UUID sourceEvidenceId,
+			@JsonProperty("data_origin") @NotNull DataOrigin dataOrigin,
+			@JsonProperty("created_at") @NotNull OffsetDateTime createdAt) {
+			this(id, displayCode, customer, brand, productLine, productionMode, sale, status, source, paymentCondition, creditTermDays, advanceRequired, requestedDeliveryDate, productionStartDate, dispatchDate, receivableStatus, dueDate, sourceEvidenceId, dataOrigin, createdAt, null, null, null);
+		}
+
 
         @JsonIgnore
         @AssertTrue(message = "fuera de borrador exige cliente, venta y condicion de pago")

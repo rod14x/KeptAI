@@ -232,6 +232,8 @@ function SplitView({ d, nextHref }: { d: EvidenceDetailDTO; nextHref: string | n
   const verifyAndApply = async (): Promise<ActionResult> => {
     const v = await commands.verifyFunds(ev.id, me, acceptMismatch);
     if (!v.ok || !can(me.role, "aplicar")) return v;
+    // D-012 (API): la aplicación la hace un ADMIN distinto de quien verificó.
+    if (!capabilities.applyBySameVerifier) return { ok: true, message: `${v.message} Otra persona de Administración lo descuenta de la deuda.` };
     const a = await commands.applyPayment(ev.id, me);
     return a.ok ? a : { ok: false, message: `Quedó verificado en banco, pero no se descontó: ${a.message}` };
   };
@@ -302,6 +304,13 @@ function SplitView({ d, nextHref }: { d: EvidenceDetailDTO; nextHref: string | n
       >
         Sí, llegó al banco
       </Button>
+    );
+  } else if (ev.status === "verificado_banco" && d.verifiedByMe && !capabilities.applyBySameVerifier) {
+    primary = (
+      <p className="flex items-start gap-2 rounded-xl bg-panel px-4 py-3 text-[13px] text-muted ring-1 ring-line">
+        <Info size={18} weight="bold" className="mt-px shrink-0" />
+        <span>Lo verificaste tú: otra persona de Administración lo descuenta de la deuda (segregación D-012).</span>
+      </p>
     );
   } else if (ev.status === "verificado_banco") {
     primary = (

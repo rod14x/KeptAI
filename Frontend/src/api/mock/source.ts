@@ -339,6 +339,7 @@ export const mockSource: DataSource = {
     retryMessages: true,
     editPaymentFields: true,
     markDuplicate: true,
+    applyBySameVerifier: true,
     discardPayment: true,
     manualOrderCapture: true,
     voucherNeedsFile: false,
@@ -496,6 +497,7 @@ export const mockSource: DataSource = {
         duplicateOfRef: duplicateOf(s, ev)?.ref ?? null,
         // En la demo, marcar un duplicado lo cierra (descartado); uno detectado sigue recibido.
         duplicateMarked: false,
+        verifiedByMe: false,
         order: order
           ? {
               id: order.id,

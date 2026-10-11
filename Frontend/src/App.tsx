@@ -71,6 +71,8 @@ function RequirePermission({ permission, children }: { permission: Permission | 
 function Home() {
   const { person } = useAuth();
   if (person?.role === "jefe_taller") return <Navigate to="/taller" replace />;
+  // D-014: en modo api la cartera del vendedor aún no está definida; solo ve su sesión.
+  if (!IS_MOCK && person?.role === "vendedor") return <Navigate to="/sesion" replace />;
   if (person?.role === "gerencia") return <DashboardPage />;
   return <PendientesPage />;
 }

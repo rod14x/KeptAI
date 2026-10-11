@@ -12,6 +12,11 @@ public interface VoucherStorage {
 	/** Elimina el objeto creado en este intento (compensación). */
 	void delete(String path);
 
+	/** Enlace privado de corta duración; el llamador debe autorizar el objeto antes de invocarlo. */
+	default String signedUrl(String path, int expiresInSeconds) {
+		throw new StorageException("Lectura privada no configurada", true);
+	}
+
 	/** Fallo del almacenamiento. {@code retryable}: indisponibilidad temporal (el llamador puede reintentar). */
 	class StorageException extends RuntimeException {
 

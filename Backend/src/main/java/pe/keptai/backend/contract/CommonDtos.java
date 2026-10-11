@@ -100,6 +100,13 @@ public final class CommonDtos {
 			@JsonProperty("role") @NotNull UserRole role,
 			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("name") @Size(max = 200) String name,
 			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("organization_name") @Size(max = 200) String organizationName) {
+		public UserContext(
+			@JsonProperty("user_id") @NotNull UUID userId,
+			@JsonProperty("organization_id") @NotNull UUID organizationId,
+			@JsonProperty("role") @NotNull UserRole role) {
+			this(userId, organizationId, role, null, null);
+		}
+
 	}
 
 	/** Persona de la organizacion (usuario.id, usuario.nombre), INT-FE-API-002. Nunca correo ni credenciales. */

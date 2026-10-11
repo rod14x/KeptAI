@@ -1,4 +1,8 @@
+> Revisión vigente11/10/2026: verify357/0/0, API+Auth/Storage Supabase real30/30, D-014 crédito ADMIN con V14 e idempotencia. Implementación local verificable; historial/migraciones remotas, despliegue y workflows/frontend reales pendientes. Plan: Backend/docs/plan-cierre-backend.md.
+
 # Estado de desarrollo de Miguel
+
+> Actualización vigente 11/10/2026: ejecución MIG-04/06/07 y QA local en backend-partefinal, base 29995f1. Autorización Miguel: dos ADMIN distintos para verificar/aplicar; ADMIN revisa pedidos desde panel, vendedor WhatsApp aún pendiente. Auth real previo acreditado, no repetir alta. Detalle: Backend/docs/entrega-backend-final-local.md. Sin backend público, aceptación real n8n/MIG-08 sigue pendiente. Historial posterior se conserva como antecedente.
 
 > Preparación: 10 de octubre de 2026. Esta plantilla no acredita implementación. Actualizar al terminar cada tarea, evitando escritores simultáneos.
 
@@ -6,7 +10,7 @@
 
 La rama `backend-miguel` integró `origin/feature/autorizacion` (`1b5375e`): `BD/` (esquema V1-V3, diccionario), `Middleware/n8n/` (WF0-WF3), skills de Supabase y D-005 (WhatsApp). La decisión de Miguel pasó a D-006. Revisión completa y brechas del contrato MIG-02 en [revision-integracion-andres.md](revision-integracion-andres.md). Las menciones posteriores de "BD/ vacío" en la bitácora de MIG-00..MIG-02 eran ciertas al escribirse y se conservan como historial.
 
-## Última tarea
+## Última tarea histórica (antecedente)
 
 MIG-01 completada. MIG-02: **entrega técnica de alineación completada** (10/10/2026): contrato/DTOs compatibles con SQL y n8n, sin endpoints operativos. DB-REV-002: revisión/corrección SQL local completada con V4/V5 y Storage separado conforme D-007. Interfaces del motor, semilla y upload WF2 siguen pendientes; no se inventa aceptación personal de Andrés. MIG-03 no iniciada.
 
@@ -505,3 +509,44 @@ Miguel solicita commitear y publicar la entrega actual en `backend-partefinal`; 
 - Bloqueo de integración detectado: `origin/develop` en `181a30e` contiene `BD/migrations/V10__obligacion_al_aprobar_credito.sql`; esta rama añade `V10__contacto_whatsapp.sql`. Flyway no admite ambas con versión 10. Quien integre debe consultar primero el historial REAL de la base destino y asignar una versión libre a la migración no aplicada, conservando las migraciones ya aplicadas y sus checksums. No se renumeró ninguna ni se confirmó si la V10 de crédito está aplicada en Supabase.
 - `develop` también conecta pantallas del panel y abre operaciones financieras que esta rama mantiene cerradas. La integración debe revisar esa autorización y la segregación financiera pendiente; publicar esta rama no acredita esa decisión ni la integración.
 - V10 de contactos y demo siguen sin aplicar a la base activa. La entrega está verificada localmente; no equivale a n8n público listo ni a frontend integrado o desplegado.
+
+### Backend final local — base 29995f1, backend-partefinal
+
+## Verificación de esta entrega (11/10/2026)
+
+- JDK 21 Linux y `sg docker -c './mvnw -B -o verify'`: 354 tests, 0 fallos, 0 errores, 0 omitidos, BUILD SUCCESS. Incluye 13 nuevos tests de backend completo con PostgreSQL 17 desechable/runtime sin superusuario ni bypass y Storage simulado; nuevos tests de firma privada.
+- Cobertura nueva: autorización antes de Storage, enlaces sin caché, metadatos reales/MIME declarada falsa, replay/conflicto por autor, otro tenant sin subir, caída Storage y compensación tras error SQL, corrección con revisión optimista y auditoría before/after, confirmación concurrente única, descarte incompleto, dos ADMIN distintos, rollback completo de aplicación/liberación e idempotencia, despacho con replay y consultas/reportes reales del motor.
+- Frontend existente: npm test 106/106 y npm run build OK, sin cambios de código ni conexión de módulos de negocio.
+- OpenAPI: 38 operaciones, 220 ejemplos válidos y 25 casos negativos. Matriz de rutas/roles y DTOs comprobados contra contrato. Cinco operaciones permanecen cerradas por decisión, y vendedor se deniega en el servicio hasta definir cartera.
+- Storage Supabase real: bucket privado confirmado, upload/read/signed-read/hash/delete HTTP 200 con un PNG sintético eliminado después. Prueba REST del servicio, no aceptación e2e de workflows reales.
+
+Detalle y límites vigentes: Backend/docs/entrega-backend-final-local.md. Sin commit/push de esta entrega ni migración activa. MIG-03-D3 real/MIG-08 global no cerrados, crédito/cartera pendientes.
+
+### Comprobaciones adicionales terminadas
+
+- Auth real repetido contra el código actual: 15/15 con membresía, Supabase Auth real + Spring propio 8092 + Vite propio 5175 + PostgreSQL local existente. Se verifica Bearer, /me 200/identidad, recarga y logout. Sin nueva cuenta/membresía ni cambios en env; procesos propios detenidos.
+- verificar-n8n-local.sh: 58/58 de recepción/contacto/persistencia/idempotencia/ausencia de mensajes, más 4 comprobaciones de caída Storage y rotación/revocación: 62/62 en total. Spring 8090 y Storage SIMULADO 8091, PostgreSQL desechable; procesos y base temporales eliminados. No es workflow real de Isabella.
+
+### Aceptación financiera HTTP adicional
+
+PanelFinancialAcceptanceTests añade cuatro pruebas con PostgreSQL desechable y motores reales, usando la semilla ficticia de Andrés y autenticación de test: resumen/margen/centro/caja/CSV; cobrado S/400, saldo S/400, costo S/690 y margen S/110; aplicación parcial de S/50 con replay único y saldo S/350; duplicado rechazado sin movimiento; sobreaplicación revierte y admite reintento válido; dos pagos de S/250 concurrentes sobre saldo S/400 dejan exactamente uno aplicado y otro rechazado. No es banco real ni ejecución de workflows externos.
+
+Verificación final completa tras añadir esos casos: 354 tests, 0 fallos, 0 errores, 0 omitidos, BUILD SUCCESS. Se mantiene pendiente la aceptación remota y la aprobación comercial por vendedor. No hubo commit, push, merge ni cambios de rama en esta entrega.
+
+## Resultado final de revisión de cierre — 11/10/2026
+
+- `sg docker -c './mvnw -B -o verify'`, JDK21 Linux: **357 pruebas, 0 fallos, 0 errores, 0 omitidos, BUILD SUCCESS**. Tres regresiones nuevas de crédito ADMIN; matriz de autorización y prueba SQL verifican D-014/V14 y conservan autoría de V7. No se alteró código de producción para conservar expectativas históricas del vendedor.
+- `verificar-api-supabase-real.py --run-real-storage`: **30/30** con JWT y Storage Supabase reales, Spring propio y PostgreSQL17 desechable con V1–V14/runtime sin bypass. Recepción/replay de pedido y voucher, metadatos, descarga firmada con bytes idénticos y bucket privado, carga manual/replay, corrección y confirmación, ADMIN real autoriza crédito, reinicio/consulta/replay persistentes, 409 con varias membresías, otra empresa devuelve404 y los cuatro roles se resuelven desde PostgreSQL. Cambios de rol/membresía exclusivamente en la base de prueba, no en cuentas remotas ni base activa.
+- Prueba real ampliada terminó con limpieza comprobada: dos PNG sintéticos eliminados, base desechable retirada, Spring propio8094 detenido. No quedó contenedor de aceptación. El script tolera procesos propios ya detenidos al limpiar; se recuperaron y eliminaron los dos objetos de una ejecución intermedia fallida.
+- OpenAPI vigente: **38 operaciones, 220 ejemplos, 25 casos negativos**, validación OK. Frontend mantiene evidencia previa106 pruebas/build y navegador Auth real15/15; no se modificó código/env del compañero ni se probó aquí su integración de módulos.
+- Auth real básico, vouchers privados por API, persistencia/idempotencia, revisión/auditoría y motores HTTP tienen evidencia de backend local. Aceptación financiera previa: cobrado400/saldo400/margen110, parciales/replay/duplicado/sobreaplicación y carrera de dos pagos sobre el mismo saldo.
+- **No cierre global de MIG-03-D3/MIG-05/MIG-08:** Miguel confirma que no hay backend desplegado. Faltan historial remoto y reconciliación V10, release/migraciones de destino, WF1/WF2 originales con retención sin chats y recorrido frontend conectado. La API validada puede usarse para implementar integración local; no presentar mocks/workflows sintéticos como integración real.
+- Sin commit, push, merge, cambio de rama, migraciones en DB activa ni reinicios de procesos del usuario. Cambios disponibles en backend-partefinal; publicar es un paso posterior autorizado por Miguel.
+
+## Preparación de publicación y Docker — 11/10/2026
+
+Miguel autoriza commit/push de la entrega. Rama backend-partefinal, base29995f1; origen revisado antes de publicar y sin commits nuevos en esa rama. Main418dc65 ya incorporó V10 contacto/V11 crédito; se usa V11 byte a byte igual a main (diferencias anteriores solo comentarios y texto del guard de esquema). No se integran automáticamente cambios de frontend ni main.
+
+Imagen keptai-backend:predeploy construida desde Backend/Dockerfile. Humo ejecutado con Backend/scripts/verificar-docker-local.py: prod+PostgreSQL desechable V1–V14/runtime sin bypass, healthUP, uid10001, raíz de solo lectura, sin capabilities; n8n401/401/400, panel401 y cero filas de negocio. Contenedores/red/env de prueba eliminados. Backend/compose.yaml validado con config --quiet; Backend/deploy/.env.example contiene solo marcadores, .env.production está ignorado por Git.
+
+Se conservan verify357/0/0, API/Supabase real30/30 y OpenAPI38/220/25; no hubo cambios de lógica después de esas pruebas. Guía vigente Backend/docs/despliegue-n8n.md. Próximo: comprobar historial de Supabase, aplicar release compatible, configurar hosting/HTTPS y aceptar workflows/frontend reales. Docker construido no significa desplegado ni cierre de aceptación externa.

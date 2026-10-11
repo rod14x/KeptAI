@@ -16,6 +16,7 @@ import { Segmented } from "../components/ui/Segmented";
 import { DialogShell } from "../components/ui/Dialog";
 import { inputClass } from "../components/ui/Modal";
 import { cx, formatDate, formatDateTime, formatMoney } from "../lib/format";
+import { IS_MOCK } from "../config";
 
 export function OrdenDetailPage() {
   const { ref = "" } = useParams();
@@ -164,7 +165,9 @@ function NextStep({ d }: { d: OrderDetailDTO }) {
   if (o.estado === "rechazada") return null;
   const step =
     o.estado === "pendiente_aprobacion"
-      ? `${d.seller ? `${d.seller} (vendedor)` : "El vendedor"} confirma la orden y decide el crédito.`
+      ? IS_MOCK
+        ? `${d.seller ? `${d.seller} (vendedor)` : "El vendedor"} confirma la orden y decide el crédito.`
+        : "Administración confirma la orden y decide el crédito (D-014)."
       : o.estado === "retenida"
         ? `Administración confirma que llegó el anticipo de ${formatMoney(d.card.anticipoPendienteCents)}.`
         : o.estado === "en_produccion"

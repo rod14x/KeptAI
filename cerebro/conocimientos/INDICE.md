@@ -73,3 +73,5 @@ El mapa combina un flujo general propuesto con sistemas descritos en entrevistas
 - [Estado de Miguel](desarrollo/miguel/estado.md) y [preparación Supabase](desarrollo/miguel/preparacion-supabase-rls.md).
 
 - [Continuación después de integrar los backends](desarrollo/miguel/plan-continuacion-backend-integrado.md) — MIG-INTEGRADO-001, secuencia vigente y criterios de cierre real.
+
+- [Cierre del backend y aceptación externa](../../Backend/docs/plan-cierre-backend.md): implementación previa al despliegue, D-014 ADMIN crédito, prueba API/Supabase real y pendientes n8n/frontend.

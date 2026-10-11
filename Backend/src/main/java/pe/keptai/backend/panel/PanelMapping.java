@@ -29,7 +29,7 @@ import pe.keptai.backend.contract.ContractEnums.ProductionMode;
 import pe.keptai.backend.contract.ContractEnums.ReconciliationStatus;
 
 /**
- * Traducción única entre valores SQL (V1–V11) y el contrato del panel: estados, enums y dinero. Solo transporta lo que
+ * Traducción única entre valores SQL (V1–V10) y el contrato del panel: estados, enums y dinero. Solo transporta lo que
  * calculan la base y el motor; no contiene fórmulas financieras. Importes en soles (numeric) ↔ centavos enteros.
  */
 public final class PanelMapping {
