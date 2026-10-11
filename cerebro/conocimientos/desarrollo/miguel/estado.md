@@ -228,3 +228,10 @@ MIG-03-A completa dentro de su alcance: propiedades, CORS y matriz; JWT/API key/
 - Verificación real: `MotorResultadosCajaTests` 11/11. QA-08 −40/150/110 por pedido, marca y línea; QA-09 taller −20, comercial −20, consolidado −40; QA-10 caja 250/250/−50/−50, igual a `CashForecastDemo`; QA-12 CSV exacto con protección de fórmulas. Resumen 800/400/400/690/110. Suite completa **201 tests, 0 fallos**.
 - V9 aplicada en Supabase por MCP (11/10/2026) con fila Flyway checksum 1571768166; verificado: 27 tablas con RLS, 6 políticas y 8 triggers V9, 0 grants API; advisors solo INFO intencionales.
 - Pendiente: adapter HTTP (MIG-07) con montos con signo (`MoneyBridge.solesToCents` rechaza negativos); `@Scheduled` de cobranza; QA-11/13 a nivel API; métodos explícitos para que ADMIN/JEFE registren asignaciones y transferencias desde la UI (hoy solo semilla y SQL).
+
+## AND-COSTOS-001 — Registro de costeo desde la aplicación (11/10/2026, Andrés)
+
+- Commit `b0181e7` publicado y V9 aplicada en Supabase (ver entrada anterior).
+- Entrega: `MotorCostos` y `ResultadosCostos`. Registrar costo (moneda de la orden), asignar costo a ítem (manual), repartir costos REAL por UNIDADES o VALOR_VENTA (centavos por mayor residuo, determinista), registrar y anular cargo interno, y cerrar costeo REAL/TEORICO con avisos (faltantes, asignación). Todo auditado y registrado por autoconfiguración. Doc: sección en `Backend/docs/motor-pagos.md`.
+- Verificación: `MotorCostosTests` 5/5 (100/3 → 33.34/33.33/33.33; por valor 16.67/33.33/50.00; límites, ítem de otra orden, cargo único activo, cierre y reapertura, roles). Suite completa **206 tests, 0 fallos**.
+- Límite conocido: el cierre del costeo solo lo hace ADMIN, porque JEFE_TALLER no escribe la orden por RLS (V7).

@@ -110,7 +110,33 @@ Errores nuevos: un despacho repetido o una orden no liberada devuelven `INVALID_
 | TERCERO | outsourced |
 | LOGISTICA | logistics |
 
+## Motor de costos (AND-COSTOS-001)
+
+Lo que alimenta el margen por línea y el centro productivo desde la aplicación, sin SQL manual:
+
+| Método | Rol | Qué hace |
+|---|---|---|
+| `registrarCosto(ctx, ordenId, etapaId?, concepto, monto, REAL\|TEORICO, fuente)` | ADMIN, JEFE_TALLER | Registra un costo en la moneda de la orden. El taller solo ve órdenes liberadas o posteriores. Reabre el cierre. |
+| `asignarCosto(ctx, costoId, itemId, monto, fuente)` | ADMIN, JEFE_TALLER | Asignación manual (alta o corrección) de un costo a un ítem. La base rechaza que la suma supere el costo o que el ítem sea de otra orden. |
+| `repartirCostos(ctx, ordenId, UNIDADES\|VALOR_VENTA)` | ADMIN, JEFE_TALLER | Prorratea cada costo REAL entre todos los ítems (ver detalle abajo). |
+| `registrarTransferencia(ctx, ordenId, tallerId, monto, criterio, fuente)` | ADMIN | Cargo interno del taller propio; uno activo por taller y orden. |
+| `anularTransferencia(ctx, id, motivo)` | ADMIN | Corrección por anulación; reanular se rechaza. |
+| `cerrarCosteo(ctx, ordenId, REAL\|TEORICO)` | ADMIN | Cierre explícito y auditado; habilita el margen certificado (ver detalle abajo). |
+
+`repartirCostos` reparte los centavos por mayor residuo, con desempate por id del ítem: es determinista y no pierde ni crea centavos. Por ejemplo, 100 entre 3 da 33.34 / 33.33 / 33.33. Primero pone en cero las asignaciones existentes, así que una corrección nunca supera el costo a mitad de camino.
+
+`cerrarCosteo` exige al menos un costo del origen. Devuelve avisos, sin bloquear: componentes faltantes según el tipo de producción y si la asignación por ítem está completa. Cualquier costo, asignación o cargo posterior reabre el cierre (V5/V9).
+
+El cierre es solo de ADMIN porque el taller no puede escribir la orden por RLS (V7). Todas las operaciones quedan auditadas en la misma transacción: `COSTO_REGISTRADO`, `COSTO_ASIGNADO`, `COSTOS_REPARTIDOS`, `CARGO_INTERNO_*` y `COSTEO_CERRADO`.
+
 ## Pruebas
+
+`MotorCostosTests` (5) cubre:
+- reparto exacto por unidades y por valor de venta;
+- asignación manual con límite y bloqueo de ítems de otra orden;
+- cargo interno: uno activo por taller, solo de taller interno, anulación y reregistro;
+- cierre con avisos y reapertura ante cambios;
+- roles, validaciones y alcance del taller.
 
 `MotorResultadosCajaTests` (11) cubre:
 - **QA-08:** margen −40 / 150 / 110 por pedido, marca y línea.

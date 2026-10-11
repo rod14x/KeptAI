@@ -44,4 +44,11 @@ public class MotorFinancieroAutoConfiguration {
 	MotorCaja motorCaja(JdbcTemplate jdbc, PlatformTransactionManager transactionManager) {
 		return new MotorCaja(jdbc, transactionManager);
 	}
+
+	@Bean
+	@ConditionalOnMissingBean
+	@ConditionalOnBean({ JdbcTemplate.class, PlatformTransactionManager.class })
+	MotorCostos motorCostos(JdbcTemplate jdbc, PlatformTransactionManager transactionManager) {
+		return new MotorCostos(jdbc, transactionManager);
+	}
 }
