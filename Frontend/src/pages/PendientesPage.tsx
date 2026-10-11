@@ -147,7 +147,7 @@ export function PendientesPage() {
                 <UploadSimple size={16} weight="bold" /> Subir comprobante
               </MotionLink>
             )}
-            <MotionLink to="/resumen" {...press} className="inline-flex h-11 items-center rounded-full px-4 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink">
+            <MotionLink to="/resumen" {...press} className="inline-flex h-11 items-center rounded-lg px-4 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink">
               Ver resumen
             </MotionLink>
           </>
@@ -211,7 +211,7 @@ function MainTask({ task }: { task: Task }) {
                 <span className="block truncate text-sm font-semibold">{it.title}</span>
                 <span className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-muted">
                   <span className="truncate">{it.detail}</span>
-                  {it.flag && <span className="shrink-0 rounded-full bg-warn-tint px-2 py-0.5 text-[11px] font-semibold text-warn">{it.flag}</span>}
+                  {it.flag && <span className="shrink-0 rounded-md bg-warn-tint px-2 py-0.5 text-[11px] font-semibold text-warn">{it.flag}</span>}
                 </span>
               </span>
               {it.amountCents != null && <Money cents={it.amountCents} className="text-sm font-bold" />}

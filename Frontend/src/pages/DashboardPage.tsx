@@ -1,10 +1,11 @@
 import { motion } from "motion/react";
 import { MotionLink, Stagger, itemVariants, listVariants, press } from "../components/motion/primitives";
 import { PageHeader } from "../components/ui/PageHeader";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { ArrowRight, Bank, CaretDown, CaretRight, HandCoins, ChartLineUp, Info, MagnifyingGlass, Receipt, Wallet, WarningCircle } from "../components/ui/icons";
-import { getDashboard, type ActivityItem, type AssistantNote, type DashboardDTO, type WeekPoint } from "../api/client";
+import { getDashboard, getOrders, type ActivityItem, type AssistantNote, type DashboardDTO, type OrderRow, type WeekPoint } from "../api/client";
+import { checkDeliveryOverdue } from "../lib/orderAlerts";
 import { useApi } from "../hooks/useApi";
 import { SCOPE_LABEL, useScope } from "../context/ScopeContext";
 import { useMe } from "../context/AuthContext";
@@ -19,7 +20,22 @@ import { cx, formatDate, formatDateTime, formatMoney } from "../lib/format";
 export function DashboardPage() {
   const { scope } = useScope();
   const me = useMe();
-  const { data, loading, error, reload } = useApi(() => getDashboard(scope, me.role, readPrefs(me.id).notify), [scope, me.id, me.role]);
+  const { data, loading, error, reload } = useApi(async () => {
+    const [dashboard, orders] = await Promise.all([
+      getDashboard(scope, me.role, readPrefs(me.id).notify),
+      getOrders(scope).catch(() => [] as OrderRow[]),
+    ]);
+    return { dashboard, orders };
+  }, [scope, me.id, me.role]);
+
+  const d = data?.dashboard;
+  const orders = data?.orders ?? [];
+
+  const overdueOrders = useMemo(() => {
+    return orders.filter((o) => checkDeliveryOverdue(o).isOverdue);
+  }, [orders]);
+
+  const overdueCount = overdueOrders.length;
 
   return (
     <Stagger className="mx-auto flex max-w-[1320px] flex-col gap-6 lg:gap-8">
@@ -28,28 +44,68 @@ export function DashboardPage() {
         subtitle={
           <>
             {ROLE_LABEL[me.role]}. Vista {SCOPE_LABEL[scope]}
-            {data && <>, corte al {formatDate(data.cutDate)}</>}.
+            {d && <>, corte al {formatDate(d.cutDate)}</>}.
           </>
         }
-        actions={data?.demo ? <DemoBadge /> : undefined}
+        actions={
+          <div className="flex items-center gap-2">
+            {overdueCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-bad px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-xs">
+                <WarningCircle size={14} weight="fill" />
+                URGENTE
+              </span>
+            )}
+            {d?.demo ? <DemoBadge /> : undefined}
+          </div>
+        }
       />
 
       {error ? (
         <ErrorState error={error} onRetry={reload} />
-      ) : loading || !data ? (
+      ) : loading || !d ? (
         <DashboardSkeleton />
       ) : (
         <Stagger className="flex flex-col gap-6 lg:gap-8">
-          <Kpis d={data} canResult={can(me.role, "ver_resultado")} />
-          {data.weeks ? (
+          {overdueCount > 0 && (
+            <motion.div
+              variants={itemVariants}
+              role="alert"
+              className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border-2 border-bad bg-bad-tint p-4 text-bad shadow-sm"
+            >
+              <div className="flex items-center gap-3">
+                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-bad px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-xs">
+                  <WarningCircle size={15} weight="fill" />
+                  URGENTE
+                </span>
+                <div>
+                  <p className="text-sm font-bold text-bad">
+                    {overdueCount === 1
+                      ? "1 entrega vencida detectada en el tablero de clientes"
+                      : `${overdueCount} entregas vencidas detectadas en el tablero de clientes`}
+                  </p>
+                  <p className="text-xs text-bad/90 mt-0.5">
+                    Hay pedidos donde la fecha límite de entrega fue superada o el despacho ocurrió con atraso respecto a lo acordado.
+                  </p>
+                </div>
+              </div>
+              <Link
+                to="/clientes"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-bad px-3.5 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90"
+              >
+                Ver en Kanban <ArrowRight size={14} weight="bold" />
+              </Link>
+            </motion.div>
+          )}
+          <Kpis d={d} canResult={can(me.role, "ver_resultado")} />
+          {d.weeks ? (
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
-              <CashCard d={data} weeks={data.weeks} />
-              <AssistantCard notes={data.assistant} />
+              <CashCard d={d} weeks={d.weeks} />
+              <AssistantCard notes={d.assistant} />
             </div>
           ) : (
-            <AssistantCard notes={data.assistant} />
+            <AssistantCard notes={d.assistant} />
           )}
-          {data.activity && <ActivityCard activity={data.activity} />}
+          {d.activity && <ActivityCard activity={d.activity} />}
         </Stagger>
       )}
     </Stagger>
@@ -77,7 +133,7 @@ function Kpi({
           <MotionLink
             to={href}
             {...press}
-            className="inline-flex min-h-10 items-center gap-1 rounded-full px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink"
+            className="inline-flex min-h-10 items-center gap-1 rounded-lg px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink"
           >
             Ver detalle <CaretRight size={14} weight="bold" />
           </MotionLink>
@@ -169,7 +225,7 @@ function CashCard({ d, weeks }: { d: DashboardDTO; weeks: WeekPoint[] }) {
       <button
         onClick={() => setTable((t) => !t)}
         aria-expanded={table}
-        className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink"
+        className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink"
       >
         <CaretDown size={14} weight="bold" className={cx("transition-transform", table && "rotate-180")} />
         {table ? "Ocultar tabla" : "Ver como tabla"}
@@ -268,7 +324,7 @@ function ActivityCard({ activity }: { activity: ActivityItem[] }) {
     <Card className="p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-section font-bold">Actividad reciente</h2>
-        <MotionLink to="/perfil?tab=actividad" {...press} className="inline-flex min-h-10 items-center rounded-full px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink">
+        <MotionLink to="/perfil?tab=actividad" {...press} className="inline-flex min-h-10 items-center rounded-lg px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink">
           Mi actividad
         </MotionLink>
       </div>

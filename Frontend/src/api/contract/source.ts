@@ -455,7 +455,7 @@ function activity(e: S.AuditEventT, meId: string | null): ActivityItem {
     who: e.entity_type,
     actor,
     text: e.operation.replace(/_/g, " ").toLowerCase(),
-    reference: e.changes.map((c) => `${c.field}: ${c.new_value ?? "—"}`).join(" · "),
+    reference: e.changes.map((c) => `${c.field}: ${c.new_value ?? "-"}`).join(" · "),
     amountCents: null,
     status: "completado",
     href,

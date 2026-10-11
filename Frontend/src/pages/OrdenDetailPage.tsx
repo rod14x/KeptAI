@@ -68,7 +68,7 @@ function Detail({ d }: { d: OrderDetailDTO }) {
   const pending = o.estado === "pendiente_aprobacion";
   return (
     <Stagger className="mx-auto flex max-w-[1320px] flex-col gap-6">
-      <MotionLink to="/pedidos" variants={itemVariants} {...press} className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-full pr-3 text-sm font-semibold text-muted transition-colors hover:text-ink">
+      <MotionLink to="/pedidos" variants={itemVariants} {...press} className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink">
         <ArrowLeft size={16} weight="bold" /> Pedidos
       </MotionLink>
 
@@ -76,7 +76,8 @@ function Detail({ d }: { d: OrderDetailDTO }) {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-title font-extrabold">{o.ref}</h1>
+              <h1 className="text-title font-extrabold">Por cobrar - Fecha de vencimiento</h1>
+              <span className="text-xs font-semibold text-muted">({o.ref})</span>
               <OrderStateChip estado={o.estado} />
               {o.estado === "despachada" && <FinanceChip finance={d.card.finance} daysToDue={d.card.daysToDue ?? undefined} />}
             </div>
@@ -142,8 +143,8 @@ function Detail({ d }: { d: OrderDetailDTO }) {
       <Segmented kind="tab" label="Detalle del pedido" value={tab} onChange={(value) => setParams(value === "pedido" ? {} : { tab: value })} options={[{ value: "pedido", label: "Pedido y condiciones" }, { value: "pagos", label: "Pagos y fechas" }, { value: "mensajes", label: "Seguimiento" }]} />
       {tab === "pedido" && <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-6">
-          <HojaCard d={d} />
           {pending && <ConditionCard d={d} />}
+          <HojaCard d={d} />
           <ItemsCard d={d} />
         </div>
         <div className="flex min-w-0 flex-col gap-6">
@@ -355,7 +356,7 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
   }
 
   return (
-    <Card className="p-5 sm:p-6">
+    <Card className="p-5 sm:p-6 border-2 border-violet/30 shadow-sm">
       <h2 className="text-section font-bold">Condición de pago y crédito</h2>
       <p className="mt-1 text-[13px] text-muted">Revisa la hoja y confirma. Equivale a escribir /ok {o.ref} en WhatsApp.</p>
 
@@ -380,6 +381,20 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
         </p>
       ) : (
         <div className="mt-5 flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-violet-tint/40 p-3 ring-1 ring-violet/20">
+            <div>
+              <span className="block text-xs font-bold uppercase tracking-wider text-ink">Decisión del vendedor</span>
+              <span className="block text-xs text-muted">Confirma la orden o modifícala antes de producir.</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="md" icon={<Check size={18} weight="bold" />} onClick={() => confirm(false)}>
+                Confirmar orden
+              </Button>
+              <button onClick={() => setRejectOpen(true)} className="min-h-10 rounded-lg px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-bad-tint hover:text-bad">
+                Rechazar
+              </button>
+            </div>
+          </div>
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-block)] bg-panel px-4 py-3 ring-1 ring-line/70">
             <span className="text-sm">
               <span className="font-bold">{termsLabel(tipo, plazo, pct)}</span>
@@ -390,7 +405,7 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
             <button
               onClick={() => setCustomize((c) => !c)}
               aria-expanded={customize}
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink"
             >
               <CaretDown size={14} weight="bold" className={cx("transition-transform", customize && "rotate-180")} />
               Cambiar condición
@@ -443,12 +458,12 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
             </motion.div>
           )}
 
-          <Button size="lg" className="w-full" icon={<Check size={18} weight="bold" />} onClick={() => confirm(false)}>
-            Confirmar orden
-          </Button>
-          <button onClick={() => setRejectOpen(true)} className="min-h-10 self-center rounded-full px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-bad-tint hover:text-bad">
-            Rechazar pedido
-          </button>
+
+
+
+
+
+
         </div>
       )}
 

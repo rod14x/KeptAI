@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router";
 import { motion } from "motion/react";
 import { spring } from "../motion/primitives";
@@ -56,6 +57,48 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { person } = useAuth();
   const toast = useToast();
   const items = person ? NAV_BY_ROLE[person.role] : [];
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+
+  // Bugfix: Ajuste de threshold y rootMargin del IntersectionObserver para evitar
+  // que "Pedidos" o cualquier otra sección dispare un estado activo falso al hacer scroll vertical.
+  useEffect(() => {
+    if (typeof window === "undefined" || !("IntersectionObserver" in window)) return;
+
+    const sectionIds = ["pedidos", "clientes", "conciliacion", "cobranza", "resultado"];
+    const elements = sectionIds
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => Boolean(el));
+
+    if (elements.length === 0) {
+      setActiveSection(null);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          // Exige 60% de presencia en la ventana de lectura efectiva para evitar falsos positivos
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+            setActiveSection(entry.target.id);
+          }
+        }
+      },
+      {
+        threshold: [0.6],
+        rootMargin: "-20% 0px -40% 0px",
+      },
+    );
+
+    elements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [items]);
+
+  const isItemActive = (to: string, routerActive: boolean) => {
+    if (activeSection) {
+      return to.replace("/", "") === activeSection;
+    }
+    return routerActive;
+  };
 
   return (
     <div className="flex h-full flex-col px-4 pb-5 pt-7">
@@ -74,27 +117,31 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             to={to}
             end={end}
             onClick={onNavigate}
-            className={({ isActive }) =>
-              cx(
+            className={({ isActive }) => {
+              const active = isItemActive(to, isActive);
+              return cx(
                 "relative flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-150",
-                isActive ? "text-violet-ink" : "text-muted hover:bg-panel hover:text-ink",
-              )
-            }
+                active ? "text-violet-ink" : "text-muted hover:bg-panel hover:text-ink",
+              );
+            }}
           >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <motion.span
-                    layoutId={onNavigate ? "nav-active-drawer" : "nav-active"}
-                    transition={spring}
-                    aria-hidden="true"
-                    className="absolute inset-0 rounded-lg bg-violet-tint"
-                  />
-                )}
-                <Icon size={20} weight={isActive ? "duotone" : "regular"} className="relative z-10" />
-                <span className="relative z-10">{label}</span>
-              </>
-            )}
+            {({ isActive }) => {
+              const active = isItemActive(to, isActive);
+              return (
+                <>
+                  {active && (
+                    <motion.span
+                      layoutId={onNavigate ? "nav-active-drawer" : "nav-active"}
+                      transition={spring}
+                      aria-hidden="true"
+                      className="absolute inset-0 rounded-lg bg-violet-tint"
+                    />
+                  )}
+                  <Icon size={20} weight={active ? "duotone" : "regular"} className="relative z-10" />
+                  <span className="relative z-10">{label}</span>
+                </>
+              );
+            }}
           </NavLink>
         ))}
       </nav>
