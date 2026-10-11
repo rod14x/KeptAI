@@ -47,7 +47,7 @@ import pe.keptai.backend.tenancy.TenantTransaction;
 @SpringBootTest(properties = "spring.autoconfigure.exclude=")
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import(TenantContextIntegrationTests.Probe.class)
+@Import({ TenantContextIntegrationTests.Probe.class, TenantContextIntegrationTests.ProbeRoutes.class })
 class TenantContextIntegrationTests {
 
 	static final PostgreSQLContainer PG = new PostgreSQLContainer("postgres:17-alpine");
@@ -121,6 +121,19 @@ class TenantContextIntegrationTests {
 		r.add("keptai.security.jwt.issuer-uri", () -> JwtTestSupport.ISSUER);
 		r.add("keptai.security.jwt.jwk-set-uri", JwtTestSupport::jwksUri);
 		r.add("keptai.security.jwt.audiences", () -> JwtTestSupport.AUDIENCE);
+	}
+
+	/** Solo src/test: autoriza al usuario SINGLE exclusivamente en la ruta del probe (en producción todo no listado se deniega). */
+	@org.springframework.boot.test.context.TestConfiguration
+	static class ProbeRoutes {
+
+		@org.springframework.context.annotation.Bean
+		@org.springframework.context.annotation.Primary
+		pe.keptai.backend.config.PanelFallbackAuthorization probeOnlyPanelRoutes() {
+			return (auth, ctx) -> new org.springframework.security.authorization.AuthorizationDecision(auth.get() instanceof KeptaiAuthentication k
+					&& k.access() == KeptaiAuthentication.Access.SINGLE && ctx.getRequest().getRequestURI().equals("/api/v1/test-tenant/clientes"));
+		}
+
 	}
 
 	/** Servicio de prueba solo en src/test: lee clientes bajo contexto; /me no consulta datos del tenant. */

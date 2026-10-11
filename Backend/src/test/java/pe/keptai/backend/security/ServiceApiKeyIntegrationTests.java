@@ -32,10 +32,8 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authorization.AuthorizationDecision;
-import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -47,6 +45,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import pe.keptai.backend.config.PanelFallbackAuthorization;
+import pe.keptai.backend.config.ServiceFallbackAuthorization;
 import pe.keptai.backend.tenancy.TenantContext;
 import pe.keptai.backend.tenancy.TenantContextException;
 import pe.keptai.backend.tenancy.TenantTransaction;
@@ -163,9 +163,16 @@ class ServiceApiKeyIntegrationTests {
 
 		@Bean
 		@Primary
-		AuthorizationManager<RequestAuthorizationContext> probeOnlyServiceRoutes() {
+		ServiceFallbackAuthorization probeOnlyServiceRoutes() {
 			return (auth, ctx) -> new AuthorizationDecision(auth.get() instanceof ServiceAuthentication
 					&& ctx.getRequest().getRequestURI().contains("/test-probe/"));
+		}
+
+		@Bean
+		@Primary
+		PanelFallbackAuthorization probeOnlyPanelRoutes() {
+			return (auth, ctx) -> new AuthorizationDecision(auth.get() instanceof KeptaiAuthentication k
+					&& k.access() == KeptaiAuthentication.Access.SINGLE && ctx.getRequest().getRequestURI().contains("/test-probe/"));
 		}
 
 	}
@@ -320,9 +327,16 @@ class ServiceApiKeyIntegrationTests {
 	}
 
 	@Test
-	void anAuthenticatedServiceStillGetsForbiddenOnClosedBusinessRoutes() throws Exception {
-		for (String path : new String[] { "/api/v1/ordenes/ingesta", "/api/v1/pagos/voucher", "/api/v1/ordenes/confirmar" }) {
-			mvc.perform(post(path).header("X-Api-Key", KEY_ING_A).contentType("application/json").content("{}"))
+	void anAuthenticatedServiceIsAuthorizedOnlyWhereThePolicyOpensItAndNothingIsImplementedThere() throws Exception {
+		// D2: ingesta y voucher están abiertas a INGESTA, pero no hay controlador: 404 (permiso concedido != funcionalidad).
+		for (String path : new String[] { "/api/v1/ordenes/ingesta", "/api/v1/pagos/voucher" }) {
+			mvc.perform(post(path).header("X-Api-Key", KEY_ING_A).contentType("application/json").content("{}")).andExpect(status().isNotFound());
+			mvc.perform(post(path).header("X-Api-Key", KEY_SCH_A).contentType("application/json").content("{}"))
+				.andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("FORBIDDEN"));
+		}
+		// Cerradas por decisión pendiente: 403 para cualquier servicio.
+		for (String key : new String[] { KEY_ING_A, KEY_SCH_A }) {
+			mvc.perform(post("/api/v1/ordenes/confirmar").header("X-Api-Key", key).contentType("application/json").content("{}"))
 				.andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("FORBIDDEN"));
 		}
 		// Un servicio no puede usar rutas fuera de las suyas (ni siquiera con clave válida: la clave se rechaza).

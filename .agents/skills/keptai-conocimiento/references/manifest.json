@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "402c3ec8a39aa22388a547ebe0ef599c85986618",
+  "source_head_at_generation": "580dd8bdbcc1a6341fa60e4930a8a816fd03730c",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -112,8 +112,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/estado.md",
-      "bytes": 56687,
-      "sha256": "d443ac126953abac9790f8089fa587024594029bef9a05a4833f1e5d524ac51b"
+      "bytes": 60455,
+      "sha256": "73ddb4b1f7e738345023ef00832ff8053e821e917c2fc39f2e0a8d2e3dc5744f"
     },
     {
       "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
@@ -137,8 +137,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/plan-mig-03-d.md",
-      "bytes": 7204,
-      "sha256": "8a65a9858b3ae347d6753e8c80cb2fb8fd470585836049b35c7922a52522bd36"
+      "bytes": 7483,
+      "sha256": "8c1bc6b0748217eda589f7b18b0406c069be6d3a355d8a6d898fbaefc03e95c2"
     },
     {
       "path": "conocimientos/desarrollo/miguel/preparacion-supabase-rls.md",
@@ -487,9 +487,9 @@
     },
     {
       "path": "Backend/docs/auditoria-backend-2026-10-11.md",
-      "bytes": 27932,
-      "sha256": "df36ef73aca4cb7d681eb1a56dbfc01ee0e7ae134e7bf55e74949f166db35b20",
-      "source_sha256": "df36ef73aca4cb7d681eb1a56dbfc01ee0e7ae134e7bf55e74949f166db35b20",
+      "bytes": 29124,
+      "sha256": "991577cd179070663641892ffd826889f3163c2dca5c17ce43bd164e5ca221cf",
+      "source_sha256": "991577cd179070663641892ffd826889f3163c2dca5c17ce43bd164e5ca221cf",
       "sanitized": false
     },
     {
@@ -508,9 +508,9 @@
     },
     {
       "path": "Backend/docs/matriz-acceso.md",
-      "bytes": 16288,
-      "sha256": "43294b64c004657042da215578cbf97068eb7abe6cdfb1f553587ee3ee944ee1",
-      "source_sha256": "43294b64c004657042da215578cbf97068eb7abe6cdfb1f553587ee3ee944ee1",
+      "bytes": 19288,
+      "sha256": "55ff6b508a9548609b61e4830e5c36a260beee5cd018d4b69cea60f8ac90a852",
+      "source_sha256": "55ff6b508a9548609b61e4830e5c36a260beee5cd018d4b69cea60f8ac90a852",
       "sanitized": false
     },
     {

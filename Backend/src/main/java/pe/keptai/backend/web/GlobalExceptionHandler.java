@@ -21,12 +21,33 @@ public class GlobalExceptionHandler {
 		return ResponseEntity.status(status).body(ApiError.of(codeFor(status), messageFor(status)));
 	}
 
+	/**
+	 * Denegaciones lanzadas desde un controlador o servicio protegido (p. ej. method security): respuesta uniforme
+	 * con request_id, sin mensaje de la excepción. La excepción AuthenticationServiceException es infraestructura.
+	 */
+	@ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+	ResponseEntity<ApiError> handleAccessDenied(org.springframework.security.access.AccessDeniedException ex) {
+		return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiError.of("FORBIDDEN", "Acceso denegado"));
+	}
+
+	@ExceptionHandler(org.springframework.security.authentication.AuthenticationServiceException.class)
+	ResponseEntity<ApiError> handleAuthInfrastructure(org.springframework.security.authentication.AuthenticationServiceException ex) {
+		log.error("Fallo de infraestructura de autenticación: {}", ex.getClass().getSimpleName());
+		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ApiError.of("SERVICE_UNAVAILABLE", "Servicio no disponible"));
+	}
+
+	@ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+	ResponseEntity<ApiError> handleAuthentication(org.springframework.security.core.AuthenticationException ex) {
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).header("WWW-Authenticate", "Bearer")
+			.body(ApiError.of("UNAUTHORIZED", "No autenticado"));
+	}
+
 	@ExceptionHandler(Exception.class)
 	ResponseEntity<ApiError> handleUnexpected(Exception ex) {
 		if (ex instanceof ErrorResponse er) {
 			return handleMvc(er);
 		}
-		log.error("Error no controlado", ex);
+		log.error("Error no controlado: {}", ex.getClass().getSimpleName());
 		HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
 		return ResponseEntity.status(status).body(ApiError.of(codeFor(status), messageFor(status)));
 	}

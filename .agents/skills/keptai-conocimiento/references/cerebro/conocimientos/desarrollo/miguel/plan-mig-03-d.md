@@ -1,6 +1,6 @@
 # MIG-03-D — Autenticacion de servicios y autorizacion
 ID: MIG-03-D-PLAN-001. Fecha: 11/10/2026. Responsable: Miguel/Claude.
-Estado: D1 revisada con207 tests sin fallos/errores/omitidos. Siguiente D2 tras publicacion D1. MIG-03-C usuario de panel entregado; no se declara MIG-03 completo.
+Estado: D1 y D2 revisadas; suite final D2 de225 tests sin fallos/errores/omitidos. Siguiente D3 tras publicacion D2. MIG-03-C usuario de panel entregado; no se declara MIG-03 completo.
 
 ## Fuentes
 AGENTS.md, estado vigente, matriz-acceso.md, V4/V7, OpenAPI/contrato y workflows WF0-WF3. Auditoria con precisiones §11.
@@ -51,6 +51,7 @@ Cierre D1: principal de servicio resuelto, contexto exclusivo y aislamiento prob
 No commit/push/fetch/merge ni detener servidores5433/8080/5173.
 
 ## D2 — Permisos por metodo/ruta y errores
+Entregada y revisada (11/10/2026):37 operaciones entrantes,29 abiertas por rol/alcance y8 cerradas; sin endpoints de negocio implementados. Errores MVC seguros y logs del handler sin mensajes/causas. Suite final225 tests; detalle en estado.md y matriz§6.4.
 Despues de revisar D1, aplicar matriz existente a rutas exactas del contrato, roles de usuario vs alcances de servicio y deny por defecto para rutas desconocidas.
 No permisos comodin para todas /api/v1/** ni suplantacion de usuario de negocio. /me mantiene usuarioSINGLE.
 Revisar AccessDeniedException/AuthenticationException desde MVC/method security:401/403 seguros, no500 por handler generico; infraestructura503, conflictos409 actuales.

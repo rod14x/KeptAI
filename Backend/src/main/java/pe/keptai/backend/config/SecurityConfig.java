@@ -3,6 +3,7 @@ package pe.keptai.backend.config;
 import java.nio.charset.StandardCharsets;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Set;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.access.AccessDeniedException;
@@ -17,7 +18,10 @@ import org.springframework.security.oauth2.server.resource.web.DefaultBearerToke
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
+import pe.keptai.backend.security.AccessPolicy;
 import pe.keptai.backend.security.ApiKeyAuthenticationFilter;
+import pe.keptai.backend.security.ServiceAuthentication;
+import pe.keptai.backend.security.AccessRole;
 import pe.keptai.backend.security.AuthInfrastructureFailureFilter;
 import pe.keptai.backend.security.ServiceResolver;
 import pe.keptai.backend.security.JwtDecoders;
@@ -51,11 +55,9 @@ public class SecurityConfig {
 
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http,
-			@Qualifier("corsConfigurationSource") CorsConfigurationSource cors,
+			@Qualifier("corsConfigurationSource") CorsConfigurationSource cors, PanelFallbackAuthorization panelFallback,
 			JwtDecoder jwtDecoder, MembershipResolver membershipResolver, ServiceResolver serviceResolver,
-			AuthorizationManager<RequestAuthorizationContext> serviceRoutes) throws Exception {
-		AuthorizationManager<RequestAuthorizationContext> panel = (auth, ctx) -> new AuthorizationDecision(
-				auth.get() instanceof KeptaiAuthentication k && k.access() == KeptaiAuthentication.Access.SINGLE);
+			ServiceFallbackAuthorization serviceRoutes) throws Exception {
 		http
 			.cors(c -> c.configurationSource(cors))
 			.csrf(AbstractHttpConfigurer::disable)
@@ -63,11 +65,19 @@ public class SecurityConfig {
 			.httpBasic(AbstractHttpConfigurer::disable)
 			.logout(AbstractHttpConfigurer::disable)
 			.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-			.authorizeHttpRequests(a -> a
-				.requestMatchers("/actuator/health/**").permitAll()
-				.requestMatchers(SERVICE_PATHS).access(serviceRoutes)
-				.requestMatchers("/api/v1/**").access(panel)
-				.anyRequest().denyAll())
+			.authorizeHttpRequests(a -> {
+				a.requestMatchers("/actuator/health/**").permitAll();
+				// MIG-03-D2: una regla por operación del contrato (método + ruta exacta); cerradas = sin regla.
+				for (AccessPolicy.Rule r : AccessPolicy.RULES) {
+					if (r.open()) {
+						a.requestMatchers(r.method(), r.path()).access(r.kind() == AccessPolicy.Kind.PANEL ? panelRoles(r.actors()) : serviceScopes(r.actors()));
+					}
+				}
+				// Rutas no listadas: denegadas (los managers de reserva solo se sustituyen en probes de src/test).
+				a.requestMatchers(SERVICE_PATHS).access(serviceRoutes);
+				a.requestMatchers("/api/v1/**").access(panelFallback);
+				a.anyRequest().denyAll();
+			})
 			.oauth2ResourceServer(o -> o
 				.bearerTokenResolver(healthExemptResolver())
 				.jwt(j -> j.decoder(jwtDecoder).jwtAuthenticationConverter(new KeptaiJwtConverter(membershipResolver)))
@@ -81,12 +91,29 @@ public class SecurityConfig {
 		return http.build();
 	}
 
+	@Bean
+	PanelFallbackAuthorization panelFallbackAuthorization() {
+		return (auth, ctx) -> new AuthorizationDecision(false);
+	}
+
+	/** Usuario del panel con membresía única (acceso SINGLE) cuyo rol, leído de PostgreSQL, figura en la regla. */
+	private static AuthorizationManager<RequestAuthorizationContext> panelRoles(Set<AccessRole> roles) {
+		return (auth, ctx) -> new AuthorizationDecision(auth.get() instanceof KeptaiAuthentication k && k.isAuthenticated()
+				&& k.access() == KeptaiAuthentication.Access.SINGLE && roles.contains(k.membership().rol()));
+	}
+
+	/** Servicio autenticado por API key cuyo alcance, leído de PostgreSQL, figura en la regla. */
+	private static AuthorizationManager<RequestAuthorizationContext> serviceScopes(Set<AccessRole> scopes) {
+		return (auth, ctx) -> new AuthorizationDecision(auth.get() instanceof ServiceAuthentication s && s.isAuthenticated()
+				&& scopes.contains(s.identity().alcance()));
+	}
+
 	/**
-	 * Autorización de las rutas de servicio. D1 autentica al servicio pero mantiene cerradas todas las rutas de
-	 * negocio (siempre denegado, 403 para un servicio válido); los permisos por método/ruta son D2.
+	 * Reserva para rutas de servicio no listadas en AccessPolicy: siempre denegado en producción.
+	 * Los permisos de las operaciones declaradas se aplican por método y ruta (D2).
 	 */
 	@Bean
-	AuthorizationManager<RequestAuthorizationContext> serviceRouteAuthorization() {
+	ServiceFallbackAuthorization serviceFallbackAuthorization() {
 		return (auth, ctx) -> new AuthorizationDecision(false);
 	}
 

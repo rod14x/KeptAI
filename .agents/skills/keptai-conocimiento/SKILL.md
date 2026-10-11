@@ -65,7 +65,7 @@ Solo vouchers como evidencia persistente y datos estructurados del negocio. No g
 
 ## Supabase: estado y traspaso
 
-Miguel confirmó conexión del equipo mediante MCP; no hay `.env` de la app ni conexión Spring acreditada. Consultar [preparación Supabase/RLS](references/cerebro/conocimientos/desarrollo/miguel/preparacion-supabase-rls.md): distinguir administración por MCP de JDBC/Auth/Storage, verificar roles y contexto por transacción; las políticas versionadas no acreditan aislamiento probado en el proyecto remoto.
+Miguel tiene archivos de entorno locales ignorados y conexión Spring a PostgreSQL local; Auth real y Storage siguen pendientes. Andrés conserva el acceso remoto por MCP; Miguel descartó conectar su Claude personalmente (11/10/2026). Consultar [preparación Supabase/RLS](references/cerebro/conocimientos/desarrollo/miguel/preparacion-supabase-rls.md): distinguir administración por MCP de JDBC/Auth/Storage, verificar roles y contexto por transacción; las políticas versionadas no acreditan aislamiento probado en el proyecto remoto.
 
 ## Grafo opcional (Graphify)
 
