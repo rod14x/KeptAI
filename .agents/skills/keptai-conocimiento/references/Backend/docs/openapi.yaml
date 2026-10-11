@@ -1606,7 +1606,9 @@ paths:
       - Integracion n8n
       operationId: n8nIngestOrder
       summary: '[n8n WF1] Recibir la hoja de resumen y el transcript de un chat cerrado con /cerrar.'
-      description: 'Ruta EXACTA que llama el nodo `Enviar pedido al backend` de `WF1_cierre_venta.json`. Cuerpo y nombres
+      description: 'IMPLEMENTADO SOLO COMO RECEPCION: devuelve 200 VALIDADO_SIN_PERSISTIR tras validar JSON e instancia del servicio. No guarda cuerpo, no crea orden, no ejecuta IA y no encola trabajo. Los JID no se resuelven contra usuarios en esta etapa. La respuesta 201, idempotencia y procesamiento descritos a continuacion son objetivos pendientes de MIG-05.
+
+        Ruta EXACTA que llama el nodo `Enviar pedido al backend` de `WF1_cierre_venta.json`. Cuerpo y nombres
         tal como los arma el nodo `Parsear y hoja resumen`
 
         (camelCase y español; el JSON de `extraccion` sigue el prompt del nodo `Preparar LLM`). Los importes llegan en SOLES
@@ -1631,6 +1633,7 @@ paths:
         '
       x-keptai-owner: miguel
       x-keptai-status: proposed
+      x-keptai-reception-status: implemented
       x-keptai-task: MIG-05
       x-keptai-proposed-roles:
       - service_n8n
@@ -1654,6 +1657,30 @@ paths:
               parseFailure:
                 $ref: '#/components/examples/N8nIngestaParseFailure'
       responses:
+        '200':
+          description: JSON validado sin persistencia ni procesamiento; no se ha creado una orden.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [estado, persistido, procesado, request_id]
+                properties:
+                  estado:
+                    type: string
+                    enum: [VALIDADO_SIN_PERSISTIR]
+                  persistido:
+                    type: boolean
+                    enum: [false]
+                  procesado:
+                    type: boolean
+                    enum: [false]
+                  request_id:
+                    type: string
+                    format: uuid
         '201':
           description: Borrador creado (o repetido de forma idempotente con `Idempotency-Replayed`).
           headers:

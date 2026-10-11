@@ -59,6 +59,7 @@ No habilitar funcionalidades inexistentes; contrato/fixtures no son endpoints im
 Decisiones marca/cartera/segregacion y confirmacion por vendedorJid no resueltas siguen limitadas y documentadas, sin conceder permiso expansivo.
 
 ## D3 — Webhooks y comprobacion integrada de seguridad
+Direccion posterior de Miguel (11/10/2026): Isabella desarrolla n8n en su entorno. D3 local se acota a contrato/credenciales/pruebas de Spring y guia de coordinacion; no modificar sus workflows ni los JSON versionados por inferencia. Ver Backend/docs/integracion-n8n-isabella.md. La muestra recibida es payload, no export de workflow; integracion real pendiente. Esta direccion prevalece sobre las instrucciones anteriores de editar definiciones.
 Contrato de credenciales por instancia/alcance y llamadas WF0->WF1/WF2 deben autenticarse. Cambiar definiciones n8n solo cuando se ejecute esta tarea explicita, conservar placeholders y no secretos/activaciones.
 Separar credencial ingreso n8n de X-Api-Key hacia Spring y X-Api-Secret salienteWF3. Dos claves INGESTA/SCHEDULER para callback correcto.
 Verificar errores y pruebas contrato, no llamadas externas automaticas. Transporte binario de voucher se define con MIG-04/05, no adivinar hash/path.

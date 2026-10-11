@@ -86,7 +86,7 @@ class AuthorizationMatrixTests {
 	}
 
 	private int statusOf(String method, String path, Authentication auth) throws Exception {
-		var req = request(HttpMethod.valueOf(method), path);
+		var req = request(HttpMethod.valueOf(method), path).contentType("application/json");
 		if (auth != null) {
 			req = req.with(authentication(auth));
 		}
@@ -111,7 +111,7 @@ class AuthorizationMatrixTests {
 				checks++;
 			}
 			for (AccessRole scope : List.of(AccessRole.INGESTA, AccessRole.SCHEDULER)) {
-				int expected = serviceOp && !closed && SERVICE_SCOPE.get(op.id()) == scope ? 404 : 403;
+				int expected = serviceOp && !closed && SERVICE_SCOPE.get(op.id()) == scope ? (op.id().equals("n8nIngestOrder") ? 400 : 404) : 403;
 				assertThat(statusOf(op.method(), path, service(scope))).as(op.id() + " como servicio " + scope).isEqualTo(expected);
 				checks++;
 			}

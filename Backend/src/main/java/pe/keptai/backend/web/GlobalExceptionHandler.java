@@ -14,6 +14,12 @@ public class GlobalExceptionHandler {
 
 	private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+	/** Body ausente o ilegible: no exponer fragmentos de JSON ni causas de Jackson. */
+	@ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+	ResponseEntity<ApiError> handleUnreadableBody(org.springframework.http.converter.HttpMessageNotReadableException ex) {
+		return ResponseEntity.badRequest().body(ApiError.of("BAD_REQUEST", "Solicitud no valida"));
+	}
+
 	/** Errores estandar de Spring MVC (404, 405, 400, 415...). */
 	@ExceptionHandler(org.springframework.web.ErrorResponseException.class)
 	ResponseEntity<ApiError> handleMvc(ErrorResponse ex) {

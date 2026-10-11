@@ -1,6 +1,6 @@
 # Matriz de acceso — MIG-03-A
 
-Fecha: 10/10/2026. Rama backend-migueltarea2y3. Estado: matriz y configuración (MIG-03-A) más **validación de JWT y `GET /api/v1/me` (MIG-03-B, probados con JWKS de prueba y PostgreSQL real; Auth real pendiente)**. Sin JWT configurado todo responde 401 salvo `/actuator/health/**`. **Contexto JDBC transaccional de usuario (MIG-03-C, §6.2) implementado y probado con PostgreSQL desechable.** **`X-Api-Key` y contexto de servicio (MIG-03-D1, §6.3) implementados y probados.** **Autorización por método/ruta exacta (MIG-03-D2, §6.4) implementada: permiso de rol/alcance ≠ funcionalidad; solo `/me` existe.** Siguen sin implementar los demás endpoints. Fuentes: `BD/migrations/V4` y `V7` (D-010), `BD/definicion-base-datos.md`, `BD/revision-sql-rls.md`, `contrato-api.md`, `openapi.yaml`, `alineacion-bd-n8n.md`. Las filas marcadas *propuesta* no son aprobaciones del equipo.
+Fecha: 10/10/2026. Rama backend-migueltarea2y3. Estado: matriz y configuración (MIG-03-A) más **validación de JWT y `GET /api/v1/me` (MIG-03-B, probados con JWKS de prueba y PostgreSQL real; Auth real pendiente)**. Sin JWT configurado todo responde 401 salvo `/actuator/health/**`. **Contexto JDBC transaccional de usuario (MIG-03-C, §6.2) implementado y probado con PostgreSQL desechable.** **`X-Api-Key` y contexto de servicio (MIG-03-D1, §6.3) implementados y probados.** **Autorización por método/ruta exacta (MIG-03-D2, §6.4) implementada: permiso de rol/alcance ≠ funcionalidad; /me existe y /ordenes/ingesta tiene recepción validada sin persistencia.** Siguen sin implementar los demás endpoints. Fuentes: `BD/migrations/V4` y `V7` (D-010), `BD/definicion-base-datos.md`, `BD/revision-sql-rls.md`, `contrato-api.md`, `openapi.yaml`, `alineacion-bd-n8n.md`. Las filas marcadas *propuesta* no son aprobaciones del equipo.
 
 ## 1. Tres credenciales distintas (una por operación)
 
@@ -115,3 +115,6 @@ Fuente única: `security/AccessPolicy` (una regla por operación entrante del co
 
 ## 7. Qué no cubre esta entrega
 Webhooks y workflows n8n (D3), controllers distintos de `/me`, Storage, motor financiero, cambios en V1–V7 ni Supabase remoto. Las pruebas usan un JWKS local de prueba y PostgreSQL de Testcontainers: **no acreditan** integración con Supabase Auth real.
+
+## Recepción WF1 solicitada por Miguel — 11/10/2026
+POST /api/v1/ordenes/ingesta implementa solo validación estricta del objeto JSON e instancia vinculada al servicio INGESTA, HTTP200 VALIDADO_SIN_PERSISTIR. No recibe credenciales en body, no persiste texto ni genera orden, no resuelve vendedorJid ni verifica negocio. 201/idempotencia pendiente MIG-05. Otros endpoints conservan permisos D2; voucher sin controller, confirmación/callback cerrados.

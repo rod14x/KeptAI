@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "580dd8bdbcc1a6341fa60e4930a8a816fd03730c",
+  "source_head_at_generation": "9ed8a3a8c9ae72772e99a3b671682b5428cf41a4",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -112,8 +112,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/estado.md",
-      "bytes": 60455,
-      "sha256": "73ddb4b1f7e738345023ef00832ff8053e821e917c2fc39f2e0a8d2e3dc5744f"
+      "bytes": 62933,
+      "sha256": "5ee7ee2c4ee910a960e6fe2b855a6dba30426bfb2bd0b8a28b8cc72c9bfc4bdb"
     },
     {
       "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
@@ -137,8 +137,8 @@
     },
     {
       "path": "conocimientos/desarrollo/miguel/plan-mig-03-d.md",
-      "bytes": 7483,
-      "sha256": "8c1bc6b0748217eda589f7b18b0406c069be6d3a355d8a6d898fbaefc03e95c2"
+      "bytes": 7930,
+      "sha256": "e6c22446276791a7eda0a69f02e9334e913ef653c6281aeb0a7ea303d042aff5"
     },
     {
       "path": "conocimientos/desarrollo/miguel/preparacion-supabase-rls.md",
@@ -480,16 +480,16 @@
     },
     {
       "path": "Backend/docs/alineacion-bd-n8n.md",
-      "bytes": 4815,
-      "sha256": "85acab094bf0490059df401be00972ce0af5403fee3630341330e838c0f0f3f2",
-      "source_sha256": "85acab094bf0490059df401be00972ce0af5403fee3630341330e838c0f0f3f2",
+      "bytes": 5163,
+      "sha256": "dfbd9229f9efedb52401b1f79bc30d0c5b43ed764cf61d9a3709fb3fcbad08ab",
+      "source_sha256": "dfbd9229f9efedb52401b1f79bc30d0c5b43ed764cf61d9a3709fb3fcbad08ab",
       "sanitized": false
     },
     {
       "path": "Backend/docs/auditoria-backend-2026-10-11.md",
-      "bytes": 29124,
-      "sha256": "991577cd179070663641892ffd826889f3163c2dca5c17ce43bd164e5ca221cf",
-      "source_sha256": "991577cd179070663641892ffd826889f3163c2dca5c17ce43bd164e5ca221cf",
+      "bytes": 30337,
+      "sha256": "089407afa2886257a6e0a16469560f64cf99f49f0891ebadbc9cef2d26020789",
+      "source_sha256": "089407afa2886257a6e0a16469560f64cf99f49f0891ebadbc9cef2d26020789",
       "sanitized": false
     },
     {
@@ -501,23 +501,30 @@
     },
     {
       "path": "Backend/docs/contrato-api.md",
-      "bytes": 8965,
-      "sha256": "fe9e030c1f69660c852c4f5c9bd85ec09482e15027be7dce82b8631bb75dc0a7",
-      "source_sha256": "fe9e030c1f69660c852c4f5c9bd85ec09482e15027be7dce82b8631bb75dc0a7",
+      "bytes": 9223,
+      "sha256": "91e92cbcc359684ef76f10e0b5de9cc14d995bf164268e27f473d79f37adbcc1",
+      "source_sha256": "91e92cbcc359684ef76f10e0b5de9cc14d995bf164268e27f473d79f37adbcc1",
+      "sanitized": false
+    },
+    {
+      "path": "Backend/docs/integracion-n8n-isabella.md",
+      "bytes": 7977,
+      "sha256": "9571f6d64ebaa53c01bff7b9e894fa076d00b442b006bf4237b9d7309abba2b7",
+      "source_sha256": "9571f6d64ebaa53c01bff7b9e894fa076d00b442b006bf4237b9d7309abba2b7",
       "sanitized": false
     },
     {
       "path": "Backend/docs/matriz-acceso.md",
-      "bytes": 19288,
-      "sha256": "55ff6b508a9548609b61e4830e5c36a260beee5cd018d4b69cea60f8ac90a852",
-      "source_sha256": "55ff6b508a9548609b61e4830e5c36a260beee5cd018d4b69cea60f8ac90a852",
+      "bytes": 19799,
+      "sha256": "7ee7eefe613df65efa35cff1dbbb0177477506b53ff17c876ec6f4112cb2729c",
+      "source_sha256": "7ee7eefe613df65efa35cff1dbbb0177477506b53ff17c876ec6f4112cb2729c",
       "sanitized": false
     },
     {
       "path": "Backend/docs/openapi.yaml",
-      "bytes": 210553,
-      "sha256": "a1e7751a0d1a29f4864719e9f11d0db9e657e8ddb7df6c9c0df81dcecaec50c1",
-      "source_sha256": "e7fe77ba87ba8bbd09977b8284a4f4f716f1db321bd82ee54a026a94b161cea9",
+      "bytes": 211808,
+      "sha256": "4fd4ee38bb461d4e504cf20f2d830090dc7b342055e74445f6169b16423a3c3d",
+      "source_sha256": "ce3db61d7faa63db8b4624fa134f8d8abcb21607bc209cedd22aca4a4f7cdd45",
       "sanitized": true
     },
     {
@@ -529,9 +536,9 @@
     },
     {
       "path": "Middleware/n8n/README.md",
-      "bytes": 6790,
-      "sha256": "da90a7935caa03664964d2623463ab3d7da51490616eddecd5ab06a36b1f94b6",
-      "source_sha256": "b45cff3631ba71f87cca3ca77c97a21449c4a994246846e1e43eb5b443130851",
+      "bytes": 8429,
+      "sha256": "da9365fbd54dc37bd469f732c3f5742b211190a43f76488c288302f95c54f027",
+      "source_sha256": "cfd6410783bfa1caaeee2f673db85f498326e0ba2ec69d4b8385e03d5c746ac7",
       "sanitized": true
     },
     {

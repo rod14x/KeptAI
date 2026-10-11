@@ -57,7 +57,7 @@ class SecurityExceptionHandlingTests {
 			return throwFor(mode);
 		}
 
-		@PostMapping("/api/v1/ordenes/ingesta")
+		@PostMapping("/api/v1/pagos/voucher")
 		String ingest(@RequestParam String mode) {
 			return throwFor(mode);
 		}
@@ -146,7 +146,7 @@ class SecurityExceptionHandlingTests {
 	@Test
 	void sameUniformErrorsApplyToAnAuthenticatedServiceOnItsOwnRoute() throws Exception {
 		for (Object[] c : new Object[][] { { "denied", 403, "FORBIDDEN" }, { "unauthenticated", 401, "UNAUTHORIZED" }, { "infra", 503, "SERVICE_UNAVAILABLE" } }) {
-			MvcResult r = mvc.perform(post("/api/v1/ordenes/ingesta").param("mode", (String) c[0]).with(authentication(ingesta())))
+			MvcResult r = mvc.perform(post("/api/v1/pagos/voucher").param("mode", (String) c[0]).with(authentication(ingesta())))
 				.andExpect(status().is((Integer) c[1])).andExpect(jsonPath("$.code").value((String) c[2])).andExpect(jsonPath("$.request_id").isNotEmpty()).andReturn();
 			assertThat(r.getResponse().getContentAsString()).doesNotContain("hunter2").doesNotContain("SELECT");
 		}
@@ -156,7 +156,7 @@ class SecurityExceptionHandlingTests {
 	void theRouteGateStillRunsBeforeTheControllerSoItNeverThrowsForUnauthorizedActors() throws Exception {
 		// JEFE_TALLER ve órdenes; GERENTE de pagos no ve esta ruta; un servicio no entra al panel: 403 sin ejecutar el probe.
 		mvc.perform(get("/api/v1/orders/" + UUID.randomUUID()).param("mode", "unexpected").with(authentication(ingesta()))).andExpect(status().isForbidden());
-		mvc.perform(post("/api/v1/ordenes/ingesta").param("mode", "unexpected").with(authentication(vendedor()))).andExpect(status().isForbidden());
+		mvc.perform(post("/api/v1/pagos/voucher").param("mode", "unexpected").with(authentication(vendedor()))).andExpect(status().isForbidden());
 		mvc.perform(get("/api/v1/orders/" + UUID.randomUUID()).param("mode", "unexpected")).andExpect(status().isUnauthorized());
 	}
 

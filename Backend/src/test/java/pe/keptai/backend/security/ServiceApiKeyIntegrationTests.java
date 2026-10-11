@@ -327,10 +327,34 @@ class ServiceApiKeyIntegrationTests {
 	}
 
 	@Test
+	void realApiKeyCanValidateAnOrderPayloadWithoutCreatingAnOrder() throws Exception {
+		var spec = new org.yaml.snakeyaml.Yaml(new org.yaml.snakeyaml.constructor.SafeConstructor(new org.yaml.snakeyaml.LoaderOptions()));
+		java.util.Map<?, ?> root = spec.load(java.nio.file.Files.readString(java.nio.file.Path.of("docs/openapi.yaml")));
+		var components = (java.util.Map<?, ?>) root.get("components");
+		var examples = (java.util.Map<?, ?>) components.get("examples");
+		var example = (java.util.Map<?, ?>) examples.get("N8nIngestaCredit");
+		var value = new java.util.LinkedHashMap<String, Object>();
+		((java.util.Map<?, ?>) example.get("value")).forEach((key, val) -> value.put(key.toString(), val));
+		value.put("instancia", "n8n-a");
+		String body = tools.jackson.databind.json.JsonMapper.builder().build().writeValueAsString(value);
+		long before;
+		try (Connection c = owner(); Statement s = c.createStatement(); var rs = s.executeQuery("SELECT count(*) FROM keptai.orden")) {
+			rs.next(); before = rs.getLong(1);
+		}
+		mvc.perform(post("/api/v1/ordenes/ingesta").header("X-Api-Key", KEY_ING_A)
+			.contentType("application/json").content(body))
+			.andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("VALIDADO_SIN_PERSISTIR"))
+			.andExpect(jsonPath("$.persistido").value(false)).andExpect(jsonPath("$.procesado").value(false));
+		try (Connection c = owner(); Statement s = c.createStatement(); var rs = s.executeQuery("SELECT count(*) FROM keptai.orden")) {
+			rs.next(); assertThat(rs.getLong(1)).isEqualTo(before);
+		}
+	}
+
+	@Test
 	void anAuthenticatedServiceIsAuthorizedOnlyWhereThePolicyOpensItAndNothingIsImplementedThere() throws Exception {
-		// D2: ingesta y voucher están abiertas a INGESTA, pero no hay controlador: 404 (permiso concedido != funcionalidad).
+		// Ingesta tiene recepción validada ({} -> 400); voucher todavía no tiene controlador (404).
 		for (String path : new String[] { "/api/v1/ordenes/ingesta", "/api/v1/pagos/voucher" }) {
-			mvc.perform(post(path).header("X-Api-Key", KEY_ING_A).contentType("application/json").content("{}")).andExpect(status().isNotFound());
+			mvc.perform(post(path).header("X-Api-Key", KEY_ING_A).contentType("application/json").content("{}")).andExpect(path.equals("/api/v1/ordenes/ingesta") ? status().isBadRequest() : status().isNotFound());
 			mvc.perform(post(path).header("X-Api-Key", KEY_SCH_A).contentType("application/json").content("{}"))
 				.andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("FORBIDDEN"));
 		}
