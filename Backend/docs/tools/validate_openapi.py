@@ -70,8 +70,8 @@ def main(path):
             for key in ("x-keptai-owner", "x-keptai-task", "x-keptai-proposed-roles"):
                 if key not in op:
                     fail(f"{where}: falta {key}")
-            if op.get("x-keptai-status") != "proposed":
-                fail(f"{where}: x-keptai-status debe ser 'proposed' (ningun endpoint esta operativo)")
+            if op.get("x-keptai-status") not in ("proposed", "implemented_local"):
+                fail(f"{where}: x-keptai-status debe distinguir propuesta e implementación local")
             params = [resolve_local(spec, x["$ref"]) if "$ref" in x else x for x in op.get("parameters", [])]
             names = {x["name"] for x in params}
             if method == "post" and "Idempotency-Key" not in names and not op.get("x-keptai-idempotency") and op.get("x-keptai-direction") != "outbound":

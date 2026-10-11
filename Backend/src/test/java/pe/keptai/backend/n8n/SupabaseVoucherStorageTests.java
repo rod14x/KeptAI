@@ -58,6 +58,25 @@ class SupabaseVoucherStorageTests {
 	}
 
 	@Test
+	void signsOnlyTheRequestedPrivateObjectAndLimitsExpiry() throws Exception {
+		cuerpoRespuesta = "{\"signedURL\":\"/object/sign/keptai-vouchers/" + PATH + "?token=fixture\"}";
+		VoucherStorage s = storage("sb_secret_FIXTURE_SIGNING_ONLY");
+		assertThat(s.signedUrl(PATH, 60)).startsWith("http://127.0.0.1:").endsWith(PATH + "?token=fixture");
+		assertThat(vistos.getFirst().uri()).isEqualTo("/storage/v1/object/sign/keptai-vouchers/" + PATH);
+		assertThat(vistos.getFirst().metodo()).isEqualTo("POST");
+		assertThatThrownBy(() -> s.signedUrl(PATH, 301)).isInstanceOf(VoucherStorage.StorageException.class);
+	}
+
+	@Test
+	void rejectsSigningResponsesForOtherObjectsOrExternalHosts() throws Exception {
+		VoucherStorage s = storage("sb_secret_FIXTURE_SIGNING_ONLY");
+		for (String bad : List.of("https://evil.invalid/x?token=a", "//evil.invalid/x?token=a", "/object/sign/keptai-vouchers/another.png?token=a", "/object/sign/keptai-vouchers/" + PATH)) {
+			cuerpoRespuesta = "{\"signedURL\":\"" + bad + "\"}";
+			assertThatThrownBy(() -> s.signedUrl(PATH, 60)).isInstanceOf(VoucherStorage.StorageException.class);
+		}
+	}
+
+	@Test
 	void uploadsToThePrivateBucketWithTheSecretOnlyInTheApikeyHeader() throws Exception {
 		String secret = "sb_secret_FIXTURE_NOT_REAL_0123456789";
 		storage(secret).put(PATH, new byte[] { 1, 2, 3 }, "image/png");

@@ -54,7 +54,7 @@ class SchemaRlsTests {
  }
  static String application(String id,String amount){return "INSERT INTO aplicacion_pago(id,organizacion_id,pago_id,obligacion_id,monto_aplicado,aplicado_por) VALUES ('"+id+"','"+A+"','"+PA+"','"+RA+"',"+amount+",'"+UA+"')";}
  @Test void migrationsAndPrivacy()throws Exception{try(Connection c=owner()){
-  assertThat(scalar(c,"SELECT count(*) FROM keptai.flyway_schema_history WHERE success AND version IS NOT NULL")).isEqualTo("10");
+  assertThat(scalar(c,"SELECT count(*) FROM keptai.flyway_schema_history WHERE success AND version IS NOT NULL")).isEqualTo("14");
   assertThat(scalar(c,"SELECT count(*) FROM information_schema.tables WHERE table_schema='keptai' AND table_name IN ('mensaje','mensaje_saliente','nota_cliente')")).isEqualTo("0");
   // V10 (dirección de Miguel, 11/10/2026): contacto vuelve SOLO como metadatos de WhatsApp de un cliente; sin mensajes ni notas.
   assertThat(scalar(c,"SELECT string_agg(column_name, ',' ORDER BY column_name) FROM information_schema.columns WHERE table_schema='keptai' AND table_name='contacto'")).isEqualTo("activo,cliente_id,creado_en,id,nombre,organizacion_id,whatsapp_jid");
@@ -142,11 +142,11 @@ class SchemaRlsTests {
  assertThat(scalar(c,"SELECT count(*) FROM storage.objects")).isEqualTo("0");
  }}
  static String credit(String by){return "INSERT INTO aprobacion_credito(organizacion_id,orden_id,decision,aprobado_por,decidido_en,plazo_dias) VALUES ('"+A+"','"+OA+"','APROBADO','"+by+"',now(),30)";}
- @Test void onlyTheSellerDecidesCreditAndAsThemself()throws Exception{try(Connection c=runtime()){
+ @Test void onlyAdminDecidesCreditAndAsThemself()throws Exception{try(Connection c=runtime()){
   context(c,A,"",SA);denied(c,credit(UV));
-  context(c,A,UA,"");denied(c,credit(UA));
-  context(c,A,UV,"");denied(c,credit(UA));
-  exec(c,credit(UV));
+  context(c,A,UV,"");denied(c,credit(UV));
+  context(c,A,UA,"");denied(c,credit(UV));
+  exec(c,credit(UA));
  }}
  @Test void authorshipAndAuditActorCannotBeSpoofed()throws Exception{try(Connection c=runtime()){
   context(c,A,UA,"");

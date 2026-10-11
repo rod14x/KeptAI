@@ -6,16 +6,22 @@ import java.util.List;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import pe.keptai.backend.contract.CommonDtos.NonNegativeMoney;
+import pe.keptai.backend.contract.CommonDtos.PersonRef;
 import pe.keptai.backend.contract.CommonDtos.PositiveMoney;
+import pe.keptai.backend.contract.ContractEnums.NotificationStatus;
+import pe.keptai.backend.contract.ContractEnums.NotificationType;
+import pe.keptai.backend.contract.ContractEnums.PaymentChannel;
 import pe.keptai.backend.contract.ContractEnums.AlertResolution;
 import pe.keptai.backend.contract.ContractEnums.AlertRule;
 import pe.keptai.backend.contract.ContractEnums.TermStartEvent;
@@ -49,7 +55,25 @@ public final class ReceivableDtos {
 			@JsonProperty("due_date") LocalDate dueDate,
 			@JsonProperty("due_bucket") @NotNull DueBucket dueBucket,
 			@JsonProperty("days_overdue") @NotNull @Min(0) @Max(36_500) Integer daysOverdue,
+			@JsonProperty("status") @NotNull ReceivableStatus status,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("applications") @Size(max = 50) List<@Valid ReceivableApplication> applications) {
+		public Receivable(
+			@JsonProperty("id") @NotNull UUID id,
+			@JsonProperty("order_id") @NotNull UUID orderId,
+			@JsonProperty("order_code") @NotNull @Pattern(regexp = OrderDtos.LABEL_REGEX) String orderCode,
+			@JsonProperty("customer") @NotNull @Valid CustomerRef customer,
+			@JsonProperty("original_amount") @NotNull @Valid PositiveMoney originalAmount,
+			@JsonProperty("applied_amount") @NotNull @Valid NonNegativeMoney appliedAmount,
+			@JsonProperty("balance") @NotNull @Valid NonNegativeMoney balance,
+			@JsonProperty("credit_term_days") @NotNull @Min(0) @Max(365) Integer creditTermDays,
+			@JsonProperty("term_start_event") @NotNull TermStartEvent termStartEvent,
+			@JsonProperty("due_date") LocalDate dueDate,
+			@JsonProperty("due_bucket") @NotNull DueBucket dueBucket,
+			@JsonProperty("days_overdue") @NotNull @Min(0) @Max(36_500) Integer daysOverdue,
 			@JsonProperty("status") @NotNull ReceivableStatus status) {
+			this(id, orderId, orderCode, customer, originalAmount, appliedAmount, balance, creditTermDays, termStartEvent, dueDate, dueBucket, daysOverdue, status, null);
+		}
+
 
 		@JsonIgnore
 		@AssertTrue(message = "days_overdue solo es mayor que 0 cuando due_bucket=overdue")
@@ -83,6 +107,38 @@ public final class ReceivableDtos {
 		}
 	}
 
+	/** Pago aplicado (vigente) a la obligacion, con canal y autor; INT-FE-API-002. */
+	public record ReceivableApplication(
+			@JsonProperty("application_id") @NotNull UUID applicationId,
+			@JsonProperty("payment_id") @NotNull UUID paymentId,
+			@JsonProperty("payment_code") @Pattern(regexp = OrderDtos.LABEL_REGEX) String paymentCode,
+			@JsonProperty("channel") @NotNull PaymentChannel channel,
+			@JsonProperty("amount") @NotNull @Valid PositiveMoney amount,
+			@JsonProperty("applied_at") @NotNull OffsetDateTime appliedAt,
+			@JsonProperty("applied_by") @Valid PersonRef appliedBy) {
+	}
+
+	/**
+	 * Envio de cobranza programado o realizado por WF3 (envio_notificacion), INT-FE-API-002. Solo metadatos de entrega:
+	 * la base no guarda el texto (D-007).
+	 */
+	public record Notification(
+			@JsonProperty("id") @NotNull UUID id,
+			@JsonProperty("customer") @Valid CustomerRef customer,
+			@JsonProperty("order_id") UUID orderId,
+			@JsonProperty("order_code") @Pattern(regexp = OrderDtos.LABEL_REGEX) String orderCode,
+			@JsonProperty("type") @NotNull NotificationType type,
+			@JsonProperty("status") @NotNull NotificationStatus status,
+			@JsonProperty("scheduled_for") @NotNull OffsetDateTime scheduledFor,
+			@JsonProperty("attempts") @NotNull @Min(0) @Max(1000) Integer attempts,
+			@JsonProperty("sent_at") OffsetDateTime sentAt,
+			@JsonProperty("last_error") @Size(max = 500) String lastError) {
+	}
+
+	/** Cuerpo de {@code POST /collection-alerts/{alert_id}/resolution}: por que Administracion cierra la alerta. */
+	public record ResolveAlertRequest(@JsonProperty("note") @NotBlank @Size(max = 500) String note) {
+	}
+
 	/**
 	 * Alerta interna de cobranza (alerta_cobranza): apunta a una obligacion, a un pago en revision o a ambos. Los desfases
 	 * -3/0/+3 de la cobranza al cliente pertenecen a la cola de mensajes salientes (WF3), no a la alerta.
@@ -96,7 +152,22 @@ public final class ReceivableDtos {
 			@JsonProperty("responsible_user_id") UUID responsibleUserId,
 			@JsonProperty("resolution") AlertResolution resolution,
 			@JsonProperty("created_at") @NotNull OffsetDateTime createdAt,
+			@JsonProperty("closed_at") OffsetDateTime closedAt,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("responsible_name") @Size(max = 200) String responsibleName,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("resolution_note") @Size(max = 500) String resolutionNote) {
+		public CollectionAlert(
+			@JsonProperty("id") @NotNull UUID id,
+			@JsonProperty("receivable_id") UUID receivableId,
+			@JsonProperty("payment_id") UUID paymentId,
+			@JsonProperty("rule") @NotNull AlertRule rule,
+			@JsonProperty("status") @NotNull AlertStatus status,
+			@JsonProperty("responsible_user_id") UUID responsibleUserId,
+			@JsonProperty("resolution") AlertResolution resolution,
+			@JsonProperty("created_at") @NotNull OffsetDateTime createdAt,
 			@JsonProperty("closed_at") OffsetDateTime closedAt) {
+			this(id, receivableId, paymentId, rule, status, responsibleUserId, resolution, createdAt, closedAt, null, null);
+		}
+
 
 		@JsonIgnore
 		@AssertTrue(message = "la alerta apunta a una obligacion o a un pago")
@@ -129,7 +200,20 @@ public final class ReceivableDtos {
 			@JsonProperty("credit_term_days") @Min(0) @Max(365) Integer creditTermDays,
 			@JsonProperty("advance_pct_bps") @Min(0) @Max(10_000) Integer advancePctBps,
 			@JsonProperty("reason") @Size(max = 500) String reason,
+			@JsonProperty("decided_at") OffsetDateTime decidedAt,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("responsible_name") @Size(max = 200) String responsibleName) {
+		public CreditAuthorization(
+			@JsonProperty("status") @NotNull CreditAuthorizationStatus status,
+			@JsonProperty("responsible_user_id") UUID responsibleUserId,
+			@JsonProperty("arrears_notice_shown") @NotNull Boolean arrearsNoticeShown,
+			@JsonProperty("overdue_balance_reference") @Valid NonNegativeMoney overdueBalanceReference,
+			@JsonProperty("credit_term_days") @Min(0) @Max(365) Integer creditTermDays,
+			@JsonProperty("advance_pct_bps") @Min(0) @Max(10_000) Integer advancePctBps,
+			@JsonProperty("reason") @Size(max = 500) String reason,
 			@JsonProperty("decided_at") OffsetDateTime decidedAt) {
+			this(status, responsibleUserId, arrearsNoticeShown, overdueBalanceReference, creditTermDays, advancePctBps, reason, decidedAt, null);
+		}
+
 
 		@JsonIgnore
 		@AssertTrue(message = "aprobada o rechazada exige responsable y fecha de decision")

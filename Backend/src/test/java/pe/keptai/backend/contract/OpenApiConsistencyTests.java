@@ -44,11 +44,11 @@ class OpenApiConsistencyTests {
 	}
 
 	@Test
-	void specIsOpenApi31AndEveryOperationIsOnlyProposed() {
+	void specIsOpenApi31AndEveryOperationDeclaresItsImplementationStatus() {
 		assertThat(spec.root().path("openapi").asString()).startsWith("3.1");
 		assertThat(spec.root().path("info").path("version").asString()).contains("proposal");
 		forEachOperation((key, op) -> {
-			assertThat(op.path("x-keptai-status").asString()).as(key).isEqualTo("proposed");
+			assertThat(op.path("x-keptai-status").asString()).as(key).isIn("proposed", "implemented_local");
 			assertThat(op.path("operationId").asString()).as(key).isNotBlank();
 			assertThat(op.path("x-keptai-owner").asString()).as(key).isIn("miguel", "miguel_adapter_andres_engine");
 			assertThat(op.path("security").toString()).as(key).isEqualTo(key.contains("/ordenes/") || key.contains("/pagos/voucher") || key.contains("/mensajes/") ? "[{\"serviceApiKey\":[]}]" : "[{\"bearerAuth\":[]}]");
@@ -111,7 +111,9 @@ class OpenApiConsistencyTests {
 		assertThat(inGuide).as("matriz de contrato-api.md desalineada con openapi.yaml").isEqualTo(inSpec);
 		for (String line : Files.readAllLines(OpenApiSpec.MATRIX)) {
 			if (line.startsWith("| `") && line.split("\\|").length >= 7) {
-				assertThat(line).as("toda fila declara que no esta implementado").containsIgnoringCase("propuesta");
+				String id=line.split("\\|")[1].trim().replace("`", "");
+                String declared=spec.root().path("paths").valueStream().flatMap(x->x.valueStream()).filter(x->id.equals(x.path("operationId").asString())).findFirst().orElseThrow().path("x-keptai-status").asString();
+                assertThat(line).containsIgnoringCase(declared.equals("implemented_local") ? "Implementado localmente" : "Propuesta");
 			}
 		}
 	}
@@ -139,20 +141,9 @@ class OpenApiConsistencyTests {
 	@Test
 	void javaRecordsExposeExactlyTheSchemaProperties() {
 		Map<String, Class<?>> records = new LinkedHashMap<>();
-		for (Class<?> c : new Class<?>[] { Money.class, NonNegativeMoney.class, PositiveMoney.class, PageInfo.class,
-				ApiErrorDetail.class, ApiErrorExtended.class, UserContext.class, Evidence.class, CreateTextEvidenceRequest.class,
-				EvidenceDownloadLink.class, StartExtractionRequest.class, ExtractionJob.class, OrderDraftFields.class,
-				VoucherDraftFields.class, ExtractionDraft.class, OrderFieldsCorrection.class, VoucherFieldsCorrection.class,
-				CorrectDraftRequest.class, ConfirmDraftRequest.class, ConfirmDraftResponse.class, DiscardDraftRequest.class,
-				CustomerRef.class, Order.class, PaymentVerification.class, Payment.class, ReconciliationCandidate.class,
-				ReconciliationResult.class, RegisterVerificationRequest.class, ApplyPaymentRequest.class,
-				PaymentApplication.class, PaymentApplicationResult.class, Receivable.class, CollectionAlert.class,
-				CreditAuthorization.class, StatementOrder.class, StatementApplication.class, CustomerStatement.class,
-				ResultsSummary.class, MarginRow.class, MarginReport.class, ProductionCenterRow.class,
-				ProductionCenterReport.class, OpeningCash.class, CashAssumptions.class, CashWeek.class, CashForecast.class,
-				AuditChange.class, AuditEvent.class, DispatchRequest.class, CreditDecisionRequest.class }) {
-			records.put(c.getSimpleName(), c);
-		}
+        for (Class<?> group : List.of(CommonDtos.class,EvidenceDtos.class,ExtractionDtos.class,OrderDtos.class,PaymentDtos.class,ReceivableDtos.class,ResultsDtos.class,AuditDtos.class)) {
+            for(Class<?> c:group.getDeclaredClasses()) if(c.isRecord() && spec.root().path("components").path("schemas").has(c.getSimpleName())) records.put(c.getSimpleName(),c);
+        }
 		records.forEach((name, type) -> {
 			Set<String> javaProps = Arrays.stream(type.getRecordComponents())
 				.map(OpenApiConsistencyTests::jsonName).collect(Collectors.toCollection(TreeSet::new));
@@ -169,7 +160,7 @@ class OpenApiConsistencyTests {
 				"ExtractedString", "ExtractedInteger", "ExtractedMoney", "ExtractedDateTime", "EvidencePage", "ExtractionDraftPage",
 				"OrderPage", "PaymentPage", "ReceivablePage", "CollectionAlertPage", "AuditEventPage"));
 		spec.root().path("components").path("schemas").properties().forEach(e -> {
-			if (e.getValue().has("properties") && !noDto.contains(e.getKey()) && !e.getKey().startsWith("N8n")) {
+			if (e.getValue().has("properties") && !noDto.contains(e.getKey()) && !e.getKey().endsWith("Page") && !e.getKey().startsWith("N8n")) {
 				assertThat(records).as("falta DTO Java para el esquema " + e.getKey()).containsKey(e.getKey());
 			}
 		});
@@ -185,7 +176,7 @@ class OpenApiConsistencyTests {
 				boolean notNull = c.getAccessor().isAnnotationPresent(jakarta.validation.constraints.NotNull.class)
 						|| c.getAccessor().isAnnotationPresent(jakarta.validation.constraints.NotBlank.class);
 				JsonNode prop = schema.path("properties").path(json);
-				boolean nullable = prop.path("type").toString().contains("null") || prop.path("oneOf").toString().contains("\"null\"");
+				boolean nullable = prop.path("type").toString().contains("null") || prop.path("oneOf").toString().contains("\"null\"") || prop.path("anyOf").toString().contains("\"null\"");
 				if (notNull) {
 					assertThat(required).as("%s.%s es @NotNull y debe ser requerido en el YAML", name, json).contains(json);
 				}

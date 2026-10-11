@@ -88,7 +88,7 @@ class AccessPolicyContractTests {
 	void closedRulesCarryTheirPendingReasonAndAreDocumentedInTheMatrix() throws IOException {
 		List<Rule> closed = AccessPolicy.RULES.stream().filter(r -> !r.open()).toList();
 		assertThat(closed).extracting(Rule::operationId).containsExactlyInAnyOrder("createTextEvidence", "startExtraction", "getExtractionJob",
-			"getReconciliationCandidates", "registerPaymentVerification", "applyPayment", "n8nConfirmOrder", "n8nReportMessageStatus");
+			"n8nConfirmOrder", "n8nReportMessageStatus");
 		assertThat(closed).allSatisfy(r -> {
 			assertThat(r.closedReason()).isNotBlank();
 			assertThat(r.actors()).isEmpty();

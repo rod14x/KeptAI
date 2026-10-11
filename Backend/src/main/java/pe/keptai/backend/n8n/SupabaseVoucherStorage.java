@@ -63,6 +63,34 @@ final class SupabaseVoucherStorage implements VoucherStorage {
 		throw new StorageException("Storage respondió " + s, s >= 500 || s == 429);
 	}
 
+	@Override
+	public String signedUrl(String path, int expiresInSeconds) {
+		if (expiresInSeconds < 1 || expiresInSeconds > 300) {
+			throw new StorageException("Vigencia no permitida", false);
+		}
+		// Reutilizar validación de ruta y credenciales; nunca seguir redirecciones.
+		HttpRequest.Builder auth = request(path);
+		String expected = "/object/sign/" + URLEncoder.encode(bucket, StandardCharsets.UTF_8) + "/" + path;
+		auth.uri(URI.create(base.replace("/object/", "") + expected));
+		HttpResponse<String> response = send(auth.header("Content-Type", "application/json")
+			.POST(HttpRequest.BodyPublishers.ofString("{\"expiresIn\":" + expiresInSeconds + "}")));
+		if (response.statusCode() != 200) {
+			throw new StorageException("No se pudo emitir enlace privado", response.statusCode() >= 500 || response.statusCode() == 429);
+		}
+		try {
+			String signed = tools.jackson.databind.json.JsonMapper.builder().build().readTree(response.body()).path("signedURL").asString();
+			URI relative = URI.create(signed);
+			if (relative.isAbsolute() || relative.getRawAuthority() != null || !expected.equals(relative.getRawPath())
+					|| relative.getRawQuery() == null || relative.getFragment() != null) {
+				throw new IllegalArgumentException();
+			}
+			return base.replace("/object/", "") + signed;
+		}
+		catch (RuntimeException e) {
+			throw new StorageException("Respuesta de Storage inválida", false);
+		}
+	}
+
 	private HttpRequest.Builder request(String path) {
 		if (!PATH.matcher(path).matches()) {
 			throw new StorageException("Ruta de objeto no permitida", false);

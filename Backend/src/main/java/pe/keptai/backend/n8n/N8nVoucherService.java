@@ -238,9 +238,9 @@ public class N8nVoucherService {
 		ocr.put("destinatario", x.destinatario());
 		db.update("""
 				INSERT INTO keptai.comprobante (organizacion_id, pago_id, banco, archivo_storage_path, archivo_hash, ocr_extraccion, confianza,
-				       instancia_origen, provider_message_id)
-				VALUES (keptai.app_organizacion_actual(), ?, ?, ?, ?, ?::jsonb, ?, ?, ?)""", pagoId, vacioANulo(x.banco()), path, archivo.sha256(),
-				ocr.toString(), x.confianza().setScale(3, java.math.RoundingMode.HALF_UP), req.instancia(), req.mensajeId());
+				       instancia_origen, provider_message_id, archivo_content_type, archivo_size_bytes)
+				VALUES (keptai.app_organizacion_actual(), ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?)""", pagoId, vacioANulo(x.banco()), path, archivo.sha256(),
+				ocr.toString(), x.confianza().setScale(3, java.math.RoundingMode.HALF_UP), req.instancia(), req.mensajeId(), archivo.contentType(), archivo.bytes().length);
 		db.update("""
 				INSERT INTO keptai.evento_auditoria (organizacion_id, usuario_id, actor, operacion, entidad, entidad_id, cambios, request_id)
 				VALUES (keptai.app_organizacion_actual(), NULL, 'N8N', 'VOUCHER_RECIBIDO', 'pago', ?, ?::jsonb, ?)""",

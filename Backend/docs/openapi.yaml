@@ -1,34 +1,42 @@
 openapi: 3.1.0
 info:
-  title: KeptAI API (PROPUESTA de contrato MIG-02)
-  version: 0.1.0-proposal
-  summary: Contrato propuesto del backend KeptAI. Ningún endpoint está implementado ni operativo.
-  description: "**Estado: PROPUESTA para revisión de Andrés (gate de aceptación pendiente).** Este archivo no acredita\nendpoints,\
-    \ controladores, persistencia ni motor financiero. Todo ejemplo es **ficticio** (semilla de demostración\nP-001/P-002/V-001..V-003\
-    \ de PROP-DB-001 y del prompt adaptado PROP-FRONT-001); no son datos de Corpotex.\n\nConvenciones propuestas (detalle\
-    \ y acuerdos pendientes en `Backend/docs/contrato-api.md`):\n\n- **Identificadores:** UUID en `id` y `*_id`. Las etiquetas\
-    \ legibles (`P-001`, `V-001`) viajan aparte, en `display_code`,\n  y nunca sustituyen al UUID.\n- **Dinero:** objeto `{amount_cents,\
-    \ currency}`. `amount_cents` es un entero (centavos), dentro del rango seguro de\n  JavaScript (±9007199254740991). `currency`\
-    \ es `PEN` (demo); un mismo cálculo no mezcla monedas. Los negativos son válidos en margen,\n  resultado y saldo de caja;\
-    \ el importe de un pago recibido o aplicado es siempre positivo. Conversión BigDecimal ↔ centavos en un solo punto del\
-    \ servidor.\n- **Ausente ≠ cero:** un dato no cargado, ilegible o incompleto es `null` con un estado explícito (`status`,\
-    \ `cost_status`,\n  `forecast_status`). Nunca se rellena con 0 ni se inventa.\n- **Fechas:** `date` (`YYYY-MM-DD`, fecha\
-    \ de negocio local America/Lima) para vencimientos; instantes `date-time` ISO 8601 con\n  desfase (p. ej. `2026-10-10T09:30:00-05:00`).\
-    \ El cliente debe aceptar cualquier desfase.\n- **Autorización:** JWT de Supabase como Bearer (validación real: MIG-03,\
-    \ pendiente). La organización se resuelve en el\n  servidor por membresía; ningún cuerpo, ruta ni consulta lleva `organization_id`\
-    \ y los cuerpos de petición rechazan campos desconocidos.\n- **Idempotencia:** las operaciones POST del panel exigen `Idempotency-Key`.\
-    \ Huella propuesta: organización + usuario + método + ruta con sus parámetros + clave + hash del cuerpo (la misma clave\
-    \ sobre otro recurso es otra operación). Autenticación y rol se comprueban antes de consultar la clave. Solo se almacenan\
-    \ resultados exitosos: repetir tras un 4xx/5xx reintenta.\n  Misma clave y mismo contenido devuelven el resultado original\
-    \ (mismo estado HTTP, cabecera `Idempotency-Replayed: true`).\n  Misma clave con contenido distinto: 409 `IDEMPOTENCY_KEY_CONFLICT`.\
-    \ Misma clave en curso: 409 `IDEMPOTENCY_IN_PROGRESS`. Ventana de retención: por acordar.\n- **Errores:** `{code, message,\
-    \ request_id}` (ApiError vigente) con `details` y `retryable` opcionales (extensión compatible propuesta).\n- **Listas:**\
-    \ paginación por cursor opaco (`limit` 1..100, 25 por omisión).\n- **Separación de conceptos:** voucher recibido ≠ extracción\
-    \ ≠ fondos verificados ≠ pago aplicado. Confirmar un borrador no verifica\n  fondos ni aplica el pago. El backend no recalcula\
-    \ saldos: invoca el motor de Andrés.\n- Extensiones `x-keptai-*`: `owner`, `status` (siempre `proposed`), `proposed-roles`\
-    \ (roles propuestos, sin aprobación) y `task`.\n\nActualización MIG-02: panel en centavos con JWT; n8n en soles decimales\
-    \ con X-Api-Key. IA de n8n, reglas de Spring. Autenticación, RLS y endpoints pendientes de implementación. Ver alineacion-bd-n8n.md."
-  x-keptai-status: proposed
+  title: KeptAI API — contrato versionado y ejecución local
+  version: 0.2.0-proposal
+  summary: Operaciones implementadas y probadas localmente, con rutas propuestas o cerradas explícitas; despliegue y aceptación
+    n8n pendientes.
+  description: 'Estado por operación: implemented_local acredita código y pruebas locales; proposed identifica contratos pendientes
+    o rutas deliberadamente cerradas. No acredita publicación ni aceptación externa. Todos los ejemplos son ficticios.
+
+
+    Panel: JWT Supabase Bearer y membresía resuelta en el servidor; n8n: X-Api-Key de INGESTA por organización/instancia.
+    El cliente no elige organización ni autor. PostgreSQL/RLS valida actor real. VENDEDOR permanece denegado en los servicios
+    de negocio hasta definir cartera.
+
+
+    Dinero del panel: amount_cents entero y currency=PEN; n8n: soles decimales. BigDecimal y reglas financieras permanecen
+    en motores de Andrés. Ausente no equivale a cero. Dates de negocio y date-time con desfase explícito.
+
+
+    Idempotencia operativa: n8n según su contrato por mensaje; panel en confirmación, carga de voucher, verificación, aplicación
+    y despacho exige Idempotency-Key (8–128 caracteres A-Za-z0-9._:-). Reserva única por tenant/operación/clave; autor, recurso
+    y datos significativos forman la huella. Replay devuelve resultado original, sin cabecera Idempotency-Replayed. Contenido/autor
+    distinto: IDEMPOTENCY_CONFLICT 409. La reserva concurrente espera al commit/rollback; un fallo revierte efectos y reserva.
+    Descarte se resuelve idempotentemente por recurso, sin clave.
+
+
+    Verificación disponible: simulated_demo, sin banco real. Aplicación exige otro ADMIN. Confirmación humana no verifica
+    fondos ni aprueba crédito. Enlaces privados vencen en 60 segundos; no guardarlos ni registrarlos. Los vouchers históricos
+    pueden tener metadatos desconocidos null.
+
+
+    Errores: code, message, request_id sin SQL/credenciales; details/retryable son extensiones opcionales. Listas: limit 1–100,
+    100 por omisión en la implementación actual, cursor opaco. Los roles y restricciones efectivos están documentados en matriz-acceso.md;
+    cada operación declara owner, task, status y proposed-roles.
+
+
+    Release pendiente: reconciliar historial Flyway remoto (colisión V10) y aplicar V11–V13 según el plan acordado, sin modificar
+    migraciones aplicadas. Ver entrega-backend-final-local.md.'
+  x-keptai-status: mixed_local
   x-keptai-demo-data: true
 tags:
 - name: Contexto
@@ -58,15 +66,15 @@ paths:
       - Contexto
       operationId: getMyContext
       summary: Usuario autenticado, organización resuelta y rol (solo lectura).
-      description: 'Implementado en MIG-03-B y probado con JWKS de prueba y PostgreSQL real (fixtures); la integración con Supabase Auth real sigue
-        pendiente. Valida firma (RS256/ES256), issuer, audiencia, exp y nbf; el `sub` se resuelve con `keptai_private.resolver_usuario`.
-        Con una sola membresía activa responde 200. Sin membresía activa: 403 `FORBIDDEN`. Con varias: 409
-        `ORGANIZATION_SELECTION_REQUIRED` (propuesta; la selección de organización aún no está definida y no se elige ninguna).
-        Fallo de base o JWKS: 503 `SERVICE_UNAVAILABLE`.
+      description: 'Implementado en MIG-03-B y probado con JWKS de prueba y PostgreSQL real (fixtures); la integración con
+        Supabase Auth real sigue pendiente. Valida firma (RS256/ES256), issuer, audiencia, exp y nbf; el `sub` se resuelve
+        con `keptai_private.resolver_usuario`. Con una sola membresía activa responde 200. Sin membresía activa: 403 `FORBIDDEN`.
+        Con varias: 409 `ORGANIZATION_SELECTION_REQUIRED` (propuesta; la selección de organización aún no está definida y
+        no se elige ninguna). Fallo de base o JWKS: 503 `SERVICE_UNAVAILABLE`.
 
         '
       x-keptai-owner: miguel
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-implemented: MIG-03-B (fixture JWKS; Auth real pendiente)
       x-keptai-task: MIG-03
       x-keptai-proposed-roles:
@@ -95,6 +103,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
+      parameters: []
   /api/v1/evidences/text:
     post:
       tags:
@@ -153,17 +162,12 @@ paths:
       - Evidencias
       operationId: uploadEvidenceFile
       summary: Subir imagen de voucher o nota de voz a almacenamiento privado.
-      description: 'D-007: solo voucher_image; audio_note/text_chat no habilitados, 422. Límites propuestos (no oficiales,
-        por confirmar): imagen JPEG/PNG/WebP hasta 5 MB; audio OGG/MP3/MP4/WAV hasta 10 MB.
-
-        El hash SHA-256 lo calcula el servidor. Nunca se aceptan URLs para que el servidor las descargue.
-
-        '
+      description: ADMIN adjunta un voucher privado JPEG, PNG o PDF de máximo 10 MiB a un pago RECIBIDO de su organización.
+        payment_id e Idempotency-Key son obligatorios. Se valida el contenido binario. No crea ni verifica pagos.
       x-keptai-owner: miguel
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-04
       x-keptai-proposed-roles:
-      - VENDEDOR
       - ADMIN
       security:
       - bearerAuth: []
@@ -209,10 +213,9 @@ paths:
       operationId: listEvidences
       summary: Listar evidencias de la organización del usuario.
       x-keptai-owner: miguel
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-04
       x-keptai-proposed-roles:
-      - VENDEDOR
       - ADMIN
       security:
       - bearerAuth: []
@@ -250,10 +253,9 @@ paths:
       operationId: getEvidence
       summary: Consultar una evidencia (metadatos).
       x-keptai-owner: miguel
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-04
       x-keptai-proposed-roles:
-      - VENDEDOR
       - ADMIN
       security:
       - bearerAuth: []
@@ -284,14 +286,12 @@ paths:
       - Evidencias
       operationId: getEvidenceDownloadLink
       summary: Obtener un enlace temporal autorizado para ver el archivo privado.
-      description: 'Una evidencia de otra organización responde 404, sin revelar su existencia. Las evidencias de texto no
-        tienen enlace (409 `INVALID_STATE`). Propuesta: respuesta con `Cache-Control: no-store`, vigencia corta por acordar
-        y evento de auditoría de cada emisión.'
+      description: ADMIN autorizado por objeto y tenant; enlace privado de 60 segundos, no-store, auditoría sin URL ni token.
+        Otra organización responde 404. VENDEDOR pendiente de cartera.
       x-keptai-owner: miguel
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-04
       x-keptai-proposed-roles:
-      - VENDEDOR
       - ADMIN
       security:
       - bearerAuth: []
@@ -434,10 +434,9 @@ paths:
       operationId: listDrafts
       summary: Listar borradores de extracción.
       x-keptai-owner: miguel
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-06
       x-keptai-proposed-roles:
-      - VENDEDOR
       - ADMIN
       security:
       - bearerAuth: []
@@ -475,10 +474,9 @@ paths:
       operationId: getDraft
       summary: Consultar un borrador con sus campos presentes, ausentes o ilegibles.
       x-keptai-owner: miguel
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-06
       x-keptai-proposed-roles:
-      - VENDEDOR
       - ADMIN
       security:
       - bearerAuth: []
@@ -513,10 +511,9 @@ paths:
       description: Cada campo corregido pasa a `present` con `human_corrected=true` y genera un evento de auditoría (quién,
         campo, valor anterior y nuevo, fecha).
       x-keptai-owner: miguel
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-06
       x-keptai-proposed-roles:
-      - VENDEDOR
       - ADMIN
       security:
       - bearerAuth: []
@@ -560,25 +557,17 @@ paths:
       - Extraccion
       operationId: confirmDraft
       summary: Confirmar el borrador tras revisión humana.
-      description: 'Un borrador de pedido crea un pedido persistente (servicio de Andrés). Un borrador de voucher registra
-        un pago en estado `received`.
-
-        **Confirmar no verifica fondos ni aplica el pago ni reduce el saldo.** Campos ausentes o ilegibles: 422 `DRAFT_INCOMPLETE`.
-
-        Si el motor detecta una referencia de operación ya usada, el pago nace `duplicate` (quién y cuándo lo marca: acuerdo
-        pendiente con Andrés).
-
-        Texto libre del borrador que no cabe en el pedido o en el pago (longitud, canal desconocido): 422 `DRAFT_INCOMPLETE`
-        con `details`.
-
-        `expected_revision` desactualizado: 409 `REVISION_CONFLICT`.
-
-        '
+      description: "Un borrador de pedido crea un pedido persistente (servicio de Andrés). Un borrador de voucher registra\
+        \ un pago en estado `received`.\n**Confirmar no verifica fondos ni aplica el pago ni reduce el saldo.** Campos ausentes\
+        \ o ilegibles: 422 `DRAFT_INCOMPLETE`.\nSi el motor detecta una referencia de operación ya usada, el pago nace `duplicate`\
+        \ (quién y cuándo lo marca: acuerdo pendiente con Andrés).\nTexto libre del borrador que no cabe en el pedido o en\
+        \ el pago (longitud, canal desconocido): 422 `DRAFT_INCOMPLETE` con `details`.\n`expected_revision` desactualizado:\
+        \ 409 `REVISION_CONFLICT`.\n ADMIN confirma la revisión humana y pasa el pedido a PENDIENTE_APROBACION. No aprueba\
+        \ crédito, no asigna un vendedor inventado y no crea obligaciones ni aplicaciones de pago."
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-06
       x-keptai-proposed-roles:
-      - VENDEDOR
       - ADMIN
       security:
       - bearerAuth: []
@@ -628,10 +617,9 @@ paths:
       operationId: discardDraft
       summary: Descartar un borrador (conserva la evidencia y la auditoría).
       x-keptai-owner: miguel
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-06
       x-keptai-proposed-roles:
-      - VENDEDOR
       - ADMIN
       security:
       - bearerAuth: []
@@ -672,6 +660,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+      description: ' El motivo libre no se conserva; se audita decisión, autor y entidad. No guarda historial de chat.'
   /api/v1/orders:
     get:
       tags:
@@ -679,7 +668,7 @@ paths:
       operationId: listOrders
       summary: Listar pedidos persistentes.
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-06
       x-keptai-proposed-roles:
       - VENDEDOR
@@ -732,7 +721,7 @@ paths:
       operationId: getOrder
       summary: Consultar un pedido.
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-06
       x-keptai-proposed-roles:
       - VENDEDOR
@@ -771,7 +760,7 @@ paths:
       operationId: listPayments
       summary: Listar pagos (comprobantes recibidos, verificados, aplicados o duplicados).
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-07
       x-keptai-proposed-roles:
       - ADMIN
@@ -817,7 +806,7 @@ paths:
       operationId: getPayment
       summary: Consultar un pago con importes recibido, verificado y aplicado por separado.
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-07
       x-keptai-proposed-roles:
       - ADMIN
@@ -857,15 +846,10 @@ paths:
       - Pagos
       operationId: getReconciliationCandidates
       summary: Clasificación y candidatos de conciliación calculados por el motor.
-      description: 'Clasificaciones: `matches`, `partial`, `duplicate`, `orphan`, `amount_mismatch`. Una clasificación no
-        altera deudas.
-
-        `match_score` lo define el motor de Andrés (escala y significado por acordar); `null` si el motor no lo calcula. No
-        es confianza de extracción.
-
-        '
+      description: ADMIN, identidad desde PostgreSQL. Verificación simulada rotulada; aplicación exige ADMIN distinto del
+        verificador. Operación y auditoría atómicas; Idempotency-Key obligatoria en escrituras.
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-07
       x-keptai-proposed-roles:
       - ADMIN
@@ -900,15 +884,10 @@ paths:
       - Pagos
       operationId: registerPaymentVerification
       summary: Registrar la verificación de fondos (en la demo, simulada y rotulada).
-      description: 'No hay conexión con bancos ni billeteras. `simulated_demo` queda rotulada con `is_simulated=true`. Un
-        pago `duplicate`, o cuya referencia ya fue usada por otro pago (`reference_already_used`), no puede verificarse (422
-        `DUPLICATE_PAYMENT`).
-
-        Esta operación no aplica el pago ni cambia saldos.
-
-        '
+      description: 'Solo ADMIN. Requiere Idempotency-Key. method debe ser simulated_demo: el motor registra una verificación
+        explícitamente simulada, sin conexión bancaria. note no se persiste. La aplicación posterior exige otro ADMIN.'
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-07
       x-keptai-proposed-roles:
       - ADMIN
@@ -959,18 +938,10 @@ paths:
       - Pagos
       operationId: applyPayment
       summary: Aplicar un pago verificado a una obligación (transacción única del motor).
-      description: 'Requiere pago verificado (no duplicado, tampoco por `reference_already_used`), misma organización y moneda,
-        y saldo suficiente; el tope es el importe verificado sin aplicar. Aplicar dos veces con la misma clave no duplica;
-        el duplicado
-
-        (V-003) y el pago no verificado se rechazan sin alterar la deuda. Un fallo revierte aplicación, auditoría y alerta
-        juntas.
-
-        El saldo resultante lo calcula el motor; el cliente no envía saldos.
-
-        '
+      description: ADMIN, identidad desde PostgreSQL. Verificación simulada rotulada; aplicación exige ADMIN distinto del
+        verificador. Operación y auditoría atómicas; Idempotency-Key obligatoria en escrituras.
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-07
       x-keptai-proposed-roles:
       - ADMIN
@@ -1022,7 +993,7 @@ paths:
       operationId: listReceivables
       summary: Listar obligaciones por cobrar con saldo calculado por el motor.
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-07
       x-keptai-proposed-roles:
       - VENDEDOR
@@ -1069,7 +1040,7 @@ paths:
       operationId: getReceivable
       summary: Consultar una obligación.
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-07
       x-keptai-proposed-roles:
       - VENDEDOR
@@ -1107,7 +1078,7 @@ paths:
       description: Los desfases de alerta (-3/0/+3 días) y el escalamiento son configuración de demostración, no política
         validada.
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-07
       x-keptai-proposed-roles:
       - VENDEDOR
@@ -1155,7 +1126,7 @@ paths:
 
         '
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-07
       x-keptai-proposed-roles:
       - VENDEDOR
@@ -1191,7 +1162,7 @@ paths:
       operationId: getResultsSummary
       summary: Resumen que mantiene separados ventas, cobrado aplicado, saldo y margen.
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-07
       x-keptai-proposed-roles:
       - GERENTE
@@ -1225,7 +1196,7 @@ paths:
       operationId: getMarginReport
       summary: Costos y margen por pedido, línea o marca.
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-07
       x-keptai-proposed-roles:
       - GERENTE
@@ -1275,7 +1246,7 @@ paths:
       description: El cargo interno (precio de transferencia) se elimina en el consolidado y nunca suma como ingreso externo
         ni a la caja.
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-07
       x-keptai-proposed-roles:
       - GERENTE
@@ -1319,7 +1290,7 @@ paths:
 
         '
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-07
       x-keptai-proposed-roles:
       - GERENTE
@@ -1364,7 +1335,7 @@ paths:
 
         '
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-07
       x-keptai-proposed-roles:
       - GERENTE
@@ -1405,7 +1376,7 @@ paths:
       description: Contrato de lectura solamente; los eventos se generan en el servidor y no se pueden crear, editar ni borrar
         por API.
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-07
       x-keptai-proposed-roles:
       - ADMIN
@@ -1448,7 +1419,7 @@ paths:
       description: Solo lectura. `overdue_balance_reference` es el saldo vencido del cliente que el motor calcula (`v_cliente_mora`);
         es referencia para el vendedor, no un bloqueo.
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-07
       x-keptai-proposed-roles:
       - VENDEDOR
@@ -1482,23 +1453,13 @@ paths:
       - Credito
       operationId: submitCreditDecision
       summary: El vendedor aprueba o rechaza el crédito tras el aviso de mora (la mora no bloquea).
-      description: 'D-005: aprueba el vendedor según el estado del cliente; el sistema solo avisa. El actor sale del JWT:
-        solo el vendedor asignado a la orden (o el rol que se acuerde) puede decidir;
-
-        el cuerpo no puede nombrar al actor. Con saldo vencido se exige `arrears_notice_acknowledged=true` (422 `ARREARS_NOTICE_NOT_ACKNOWLEDGED`);
-        el aviso y el saldo de referencia quedan en `aprobacion_credito`
-
-        y la decisión en `evento_auditoria`. Una decisión del modelo o del texto del chat nunca aprueba crédito. Una segunda
-        decisión distinta sobre la misma orden: 409 `INVALID_STATE` (hay una sola fila por orden).
-
-        Orden respecto de `/ok`: pendiente de confirmar con Isabel (ver docs/alineacion-bd-n8n.md).
-
-        '
+      description: 'D-014: ADMIN autoriza durante el MVP. Idempotency-Key obligatoria; decisión, obligación y auditoría atómicas.
+        Vendedor del pedido no se cambia. Mora exige reconocimiento; verificación bancaria no incluida.'
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-07
       x-keptai-proposed-roles:
-      - VENDEDOR
+      - ADMIN
       security:
       - bearerAuth: []
       parameters:
@@ -1554,7 +1515,7 @@ paths:
 
         '
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-task: MIG-07
       x-keptai-proposed-roles:
       - ADMIN
@@ -1606,19 +1567,42 @@ paths:
       - Integracion n8n
       operationId: n8nIngestOrder
       summary: '[n8n WF1] Recibir la hoja de resumen y el transcript de un chat cerrado con /cerrar.'
-      description: 'IMPLEMENTADO (MIG-05, alcance de la ingesta de WF1). Con `X-Api-Key` de un servicio INGESTA activo valida el JSON (un objeto por solicitud, nunca el array de items de n8n) y, en una sola transaccion con contexto de servicio, crea una orden `BORRADOR` y su hoja de resumen `BORRADOR` v1 a partir de los datos ESTRUCTURADOS de `extraccion`, mas el canal (metadatos instancia/JID) y la auditoria. Responde 201. El CLIENTE se resuelve por el contacto REGISTRADO cuyo JID canonico (`<digitos>@s.whatsapp.net`, coincidencia exacta) es `chatId`: orden y canal quedan con ese cliente, y el resumen usa la razon social y el contacto de la base (el nombre del chat o de la IA no los cambia). Contacto inexistente, inactivo, de otra organizacion o JID no admitido (grupo, `@lid`, con dispositivo `:n`) = 422 `CONTACT_NOT_REGISTERED` generico (no revela cual caso ni repite el JID) sin crear nada; un canal ya vinculado a otro cliente = 422 `CHANNEL_CLIENT_CONFLICT`. NO guarda `transcript`, `hojaResumenMd` ni el crudo del modelo (D-007): el resumen guardado se construye en el servidor desde la proyeccion estructurada. No asigna marca ni vendedor (avisos `MARCA_SIN_ASIGNAR` y `VENDEDOR_SIN_RESOLVER`: el vendedor sigue PENDIENTE y `vendedorJid` no es identidad; aviso informativo `CLIENTE_ASOCIADO_POR_CONTACTO`, y `CLIENTE_DECLARADO_DISTINTO` si la IA nombro otro cliente), no confirma, no aprueba credito y no habilita produccion; `vendedorJid` no autentica a nadie. Los datos que no caben en el modelo no se inventan: una condicion de pago incompleta queda sin registrar (avisos) y los items solo se crean si todos traen cantidad y precio.
+      description: 'IMPLEMENTADO (MIG-05, alcance de la ingesta de WF1). Con `X-Api-Key` de un servicio INGESTA activo valida
+        el JSON (un objeto por solicitud, nunca el array de items de n8n) y, en una sola transaccion con contexto de servicio,
+        crea una orden `BORRADOR` y su hoja de resumen `BORRADOR` v1 a partir de los datos ESTRUCTURADOS de `extraccion`,
+        mas el canal (metadatos instancia/JID) y la auditoria. Responde 201. El CLIENTE se resuelve por el contacto REGISTRADO
+        cuyo JID canonico (`<digitos>@s.whatsapp.net`, coincidencia exacta) es `chatId`: orden y canal quedan con ese cliente,
+        y el resumen usa la razon social y el contacto de la base (el nombre del chat o de la IA no los cambia). Contacto
+        inexistente, inactivo, de otra organizacion o JID no admitido (grupo, `@lid`, con dispositivo `:n`) = 422 `CONTACT_NOT_REGISTERED`
+        generico (no revela cual caso ni repite el JID) sin crear nada; un canal ya vinculado a otro cliente = 422 `CHANNEL_CLIENT_CONFLICT`.
+        NO guarda `transcript`, `hojaResumenMd` ni el crudo del modelo (D-007): el resumen guardado se construye en el servidor
+        desde la proyeccion estructurada. No asigna marca ni vendedor (avisos `MARCA_SIN_ASIGNAR` y `VENDEDOR_SIN_RESOLVER`:
+        el vendedor sigue PENDIENTE y `vendedorJid` no es identidad; aviso informativo `CLIENTE_ASOCIADO_POR_CONTACTO`, y
+        `CLIENTE_DECLARADO_DISTINTO` si la IA nombro otro cliente), no confirma, no aprueba credito y no habilita produccion;
+        `vendedorJid` no autentica a nadie. Los datos que no caben en el modelo no se inventan: una condicion de pago incompleta
+        queda sin registrar (avisos) y los items solo se crean si todos traen cantidad y precio.
 
 
-        La organizacion y la instancia autenticas salen de PostgreSQL por la clave: `instancia` del JSON debe coincidir (403 si no) y ningun campo del cuerpo concede acceso. Errores: 400 (JSON invalido, array, campos desconocidos, `extraccion` incompleta segun el esquema), 401 (clave ausente, invalida, revocada, repetida o junto a otra credencial), 403 (alcance o instancia incorrectos), 409 `IDEMPOTENCY_CONFLICT`, 413 (cuerpo mayor que `keptai.n8n.ingesta.max-body-bytes`, 524288 bytes por defecto), 415 (no `application/json`), 422 (`CONTACT_NOT_REGISTERED`, `CHANNEL_CLIENT_CONFLICT`, `AMOUNT_INCONSISTENT`: anticipo mayor que el total), 503 (credencial o base no disponibles).
+        La organizacion y la instancia autenticas salen de PostgreSQL por la clave: `instancia` del JSON debe coincidir (403
+        si no) y ningun campo del cuerpo concede acceso. Errores: 400 (JSON invalido, array, campos desconocidos, `extraccion`
+        incompleta segun el esquema), 401 (clave ausente, invalida, revocada, repetida o junto a otra credencial), 403 (alcance
+        o instancia incorrectos), 409 `IDEMPOTENCY_CONFLICT`, 413 (cuerpo mayor que `keptai.n8n.ingesta.max-body-bytes`, 524288
+        bytes por defecto), 415 (no `application/json`), 422 (`CONTACT_NOT_REGISTERED`, `CHANNEL_CLIENT_CONFLICT`, `AMOUNT_INCONSISTENT`:
+        anticipo mayor que el total), 503 (credencial o base no disponibles).
 
 
-        Idempotencia: clave `instancia:chatId:generadoEn` (instante UTC) y hash SHA-256 de los datos funcionales estructurados (instancia, chatId, vendedorJid, generadoEn y la extraccion sin `crudo` ni texto de error), guardados en `solicitud_idempotente` (operacion `ORDEN_INGESTA`) junto con la respuesta estructurada, nunca el cuerpo. El mismo contenido repite la respuesta 201 con `Idempotency-Replayed: true`; otro contenido con esa clave = 409; dos solicitudes simultaneas no crean dos pedidos. En un reintento n8n debe conservar `generadoEn`, `chatId`, `instancia`, `vendedorJid` y la extraccion.
+        Idempotencia: clave `instancia:chatId:generadoEn` (instante UTC) y hash SHA-256 de los datos funcionales estructurados
+        (instancia, chatId, vendedorJid, generadoEn y la extraccion sin `crudo` ni texto de error), guardados en `solicitud_idempotente`
+        (operacion `ORDEN_INGESTA`) junto con la respuesta estructurada, nunca el cuerpo. El mismo contenido repite la respuesta
+        201 con `Idempotency-Replayed: true`; otro contenido con esa clave = 409; dos solicitudes simultaneas no crean dos
+        pedidos. En un reintento n8n debe conservar `generadoEn`, `chatId`, `instancia`, `vendedorJid` y la extraccion.
 
-        Ruta EXACTA del nodo `Enviar pedido al backend` de WF1. Los importes llegan en SOLES decimales (JSON number, maximo 2 decimales) y se convierten de forma exacta (sin float, sin truncar). `confianza` es informativa y no autoriza nada.
+        Ruta EXACTA del nodo `Enviar pedido al backend` de WF1. Los importes llegan en SOLES decimales (JSON number, maximo
+        2 decimales) y se convierten de forma exacta (sin float, sin truncar). `confianza` es informativa y no autoriza nada.
 
         '
       x-keptai-owner: miguel
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-implementation: implemented
       x-keptai-task: MIG-05
       x-keptai-proposed-roles:
@@ -1644,7 +1628,8 @@ paths:
                 $ref: '#/components/examples/N8nIngestaParseFailure'
       responses:
         '201':
-          description: 'Borrador creado (o repetido de forma idempotente con `Idempotency-Replayed: true`). No confirma ni libera nada.'
+          description: 'Borrador creado (o repetido de forma idempotente con `Idempotency-Replayed: true`). No confirma ni
+            libera nada.'
           headers:
             X-Request-Id:
               $ref: '#/components/headers/XRequestId'
@@ -1673,14 +1658,17 @@ paths:
           $ref: '#/components/responses/UnsupportedMediaType'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
+      parameters: []
   /api/v1/ordenes/confirmar:
     post:
       tags:
       - Integracion n8n
       operationId: n8nConfirmOrder
       summary: '[n8n WF0] El vendedor confirma la hoja de resumen con /ok ORD-123.'
-      description: 'ESTADO ACTUAL: CERRADA por decision pendiente (autoria por `vendedorJid`, MIG-06): 403 para cualquier servicio y sin controlador. Lo que sigue es el comportamiento PREVISTO. Ruta EXACTA del nodo `Confirmar pedido en backend` de `WF0_router_evolution.json`. Cuerpo: `ref`, `instancia`,
-        `chatId`, `vendedorJid`, `mensajeId` (id del mensaje `/ok`, clave de idempotencia
+      description: 'ESTADO ACTUAL: CERRADA por decision pendiente (autoria por `vendedorJid`, MIG-06): 403 para cualquier
+        servicio y sin controlador. Lo que sigue es el comportamiento PREVISTO. Ruta EXACTA del nodo `Confirmar pedido en
+        backend` de `WF0_router_evolution.json`. Cuerpo: `ref`, `instancia`, `chatId`, `vendedorJid`, `mensajeId` (id del
+        mensaje `/ok`, clave de idempotencia
 
         `ORDEN_CONFIRMAR`). Solo confirma (la hoja pasa a `CONFIRMADA` con `revisado_por`): NO verifica fondos, NO aprueba
         crédito y NO reduce saldo. El servidor exige que `vendedorJid` sea el `whatsapp_jid`
@@ -1741,26 +1729,56 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+      parameters: []
   /api/v1/pagos/voucher:
     post:
       tags:
       - Integracion n8n
       operationId: n8nReceiveVoucher
       summary: '[n8n WF2] Registrar un comprobante leído por IA como pago RECIBIDO.'
-      description: 'IMPLEMENTADO (MIG-04/05, alcance del voucher de WF2). Con `X-Api-Key` INGESTA registra un pago en fase `RECIBIDO` con su comprobante PRIVADO: valida el JSON, decodifica `imagen_base64` de forma estricta (Base64 puro, sin `data:`), valida el archivo por su contenido (JPEG/PNG decodificables con ImageIO, hasta 25 millones de pixeles; PDF analizable en modo estricto con PDFBox, con paginas y sin cifrado), calcula el SHA-256 de los bytes, lo sube al bucket privado `keptai-vouchers` con una ruta generada por el servidor y crea `pago` + `comprobante` en una transaccion con contexto de servicio. La lectura de la IA NO verifica fondos, NO aplica el pago, NO modifica saldos y NO es una aplicacion. El cliente sale del contacto REGISTRADO cuyo JID canonico es `clienteJid` (coincidencia exacta; `chatId` debe coincidir cuando tambien es un JID de contacto, si no 422 `CONTACT_JID_MISMATCH`); contacto inexistente, inactivo o JID no admitido = 422 `CONTACT_NOT_REGISTERED` generico, sin subir archivo ni crear nada. El pago queda ASOCIADO POR CONTEXTO (`pago.orden_contexto_id`, no `aplicacion_pago`) al ULTIMO pedido no cancelado de ese contacto (mismo cliente, instancia y canal; por `creado_en` descendente) y `ordenRef` lo devuelve; el `ordenRef` o la fecha que mande el cliente se ignoran. Sin pedido elegible (o empate exacto entre los mas recientes: aviso `ORDEN_AMBIGUA`, no se elige al azar) el pago queda `SIN_ORDEN` con `ordenRef` null; `DUPLICADO` prevalece sobre `SIN_ORDEN`. La asociacion queda congelada en la respuesta idempotente: un pedido posterior no reasigna un replay. `pushName` es un dato no confiable: no se guarda ni identifica a nadie. Un monto `3.5` se registra exactamente como `3.50` PEN.
+      description: 'IMPLEMENTADO (MIG-04/05, alcance del voucher de WF2). Con `X-Api-Key` INGESTA registra un pago en fase
+        `RECIBIDO` con su comprobante PRIVADO: valida el JSON, decodifica `imagen_base64` de forma estricta (Base64 puro,
+        sin `data:`), valida el archivo por su contenido (JPEG/PNG decodificables con ImageIO, hasta 25 millones de pixeles;
+        PDF analizable en modo estricto con PDFBox, con paginas y sin cifrado), calcula el SHA-256 de los bytes, lo sube al
+        bucket privado `keptai-vouchers` con una ruta generada por el servidor y crea `pago` + `comprobante` en una transaccion
+        con contexto de servicio. La lectura de la IA NO verifica fondos, NO aplica el pago, NO modifica saldos y NO es una
+        aplicacion. El cliente sale del contacto REGISTRADO cuyo JID canonico es `clienteJid` (coincidencia exacta; `chatId`
+        debe coincidir cuando tambien es un JID de contacto, si no 422 `CONTACT_JID_MISMATCH`); contacto inexistente, inactivo
+        o JID no admitido = 422 `CONTACT_NOT_REGISTERED` generico, sin subir archivo ni crear nada. El pago queda ASOCIADO
+        POR CONTEXTO (`pago.orden_contexto_id`, no `aplicacion_pago`) al ULTIMO pedido no cancelado de ese contacto (mismo
+        cliente, instancia y canal; por `creado_en` descendente) y `ordenRef` lo devuelve; el `ordenRef` o la fecha que mande
+        el cliente se ignoran. Sin pedido elegible (o empate exacto entre los mas recientes: aviso `ORDEN_AMBIGUA`, no se
+        elige al azar) el pago queda `SIN_ORDEN` con `ordenRef` null; `DUPLICADO` prevalece sobre `SIN_ORDEN`. La asociacion
+        queda congelada en la respuesta idempotente: un pedido posterior no reasigna un replay. `pushName` es un dato no confiable:
+        no se guarda ni identifica a nadie. Un monto `3.5` se registra exactamente como `3.50` PEN.
 
 
-        Obligatorios para registrar: `mensajeId` (id ORIGINAL y estable del mensaje de Evolution; null o vacio = 400; no se genera uno nuevo por reintento ni se sustituye por `recibidoEn`), `chatId` y `clienteJid` (JID con formato del contrato), `extraccion.moneda` (solo `PEN`; otra = 422 `CURRENCY_NOT_SUPPORTED`), `monto > 0` y `fecha` (faltan = 422 `VOUCHER_INCOMPLETE`: no se inventan) e `imagen_base64`. `tipo` ausente se registra como medio `OTRO`. `es_voucher=false` (o `error_parseo`) = 200 `IGNORADO_NO_VOUCHER` sin guardar archivo, pago ni clave. Errores del archivo: 400 `IMAGE_REQUIRED` / `IMAGE_INVALID_BASE64` (prefijo, caracteres invalidos, longitud no multiplo de 4 o truncada), 413 (cuerpo mayor que Base64 de `keptai.n8n.voucher.max-file-bytes` mas metadatos, o archivo decodificado mayor), 422 `IMAGE_UNSUPPORTED_TYPE` (no es un JPEG, PNG o PDF completo, aunque la extension o el MIME digan otra cosa). 422 `CONTACT_NOT_REGISTERED` / `CONTACT_JID_MISMATCH` / `CHANNEL_CLIENT_CONFLICT`, 503 `STORAGE_UNAVAILABLE` (reintentar) y 502 `STORAGE_REJECTED`. Nunca se descargan URLs aportadas por el cliente.
+        Obligatorios para registrar: `mensajeId` (id ORIGINAL y estable del mensaje de Evolution; null o vacio = 400; no se
+        genera uno nuevo por reintento ni se sustituye por `recibidoEn`), `chatId` y `clienteJid` (JID con formato del contrato),
+        `extraccion.moneda` (solo `PEN`; otra = 422 `CURRENCY_NOT_SUPPORTED`), `monto > 0` y `fecha` (faltan = 422 `VOUCHER_INCOMPLETE`:
+        no se inventan) e `imagen_base64`. `tipo` ausente se registra como medio `OTRO`. `es_voucher=false` (o `error_parseo`)
+        = 200 `IGNORADO_NO_VOUCHER` sin guardar archivo, pago ni clave. Errores del archivo: 400 `IMAGE_REQUIRED` / `IMAGE_INVALID_BASE64`
+        (prefijo, caracteres invalidos, longitud no multiplo de 4 o truncada), 413 (cuerpo mayor que Base64 de `keptai.n8n.voucher.max-file-bytes`
+        mas metadatos, o archivo decodificado mayor), 422 `IMAGE_UNSUPPORTED_TYPE` (no es un JPEG, PNG o PDF completo, aunque
+        la extension o el MIME digan otra cosa). 422 `CONTACT_NOT_REGISTERED` / `CONTACT_JID_MISMATCH` / `CHANNEL_CLIENT_CONFLICT`,
+        503 `STORAGE_UNAVAILABLE` (reintentar) y 502 `STORAGE_REJECTED`. Nunca se descargan URLs aportadas por el cliente.
 
 
-        Idempotencia: `mensajeId` es la clave (operacion `PAGO_VOUCHER`, tambien `pago.idempotency_key` y `comprobante.provider_message_id`). La identidad funcional incluye instancia, chatId, clienteJid, mensajeId, recibidoEn, tipo, banco, monto, moneda, fecha, hora, codigo_operacion y el SHA-256 de los bytes del archivo (no remitente, destinatario ni confianza). Mismo contenido = misma respuesta 201 con `Idempotency-Replayed: true`; otro contenido o archivo con ese `mensajeId` = 409. Un `mensajeId` distinto con la misma referencia de operacion, monto y fecha NO es un reintento: se registra como posible duplicado financiero (`estadoConciliacion=DUPLICADO`, `duplicadoDePagoId`) sin verificarlo ni aplicarlo y para revision de Administracion.
+        Idempotencia: `mensajeId` es la clave (operacion `PAGO_VOUCHER`, tambien `pago.idempotency_key` y `comprobante.provider_message_id`).
+        La identidad funcional incluye instancia, chatId, clienteJid, mensajeId, recibidoEn, tipo, banco, monto, moneda, fecha,
+        hora, codigo_operacion y el SHA-256 de los bytes del archivo (no remitente, destinatario ni confianza). Mismo contenido
+        = misma respuesta 201 con `Idempotency-Replayed: true`; otro contenido o archivo con ese `mensajeId` = 409. Un `mensajeId`
+        distinto con la misma referencia de operacion, monto y fecha NO es un reintento: se registra como posible duplicado
+        financiero (`estadoConciliacion=DUPLICADO`, `duplicadoDePagoId`) sin verificarlo ni aplicarlo y para revision de Administracion.
 
 
-        Si falla la subida o la base, la transaccion se revierte y el objeto subido en ese intento se elimina antes de liberar la clave (nunca uno ya referenciado por un comprobante confirmado). Ruta EXACTA del nodo `Enviar pago al backend` de WF2. Importes en soles decimales (maximo 2 decimales).
+        Si falla la subida o la base, la transaccion se revierte y el objeto subido en ese intento se elimina antes de liberar
+        la clave (nunca uno ya referenciado por un comprobante confirmado). Ruta EXACTA del nodo `Enviar pago al backend`
+        de WF2. Importes en soles decimales (maximo 2 decimales).
 
         '
       x-keptai-owner: miguel_adapter_andres_engine
-      x-keptai-status: proposed
+      x-keptai-status: implemented_local
       x-keptai-implementation: implemented
       x-keptai-task: MIG-04-05
       x-keptai-proposed-roles:
@@ -1837,17 +1855,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+      parameters: []
   /api/v1/mensajes/{id}/estado:
     post:
       tags:
       - Integracion n8n
       operationId: n8nReportMessageStatus
       summary: '[n8n WF3] Callback con el resultado de un envío de WhatsApp.'
-      description: 'ESTADO ACTUAL: CERRADA (403 para cualquier servicio): el alcance SCHEDULER del callback solo esta propuesto y no hay controlador. Lo que sigue es el comportamiento PREVISTO. Ruta EXACTA del nodo `Callback estado al backend` de `WF3_enviar_mensaje.json`: `POST /api/v1/mensajes/{mensajeId}/estado`
-        con el cuerpo del nodo `Estado de envío` / `Estado inválido`.
+      description: 'ESTADO ACTUAL: CERRADA (403 para cualquier servicio): el alcance SCHEDULER del callback solo esta propuesto
+        y no hay controlador. Lo que sigue es el comportamiento PREVISTO. Ruta EXACTA del nodo `Callback estado al backend`
+        de `WF3_enviar_mensaje.json`: `POST /api/v1/mensajes/{mensajeId}/estado` con el cuerpo del nodo `Estado de envío`
+        / `Estado inválido`.
 
-        `{id}` es el UUID de `envio_notificacion.id` y `mensajeId` del cuerpo debe coincidir (400 `ID_MISMATCH`); WF3 solo llama
-        si `mensajeId` no está vacío. El servidor solo acepta el mensaje de la organización de la credencial.
+        `{id}` es el UUID de `envio_notificacion.id` y `mensajeId` del cuerpo debe coincidir (400 `ID_MISMATCH`); WF3 solo
+        llama si `mensajeId` no está vacío. El servidor solo acepta el mensaje de la organización de la credencial.
 
         Transiciones: `PENDIENTE -> ENVIADO|ERROR`; repetir el mismo `estado` es idempotente; un estado terminal contradictorio
         = 409 `INVALID_STATE`. `intentos` lo incrementa el servidor.
@@ -1943,7 +1964,7 @@ components:
         type: string
         minLength: 8
         maxLength: 128
-        pattern: ^[A-Za-z0-9_-]+$
+        pattern: ^[A-Za-z0-9._:-]+$
     Limit:
       name: limit
       in: query
@@ -1952,7 +1973,7 @@ components:
         type: integer
         minimum: 1
         maximum: 100
-        default: 25
+        default: 100
     Cursor:
       name: cursor
       in: query
@@ -2112,7 +2133,8 @@ components:
             tooLarge:
               $ref: '#/components/examples/ErrorPayloadTooLarge'
     ServiceUnavailable:
-      description: La credencial, la base o el almacenamiento no estan disponibles por ahora; se puede reintentar. Codigos `SERVICE_UNAVAILABLE` o `STORAGE_UNAVAILABLE`.
+      description: La credencial, la base o el almacenamiento no estan disponibles por ahora; se puede reintentar. Codigos
+        `SERVICE_UNAVAILABLE` o `STORAGE_UNAVAILABLE`.
       headers:
         X-Request-Id:
           $ref: '#/components/headers/XRequestId'
@@ -2149,6 +2171,7 @@ components:
       enum:
       - demo_fixture
       - manual_entry
+      - automated_extraction
       - reviewed_extraction
       description: Origen del dato. `demo_fixture` = semilla ficticia identificada; no es dato de Corpotex.
     Money:
@@ -2287,6 +2310,16 @@ components:
       - organization_id
       - role
       properties:
+        name:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
+        organization_name:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
         user_id:
           $ref: '#/components/schemas/Uuid'
         organization_id:
@@ -2327,16 +2360,20 @@ components:
         status:
           $ref: '#/components/schemas/EvidenceStatus'
         content_type:
-          type:
-          - string
-          - 'null'
-          maxLength: 100
+          anyOf:
+          - type:
+            - string
+            - 'null'
+            maxLength: 100
+          - type: 'null'
         size_bytes:
-          type:
-          - integer
-          - 'null'
-          minimum: 0
-          maximum: 10485760
+          anyOf:
+          - type:
+            - integer
+            - 'null'
+            minimum: 0
+            maximum: 10485760
+          - type: 'null'
         sha256:
           type:
           - string
@@ -2356,7 +2393,9 @@ components:
         data_origin:
           $ref: '#/components/schemas/DataOrigin'
         uploaded_by_user_id:
-          $ref: '#/components/schemas/Uuid'
+          anyOf:
+          - $ref: '#/components/schemas/Uuid'
+          - type: 'null'
         created_at:
           type: string
           format: date-time
@@ -2397,6 +2436,7 @@ components:
       required:
       - file
       - kind
+      - payment_id
       properties:
         file:
           type: string
@@ -2409,6 +2449,8 @@ components:
         label:
           type: string
           maxLength: 120
+        payment_id:
+          $ref: '#/components/schemas/Uuid'
     EvidenceDownloadLink:
       type: object
       additionalProperties: false
@@ -2725,7 +2767,9 @@ components:
         id:
           $ref: '#/components/schemas/Uuid'
         evidence_id:
-          $ref: '#/components/schemas/Uuid'
+          anyOf:
+          - $ref: '#/components/schemas/Uuid'
+          - type: 'null'
         draft_type:
           $ref: '#/components/schemas/DraftType'
         status:
@@ -2856,9 +2900,35 @@ components:
           $ref: '#/components/schemas/OrderFieldsCorrection'
         voucher_fields:
           $ref: '#/components/schemas/VoucherFieldsCorrection'
-      oneOf:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/ReviewItem'
+        payment_condition:
+          type: string
+          enum:
+          - CONTADO
+          - CREDITO
+          - ANTICIPO
+        credit_term_days:
+          type: integer
+          minimum: 15
+          maximum: 30
+        downpayment:
+          $ref: '#/components/schemas/NonNegativeMoney'
+      anyOf:
       - required:
         - order_fields
+      - required:
+        - items
+      - required:
+        - payment_condition
+      - required:
+        - credit_term_days
+      - required:
+        - downpayment
       - required:
         - voucher_fields
     ConfirmDraftRequest:
@@ -2972,6 +3042,20 @@ components:
       - id
       - name
       properties:
+        type:
+          oneOf:
+          - $ref: '#/components/schemas/CustomerType'
+          - type: 'null'
+        tax_id:
+          type:
+          - string
+          - 'null'
+          maxLength: 11
+        credit_limit:
+          oneOf:
+          - $ref: '#/components/schemas/NonNegativeMoney'
+          - type: 'null'
+          description: Referencia para el vendedor; no bloquea (D-005).
         id:
           $ref: '#/components/schemas/Uuid'
         name:
@@ -3013,6 +3097,19 @@ components:
       - data_origin
       - created_at
       properties:
+        seller:
+          oneOf:
+          - $ref: '#/components/schemas/PersonRef'
+          - type: 'null'
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        dispatched_by:
+          oneOf:
+          - $ref: '#/components/schemas/PersonRef'
+          - type: 'null'
         id:
           $ref: '#/components/schemas/Uuid'
         display_code:
@@ -3201,6 +3298,11 @@ components:
       - verified_at
       - note
       properties:
+        verified_by_name:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
         method:
           $ref: '#/components/schemas/VerificationMethod'
         is_simulated:
@@ -3245,6 +3347,11 @@ components:
       - data_origin
       - created_at
       properties:
+        applications:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/PaymentAllocation'
         id:
           $ref: '#/components/schemas/Uuid'
         display_code:
@@ -3550,6 +3657,11 @@ components:
       - days_overdue
       - status
       properties:
+        applications:
+          type: array
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/ReceivableApplication'
         id:
           $ref: '#/components/schemas/Uuid'
         order_id:
@@ -3687,6 +3799,16 @@ components:
       - created_at
       - closed_at
       properties:
+        responsible_name:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
+        resolution_note:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
         id:
           $ref: '#/components/schemas/Uuid'
         receivable_id:
@@ -3823,6 +3945,11 @@ components:
       - reason
       - decided_at
       properties:
+        responsible_name:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
         status:
           $ref: '#/components/schemas/CreditAuthorizationStatus'
         responsible_user_id:
@@ -4072,6 +4199,10 @@ components:
       - missing_cost_components
       - orders_count
       properties:
+        perceived_margin:
+          oneOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
         group_key:
           type: string
           minLength: 1
@@ -4387,6 +4518,11 @@ components:
       - request_id
       - changes
       properties:
+        actor_name:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
         id:
           $ref: '#/components/schemas/Uuid'
         occurred_at:
@@ -5004,13 +5140,13 @@ components:
           type: string
           pattern: ^[A-Za-z0-9+/]+={0,2}$
           maxLength: 13981016
-          description: 'Archivo ORIGINAL del voucher en Base64 PURO (alfabeto estándar, longitud múltiplo de 4, sin saltos de línea
-            y SIN prefijo `data:`), dentro del JSON (`application/json`; no multipart). Obligatorio cuando `extraccion.es_voucher`
+          description: 'Archivo ORIGINAL del voucher en Base64 PURO (alfabeto estándar, longitud múltiplo de 4, sin saltos
+            de línea y SIN prefijo `data:`), dentro del JSON (`application/json`; no multipart). Obligatorio cuando `extraccion.es_voucher`
             es `true` y no hay `error_parseo`; si el voucher es ilegible no hace falta. El servidor decodifica de forma estricta,
-            acepta solo JPEG, PNG o PDF completos por su contenido real (no por extensión ni MIME), calcula el SHA-256 de los
-            bytes decodificados y sube el archivo al bucket privado con una ruta que él genera. Límite del archivo: 10485760 bytes
-            (el del bucket `keptai-vouchers`; configurable `keptai.n8n.voucher.max-file-bytes`); el Base64 de ese archivo ocupa
-            13981016 caracteres como máximo. Nunca se persiste ni se registra el Base64.'
+            acepta solo JPEG, PNG o PDF completos por su contenido real (no por extensión ni MIME), calcula el SHA-256 de
+            los bytes decodificados y sube el archivo al bucket privado con una ruta que él genera. Límite del archivo: 10485760
+            bytes (el del bucket `keptai-vouchers`; configurable `keptai.n8n.voucher.max-file-bytes`); el Base64 de ese archivo
+            ocupa 13981016 caracteres como máximo. Nunca se persiste ni se registra el Base64.'
     N8nPagoVoucherResponse:
       type: object
       additionalProperties: false
@@ -5060,7 +5196,10 @@ components:
           - string
           - 'null'
           pattern: ^[A-Z]{1,5}-[0-9]{1,9}$
-          description: 'Referencia (`ORD-n`) del ÚLTIMO pedido no cancelado del contacto (mismo cliente y canal), elegida por el servidor al registrar el voucher por primera vez y congelada en la respuesta idempotente. Es contexto, no aplicación: no reduce saldos. `null` cuando el contacto no tiene pedido elegible (`SIN_ORDEN`) o hay un empate exacto entre los más recientes (`ORDEN_AMBIGUA`). Nunca se toma del cuerpo.'
+          description: 'Referencia (`ORD-n`) del ÚLTIMO pedido no cancelado del contacto (mismo cliente y canal), elegida
+            por el servidor al registrar el voucher por primera vez y congelada en la respuesta idempotente. Es contexto,
+            no aplicación: no reduce saldos. `null` cuando el contacto no tiene pedido elegible (`SIN_ORDEN`) o hay un empate
+            exacto entre los más recientes (`ORDEN_AMBIGUA`). Nunca se toma del cuerpo.'
         alertaId:
           oneOf:
           - $ref: '#/components/schemas/Uuid'
@@ -5075,7 +5214,8 @@ components:
         avisos:
           type: array
           maxItems: 20
-          description: 'Avisos informativos, p. ej. `SIN_ORDEN` (el contacto aún no tiene un pedido elegible) u `ORDEN_AMBIGUA`. Ausente en respuestas anteriores a V10.'
+          description: Avisos informativos, p. ej. `SIN_ORDEN` (el contacto aún no tiene un pedido elegible) u `ORDEN_AMBIGUA`.
+            Ausente en respuestas anteriores a V10.
           items:
             $ref: '#/components/schemas/N8nAviso'
       allOf:
@@ -5254,6 +5394,234 @@ components:
         error:
           type: string
           const: no autorizado
+    PersonRef:
+      type: object
+      additionalProperties: false
+      description: Persona de la organización (usuario.id y usuario.nombre); nunca credenciales ni correo.
+      required:
+      - id
+      - name
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+    CustomerType:
+      type: string
+      enum:
+      - school
+      - company
+      - person
+    OrderItem:
+      type: object
+      additionalProperties: false
+      description: Ítem del pedido (orden_item). `detail` resume tela, talla y logo cuando existen.
+      required:
+      - description
+      - quantity
+      - unit_price
+      - product_line
+      - detail
+      properties:
+        description:
+          type: string
+          minLength: 1
+          maxLength: 500
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        unit_price:
+          $ref: '#/components/schemas/NonNegativeMoney'
+        product_line:
+          type:
+          - string
+          - 'null'
+          maxLength: 100
+        detail:
+          type:
+          - string
+          - 'null'
+          maxLength: 300
+    PaymentAllocation:
+      type: object
+      additionalProperties: false
+      description: Aplicación vigente de un pago a una obligación (aplicacion_pago sin anular).
+      required:
+      - application_id
+      - receivable_id
+      - order_id
+      - order_code
+      - amount
+      - applied_at
+      - applied_by
+      properties:
+        application_id:
+          $ref: '#/components/schemas/Uuid'
+        receivable_id:
+          $ref: '#/components/schemas/Uuid'
+        order_id:
+          $ref: '#/components/schemas/Uuid'
+        order_code:
+          type: string
+          pattern: ^[A-Z]{1,5}-[0-9]{1,9}$
+        amount:
+          $ref: '#/components/schemas/PositiveMoney'
+        applied_at:
+          type: string
+          format: date-time
+        applied_by:
+          oneOf:
+          - $ref: '#/components/schemas/PersonRef'
+          - type: 'null'
+    ReceivableApplication:
+      type: object
+      additionalProperties: false
+      description: Pago aplicado (vigente) a la obligación, con su canal y autor.
+      required:
+      - application_id
+      - payment_id
+      - payment_code
+      - channel
+      - amount
+      - applied_at
+      - applied_by
+      properties:
+        application_id:
+          $ref: '#/components/schemas/Uuid'
+        payment_id:
+          $ref: '#/components/schemas/Uuid'
+        payment_code:
+          type:
+          - string
+          - 'null'
+          pattern: ^[A-Z]{1,5}-[0-9]{1,9}$
+        channel:
+          $ref: '#/components/schemas/PaymentChannel'
+        amount:
+          $ref: '#/components/schemas/PositiveMoney'
+        applied_at:
+          type: string
+          format: date-time
+        applied_by:
+          oneOf:
+          - $ref: '#/components/schemas/PersonRef'
+          - type: 'null'
+    NotificationType:
+      type: string
+      enum:
+      - collection_preventive
+      - collection_due
+      - early_arrears
+      - repurchase
+      - account_statement
+      - payment_confirmation
+      - seller_summary
+    NotificationStatus:
+      type: string
+      enum:
+      - pending
+      - sent
+      - error
+      - cancelled
+    Notification:
+      type: object
+      additionalProperties: false
+      description: 'Envío programado o realizado por WF3 (envio_notificacion). Solo metadatos de entrega: la base no guarda
+        el texto del mensaje (D-007).'
+      required:
+      - id
+      - customer
+      - order_id
+      - order_code
+      - type
+      - status
+      - scheduled_for
+      - attempts
+      - sent_at
+      - last_error
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        customer:
+          oneOf:
+          - $ref: '#/components/schemas/CustomerRef'
+          - type: 'null'
+        order_id:
+          oneOf:
+          - $ref: '#/components/schemas/Uuid'
+          - type: 'null'
+        order_code:
+          type:
+          - string
+          - 'null'
+          pattern: ^[A-Z]{1,5}-[0-9]{1,9}$
+        type:
+          $ref: '#/components/schemas/NotificationType'
+        status:
+          $ref: '#/components/schemas/NotificationStatus'
+        scheduled_for:
+          type: string
+          format: date-time
+        attempts:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        sent_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        last_error:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
+    NotificationPage:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - page
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+          maxItems: 100
+        page:
+          $ref: '#/components/schemas/PageInfo'
+    ResolveAlertRequest:
+      type: object
+      additionalProperties: false
+      description: Cierre manual de una alerta interna por Administración; la nota queda en alerta_cobranza.resolucion.
+      required:
+      - note
+      properties:
+        note:
+          type: string
+          minLength: 1
+          maxLength: 500
+    ReviewItem:
+      type: object
+      additionalProperties: false
+      required:
+      - description
+      - quantity
+      - unit_price
+      properties:
+        description:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        unit_price:
+          $ref: '#/components/schemas/NonNegativeMoney'
   examples:
     UserContextDemo:
       summary: Contexto ficticio.
@@ -6550,7 +6918,8 @@ components:
         confirmadoPorUsuarioId: a0000000-0000-4000-8000-000000000001
         creditoPendiente: true
     N8nVoucherYape:
-      summary: 'Ejemplo ficticio COMPLETO y reproducible (PNG sintético de 86 bytes); no ejecución acreditada. Generado por Backend/scripts/generar-ejemplo-voucher.py.'
+      summary: Ejemplo ficticio COMPLETO y reproducible (PNG sintético de 86 bytes); no ejecución acreditada. Generado por
+        Backend/scripts/generar-ejemplo-voucher.py.
       value:
         instancia: isabel
         chatId: 51900000001@s.whatsapp.net
@@ -6572,7 +6941,7 @@ components:
           confianza: 0.9
         imagen_base64: iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAHUlEQVR42mNgiPqPQCJR/+GIQSPqPxwx2ET9hyMAP1IXcWid5YsAAAAASUVORK5CYII=
     N8nVoucherNotVoucher:
-      summary: 'Ejemplo ficticio de integración, no ejecución acreditada. Sin imagen_base64 porque la imagen no es un voucher.'
+      summary: Ejemplo ficticio de integración, no ejecución acreditada. Sin imagen_base64 porque la imagen no es un voucher.
       value:
         instancia: isabel
         chatId: 51900000001@s.whatsapp.net

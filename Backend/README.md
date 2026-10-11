@@ -1,5 +1,7 @@
 > Actualización vigente MIG-02/D-007 (10/10/2026): contrato alineado en [docs/contrato-api.md](docs/contrato-api.md) y [docs/alineacion-bd-n8n.md](docs/alineacion-bd-n8n.md). SQL correctivo en BD/V4–V5; solo vouchers y datos de negocio persistentes, sin chat/audio/texto saliente. Los endpoints no están implementados; MIG-03 será JWT/API key y contexto RLS. Las secciones anteriores de propuestas se conservan como historial cuando difieran.
 
+Entrega vigente de revisión/finanzas/Storage: [entrega-backend-final-local.md](docs/entrega-backend-final-local.md). Rutas y roles en [OpenAPI](docs/openapi.yaml). Implementación local no acredita despliegue ni aceptación real n8n; nuevas migraciones V11–V13 solo en desechables.
+
 # Backend KeptAI — desarrollo compartido
 
 Servicio Spring Boot 4.1.1 / Java 21 (Maven Wrapper). Estado MIG-01: solo arranque, perfiles, health mínimo y errores básicos; sin base de datos, captura, pagos ni JWT todavía. Miguel construye API/captura/IA; Andrés define datos/migraciones y motor financiero. No iniciar dos scaffolds independientes.
@@ -87,3 +89,7 @@ Matriz de acceso y decisiones pendientes: [docs/matriz-acceso.md](docs/matriz-ac
 Valida el JWT (RS256/ES256, issuer, audiencia, exp, nbf) con `keptai.security.jwt.*` y resuelve usuario, organización y rol con `keptai_private.resolver_usuario` por la conexión runtime. Detalle y límites en [docs/matriz-acceso.md](docs/matriz-acceso.md) §6.1.
 - Pruebas (fixtures; JWKS local de prueba y PostgreSQL de Testcontainers, no tocan tu base): `sg docker -c "./mvnw -o test -Dtest='Jwt*Tests'"`.
 - Prueba manual con tu base local y un Auth real, sin pegar secretos en Git ni en el chat: (1) exporta `KEPTAI_JWT_ISSUER_URI`, `KEPTAI_JWT_JWK_SET_URI` y `KEPTAI_JWT_AUDIENCES` desde tu proyecto Supabase; (2) asegura que existe una fila en `usuario` con `auth_user_id` igual al `sub` de tu sesión (la insertas tú como migrador); (3) arranca con `-Dspring-boot.run.profiles=local` en un puerto libre; (4) toma el `access_token` de tu sesión y ejecuta `curl -i -H "Authorization: Bearer $TOKEN" localhost:<puerto>/api/v1/me`. Esperado: 200 con `user_id`, `organization_id` y `role`; sin token 401; con varias membresías 409.
+
+Plan de cierre: [plan-cierre-backend.md](docs/plan-cierre-backend.md), incluida la prueba API con Supabase real y la secuencia posterior al despliegue.
+
+Docker completo: [guía de despliegue](docs/despliegue-n8n.md), `compose.yaml` y `deploy/.env.example`; build y humo prod verificados.

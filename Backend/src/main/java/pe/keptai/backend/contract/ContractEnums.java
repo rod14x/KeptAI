@@ -15,6 +15,7 @@ public final class ContractEnums {
 	public enum DataOrigin {
 		@JsonProperty("demo_fixture") DEMO_FIXTURE,
 		@JsonProperty("manual_entry") MANUAL_ENTRY,
+		@JsonProperty("automated_extraction") AUTOMATED_EXTRACTION,
 		@JsonProperty("reviewed_extraction") REVIEWED_EXTRACTION
 	}
 
@@ -230,6 +231,32 @@ public final class ContractEnums {
 	public enum ForecastStatus {
 		@JsonProperty("complete") COMPLETE,
 		@JsonProperty("missing_opening_cash") MISSING_OPENING_CASH
+	}
+
+	/** cliente.tipo (INT-FE-API-002). */
+	public enum CustomerType {
+		@JsonProperty("school") SCHOOL,
+		@JsonProperty("company") COMPANY,
+		@JsonProperty("person") PERSON
+	}
+
+	/** envio_notificacion.tipo (INT-FE-API-002); solo metadatos, sin texto (D-007). */
+	public enum NotificationType {
+		@JsonProperty("collection_preventive") COLLECTION_PREVENTIVE,
+		@JsonProperty("collection_due") COLLECTION_DUE,
+		@JsonProperty("early_arrears") EARLY_ARREARS,
+		@JsonProperty("repurchase") REPURCHASE,
+		@JsonProperty("account_statement") ACCOUNT_STATEMENT,
+		@JsonProperty("payment_confirmation") PAYMENT_CONFIRMATION,
+		@JsonProperty("seller_summary") SELLER_SUMMARY
+	}
+
+	/** envio_notificacion.estado (INT-FE-API-002). */
+	public enum NotificationStatus {
+		@JsonProperty("pending") PENDING,
+		@JsonProperty("sent") SENT,
+		@JsonProperty("error") ERROR,
+		@JsonProperty("cancelled") CANCELLED
 	}
 
 }

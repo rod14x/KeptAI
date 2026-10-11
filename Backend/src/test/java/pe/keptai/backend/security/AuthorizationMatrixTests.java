@@ -42,8 +42,7 @@ import org.yaml.snakeyaml.constructor.SafeConstructor;
 class AuthorizationMatrixTests {
 
 	/** Operaciones cuya regla está cerrada por decisiones pendientes (matriz 5.3/5.4/5.5 y D-007). */
-	static final Set<String> CLOSED = Set.of("createTextEvidence", "startExtraction", "getExtractionJob", "getReconciliationCandidates",
-			"registerPaymentVerification", "applyPayment", "n8nConfirmOrder", "n8nReportMessageStatus");
+	static final Set<String> CLOSED = Set.of("createTextEvidence", "startExtraction", "getExtractionJob", "n8nConfirmOrder", "n8nReportMessageStatus");
 
 	/** Servicios que el contrato permite en cada operación abierta de n8n. */
 	static final Map<String, AccessRole> SERVICE_SCOPE = Map.of("n8nIngestOrder", AccessRole.INGESTA, "n8nReceiveVoucher", AccessRole.INGESTA);
@@ -106,7 +105,7 @@ class AuthorizationMatrixTests {
 			// Sin credencial: siempre 401.
 			assertThat(statusOf(op.method(), path, null)).as(op.id() + " anónimo").isEqualTo(401);
 			for (AccessRole role : AccessRole.userRoles()) {
-				int expected = !serviceOp && !closed && op.roles().contains(role.name()) ? (op.id().equals("getMyContext") ? 200 : 404) : 403;
+				int expected = !serviceOp && !closed && op.roles().contains(role.name()) ? (op.id().equals("getMyContext") ? 200 : (op.method().equals("GET") ? (op.id().equals("getMarginReport") ? 400 : 503) : (op.id().equals("uploadEvidenceFile") ? 415 : 400))) : 403;
 				assertThat(statusOf(op.method(), path, user(role))).as(op.id() + " como " + role).isEqualTo(expected);
 				checks++;
 			}
@@ -120,12 +119,12 @@ class AuthorizationMatrixTests {
 	}
 
 	@Test
-	void authorizedButUnimplementedRoutesAreNotFoundNeverSuccessful() throws Exception {
+	void authorizedRoutesWithoutDatabaseFailClosedAndDoNotReturnMockSuccess() throws Exception {
 		MvcResult denied = mvc.perform(request(HttpMethod.GET, "/api/v1/results/summary").with(authentication(user(AccessRole.VENDEDOR)))).andExpect(status().isForbidden())
 			.andExpect(jsonPath("$.code").value("FORBIDDEN")).andExpect(jsonPath("$.request_id").isNotEmpty()).andReturn();
 		assertThat(denied.getResponse().getHeader("X-Request-Id")).isNotBlank();
-		mvc.perform(request(HttpMethod.GET, "/api/v1/results/summary").with(authentication(user(AccessRole.GERENTE)))).andExpect(status().isNotFound())
-			.andExpect(jsonPath("$.code").value("NOT_FOUND")).andExpect(jsonPath("$.request_id").isNotEmpty());
+		mvc.perform(request(HttpMethod.GET, "/api/v1/results/summary").with(authentication(user(AccessRole.GERENTE)))).andExpect(status().isServiceUnavailable())
+			.andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE")).andExpect(jsonPath("$.request_id").isNotEmpty());
 	}
 
 	@Test
@@ -202,10 +201,10 @@ class AuthorizationMatrixTests {
 			assertThat(statusOf("POST", "/api/v1/orders/" + UUID.randomUUID() + "/credit-decision", service(scope))).isEqualTo(403);
 			assertThat(statusOf("GET", "/api/v1/me", service(scope))).isEqualTo(403);
 		}
-		// INGESTA y SCHEDULER no son intercambiables; ninguno sirve de usuario "vendedor".
+		// INGESTA y SCHEDULER no son intercambiables; crédito exige ADMIN (D-014).
 		assertThat(statusOf("POST", "/api/v1/ordenes/ingesta", service(AccessRole.SCHEDULER))).isEqualTo(403);
-		assertThat(statusOf("POST", "/api/v1/orders/" + UUID.randomUUID() + "/credit-decision", user(AccessRole.ADMIN))).isEqualTo(403);
-		assertThat(statusOf("POST", "/api/v1/orders/" + UUID.randomUUID() + "/credit-decision", user(AccessRole.VENDEDOR))).isEqualTo(404);
+		assertThat(statusOf("POST", "/api/v1/orders/" + UUID.randomUUID() + "/credit-decision", user(AccessRole.ADMIN))).isEqualTo(400);
+		assertThat(statusOf("POST", "/api/v1/orders/" + UUID.randomUUID() + "/credit-decision", user(AccessRole.VENDEDOR))).isEqualTo(403);
 		// El webhook saliente de n8n no es una ruta de Spring.
 		assertThat(statusOf("POST", "/webhook/enviar-mensaje", user(AccessRole.ADMIN))).isEqualTo(403);
 	}

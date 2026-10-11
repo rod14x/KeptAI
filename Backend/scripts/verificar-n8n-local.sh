@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Verificación LOCAL extremo a extremo del lado Spring de la conexión n8n (MIG-03-D3 + MIG-04/05), con procesos PROPIOS y datos FICTICIOS:
-#   PostgreSQL 17 DESECHABLE (Docker) con V1–V9 -> login runtime -> provisión de servicios con servicio-local.sh --apply ->
+#   PostgreSQL 17 DESECHABLE (Docker) con las migraciones actuales -> login runtime -> provisión de servicios con servicio-local.sh --apply ->
 #   Storage SIMULADO (storage_simulado.py, no es Supabase) -> Spring propio en el puerto 8082 -> comprobación HTTP de /api/v1/ordenes/ingesta
 #   y /api/v1/pagos/voucher -> caída del Storage -> revocación y rotación -> limpieza.
 # NO toca la base activa (5433), los servidores del usuario (8080/5173), Backend/.env ni ningún workflow/credencial real:
@@ -41,7 +41,7 @@ psqlx=(docker exec -i "$name" psql -X -q -U postgres -d k)
   echo "CREATE ROLE keptai_app LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS PASSWORD '$dbpw'; GRANT keptai_runtime TO keptai_app;"; } \
   | "${psqlx[@]}" -v ON_ERROR_STOP=1 >/dev/null
 org="$("${psqlx[@]}" -t -A -v ON_ERROR_STOP=1 -c "INSERT INTO keptai.organizacion(nombre) VALUES ('Organizacion ficticia D3') RETURNING id" | head -1)"
-echo "   migraciones V1–V9 aplicadas; organización ficticia creada"
+echo "   migraciones del árbol local aplicadas; organización ficticia creada"
 export KEPTAI_PSQL_EXEC="docker exec -i $name psql -X -q -U postgres -d k"
 gen=Backend/scripts/generar-clave-servicio.sh; svc=Backend/scripts/servicio-local.sh
 for k in ing sch otra ing2; do "$gen" "$tmp/$k.key" >/dev/null; done

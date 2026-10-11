@@ -28,19 +28,19 @@ Roles = `x-keptai-proposed-roles` del contrato. «Alcance SQL» resume lo que V4
 | Operación | Ruta | Roles | Alcance / observación V7 |
 |---|---|---|---|
 | getMyContext | GET /api/v1/me | los 4 | Solo lectura de la identidad resuelta |
-| uploadEvidenceFile, listEvidences, getEvidence, getEvidenceDownloadLink | /api/v1/evidences… | VENDEDOR, ADMIN | Voucher privado; URL temporal tras validar tenant (MIG-04). `comprobante`: escribe ADMIN (o INGESTA para el alta del voucher) |
+| uploadEvidenceFile, listEvidences, getEvidence, getEvidenceDownloadLink | /api/v1/evidences… | ADMIN | Voucher privado; URL temporal tras validar tenant (MIG-04). `comprobante`: escribe ADMIN (o INGESTA para el alta del voucher) |
 | createTextEvidence, startExtraction, getExtractionJob | /api/v1/evidences/text, …/extractions, /extraction-jobs | VENDEDOR, ADMIN | **Fuera del MVP (D-007):** captura/extracción persistente de texto o audio. No implementar ni contar como pendiente |
-| listDrafts, getDraft, correctDraft, discardDraft | /api/v1/drafts… | VENDEDOR, ADMIN | INGESTA solo crea/actualiza borradores; las ediciones humanas son del usuario |
-| confirmDraft | POST /api/v1/drafts/{id}/confirmation | VENDEDOR, ADMIN | `hoja_resumen.revisado_por` = usuario autenticado (trigger V7). No verifica fondos ni aprueba crédito |
+| listDrafts, getDraft, correctDraft, discardDraft | /api/v1/drafts… | ADMIN | INGESTA solo crea/actualiza borradores; las ediciones humanas son del usuario |
+| confirmDraft | POST /api/v1/drafts/{id}/confirmation | ADMIN | `hoja_resumen.revisado_por` = usuario autenticado (trigger V7). No verifica fondos ni aprueba crédito |
 | listOrders, getOrder | GET /api/v1/orders… | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | JEFE_TALLER solo ve LIBERADA, EN_PRODUCCION, DESPACHADA, CERRADA (política `orden`); el resto ve todas |
 | listPayments, getPayment | GET /api/v1/payments… | ADMIN, GERENTE | Pagos recibidos ≠ verificados ≠ aplicados |
-| getReconciliationCandidates, registerPaymentVerification, applyPayment | /api/v1/payments/{id}/… | ADMIN | Solo ADMIN escribe `pago`/`aplicacion_pago`; `verificado_por`/`aplicado_por` = usuario autenticado. Segregación registrar ≠ verificar: **no decidida** |
+| getReconciliationCandidates, registerPaymentVerification, applyPayment | /api/v1/payments/{id}/… | ADMIN | Solo ADMIN escribe `pago`/`aplicacion_pago`; `verificado_por`/`aplicado_por` = usuario autenticado. Decisión Miguel 11/10: verificar/aplicar exige dos ADMIN distintos (API) |
 | listReceivables, getReceivable, getCustomerStatement | /api/v1/receivables…, /customers/{id}/statement | VENDEDOR, ADMIN, GERENTE | `obligacion_cobro`/`aplicacion_pago` visibles a VENDEDOR, ADMIN, GERENTE y SCHEDULER; no a JEFE_TALLER ni INGESTA |
 | listCollectionAlerts | GET /api/v1/collection-alerts | VENDEDOR, ADMIN | Alertas las escribe SCHEDULER (o ADMIN) |
 | getResultsSummary, getMarginReport, getProductionCenterResults, getCashForecast, exportOrdersCsv | /api/v1/results/…, /reports/orders.csv | GERENTE | Contrato más estricto que SQL: `v_margen_orden` solo devuelve filas a VENDEDOR, ADMIN, GERENTE; caja (`apertura_caja`, `egreso_caja`) a ADMIN, GERENTE, SCHEDULER |
 | listAuditEvents | GET /api/v1/audit-events | ADMIN, GERENTE | JEFE_TALLER solo vería auditoría de orden, orden_etapa, costo_orden, despacho (no se le abre la ruta) |
 | getCreditDecision | GET /api/v1/orders/{id}/credit-decision | VENDEDOR, ADMIN, GERENTE | Lectura de `aprobacion_credito` |
-| **submitCreditDecision** | POST /api/v1/orders/{id}/credit-decision | **solo VENDEDOR** | Política V7: únicamente `actor_actual()='VENDEDOR'` inserta/actualiza; `aprobado_por` = usuario autenticado. ADMIN, GERENTE, n8n y servicios no aprueban crédito |
+| **submitCreditDecision** | POST /api/v1/orders/{id}/credit-decision | **ADMIN** | D-014/V14: ADMIN de la organización; autoría real, idempotencia y obligación atómica. No n8n ni otros roles |
 | registerDispatch | POST /api/v1/orders/{id}/dispatch | ADMIN, JEFE_TALLER | `despacho.registrado_por` = usuario autenticado; el vencimiento nace del despacho |
 
 Cierre de costos (`costos_*_completos`): solo ADMIN o JEFE_TALLER lo certifican (trigger V7); aún no hay ruta propia en el contrato.
@@ -108,7 +108,7 @@ Elección técnica (no regla empresarial aprobada): clave aleatoria ≥256 bits,
 Fuente única: `security/AccessPolicy` (una regla por operación entrante del contrato, 37; el webhook saliente `enviarMensajeWF3` no es un endpoint Spring). `SecurityConfig` registra una regla `método + ruta exacta` por cada operación abierta y deniega todo lo demás: métodos no declarados (incluidos HEAD/OPTIONS no preflight), variantes de ruta (barra final, mayúsculas, segmentos extra), `/api/v2`, `/error`, `/v3/api-docs`, actuator salvo health. Un test compara la tabla con `openapi.yaml` (método, ruta, roles) y con esta matriz.
 - **Panel:** `KeptaiAuthentication` con membresía SINGLE y rol (leído de PostgreSQL) incluido en la regla; varias membresías → 409 en cualquier ruta del panel; sin membresía → 403. **Servicios:** `ServiceAuthentication` con alcance en la regla. Un tipo de credencial nunca entra por la ruta del otro (tampoco en la capa de autorización).
 - **Abiertas (29):** las del §3 con los roles del contrato (incluidas las de VENDEDOR sobre borradores, órdenes, cuentas por cobrar, alertas, crédito y despacho de ADMIN/JEFE_TALLER), `/me` (los 4 roles) y, para INGESTA, `n8nIngestOrder` y `n8nReceiveVoucher`. **Abrir la ruta solo concede el permiso: sin controlador responde 404** (probado) y ninguna funcionalidad queda implementada por ello.
-- **Cerradas (8) por decisión pendiente; nadie accede (403):** `createTextEvidence`, `startExtraction`, `getExtractionJob` (fuera del MVP, D-007); `getReconciliationCandidates`, `registerPaymentVerification`, `applyPayment` (segregación registrar/verificar/aplicar sin decidir, 5.5, y motor de Andrés); `n8nConfirmOrder` (confirmación por `vendedorJid`, 5.3/MIG-06); `n8nReportMessageStatus` (alcance SCHEDULER del callback solo propuesto, 5.4/D3).
+- **Antecedente D2: cerradas (8) en esa entrega:** `createTextEvidence`, `startExtraction`, `getExtractionJob` (fuera del MVP, D-007); `getReconciliationCandidates`, `registerPaymentVerification`, `applyPayment` (segregación registrar/verificar/aplicar sin decidir, 5.5, y motor de Andrés); `n8nConfirmOrder` (confirmación por `vendedorJid`, 5.3/MIG-06); `n8nReportMessageStatus` (alcance SCHEDULER del callback solo propuesto, 5.4/D3).
 - **Pendiente explícito (5.5):** el alcance del vendedor por marca o cartera **no está definido ni aplicado**, ni en esta capa ni en RLS (V7 le da lectura de toda la organización). Las rutas de VENDEDOR están abiertas solo a nivel de rol; ningún controlador real debe publicarse sin ese filtro o una decisión explícita. Tampoco se resuelve la corrección de crédito por ADMIN.
 - **Errores:** `GlobalExceptionHandler` convierte `AccessDeniedException` (incl. `AuthorizationDeniedException`) en 403 `FORBIDDEN`, `AuthenticationServiceException` en 503 `SERVICE_UNAVAILABLE`, otras `AuthenticationException` en 401 `UNAUTHORIZED` (`WWW-Authenticate: Bearer`), con `request_id` y sin mensaje de la excepción, SQL ni credenciales; el resto sigue siendo 500 genérico. El log del handler registra solo la clase de excepción, sin mensajes, causas ni stack trace potencialmente sensibles. El 409 de selección de organización lo emite la capa de autorización.
 - Puntos de sustitución para probes de `src/test`: `PanelFallbackAuthorization` y `ServiceFallbackAuthorization` (producción: siempre denegado, solo para rutas no listadas).
@@ -135,3 +135,21 @@ POST /api/v1/ordenes/ingesta implementa solo validación estricta del objeto JSO
 TenantContext.apply y TransaccionFinanciera.enTransaccion comparten TenantContext.applyIdentity. Ambos requieren transacción real/conexión vinculada y conservan una única TenantIdentity (organización + exactamente un actor) hasta commit/rollback. El motor conserva sus firmas y reglas financieras; ContextoFinanciero debe construirlo un caller interno a partir del principal autenticado, nunca un DTO del cliente.
 Las pruebas de MotorPagos con runtime PostgreSQL validan TenantTransaction→motor con la misma identidad/PID, rechazos de cambio de empresa/usuario/servicio, motor→TenantTransaction con identidad incompatible y limpieza después del rollback.
 Esto integra la frontera Java; no implementa controllers financieros ni modifica las decisiones de autorización por ruta, marca/cartera o segregación de funciones.
+
+
+## 6.5 Avance MIG-04/06/07 (11/10/2026)
+
+Dirección explícita de Miguel: ADMIN puede revisar, corregir, confirmar y descartar pedidos desde el panel sin vendedor WhatsApp; verificación/aplicación de pagos requieren dos usuarios ADMIN distintos. `getEvidenceDownloadLink`, `listDrafts`, `getDraft`, `correctDraft`, `confirmDraft` y `discardDraft` quedan solo ADMIN; no se concede cartera general a VENDEDOR. Las tres operaciones financieras del §6.4 ya no están cerradas por segregación: API ADMIN, aplicación con identidad distinta del verificador bajo lock de pago. `createTextEvidence`, `startExtraction`, `getExtractionJob`, `n8nConfirmOrder` y `n8nReportMessageStatus` siguen cerradas. Idempotency-Key obligatoria en confirmación y escrituras financieras. Los permisos son de ruta y de objeto; el contexto PostgreSQL es previo al acceso. Cartera de VENDEDOR sigue pendiente: servicios del panel deniegan hasta definirla.
+
+
+### 6.6 Lectura privada y revisión ADMIN (11/10/2026)
+
+Aprobación expresa de Miguel: ADMIN revisa/corrige/confirma/descarta desde el panel mientras no exista vendedor registrado. Evidencias (carga/listado/metadatos/enlace) y borradores quedan reservados a ADMIN. PanelContext rechaza VENDEDOR antes de consultar negocio hasta definir su cartera; D-013 por sí sola no autorizaba crédito; D-014 en §6.7 añade esa autorización explícita de ADMIN durante el MVP. `/me` continúa disponible para los cuatro roles.
+
+Carga manual: multipart con file, kind=voucher_image, payment_id y label opcional; Idempotency-Key obligatorio. Solo adjunta a un pago RECIBIDO del tenant y no crea ni verifica fondos. MIME/bytes/hash se calculan del binario; la clave privilegiada de Storage se usa después de autorizar el pago. Metadata histórica desconocida queda null. Link temporal de 60 segundos, no-store, autorizado antes de firmar, auditado sin token/URL.
+
+La segregación de dos ADMIN se aplica al adaptador HTTP. Los motores/RLS existentes de Andrés conservan sus reglas internas: no acreditar que esta regla nueva se impone a cualquier llamada interna o SQL directo. Verificación disponible solo simulated_demo. Dispatch también usa Idempotency-Key y una sola transacción que reúne motor y respuesta.
+
+## 6.7 D-014 — crédito ADMIN durante el MVP
+
+Miguel autoriza ADMIN desde el panel. V14 cambia únicamente escritura de aprobacion_credito, preserva V7 histórico y el trigger de autoría. Idempotency-Key obligatoria (autor, pedido y contenido); replay sin duplicación, 409 por contenido/autor distinto. No cambia vendedor_id. La cartera de VENDEDOR sigue sin habilitarse.

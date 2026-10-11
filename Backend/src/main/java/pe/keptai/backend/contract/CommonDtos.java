@@ -90,11 +90,29 @@ public final class CommonDtos {
 		}
 	}
 
-	/** Contexto resuelto por el servidor por membresia; el cliente nunca lo envia. */
+	/**
+	 * Contexto resuelto por el servidor por membresia; el cliente nunca lo envia. {@code name} y {@code organization_name}
+	 * (INT-FE-API-002) son informativos: la identidad y el rol siguen siendo {@code user_id}/{@code role}.
+	 */
 	public record UserContext(
 			@JsonProperty("user_id") @NotNull UUID userId,
 			@JsonProperty("organization_id") @NotNull UUID organizationId,
+			@JsonProperty("role") @NotNull UserRole role,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("name") @Size(max = 200) String name,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("organization_name") @Size(max = 200) String organizationName) {
+		public UserContext(
+			@JsonProperty("user_id") @NotNull UUID userId,
+			@JsonProperty("organization_id") @NotNull UUID organizationId,
 			@JsonProperty("role") @NotNull UserRole role) {
+			this(userId, organizationId, role, null, null);
+		}
+
+	}
+
+	/** Persona de la organizacion (usuario.id, usuario.nombre), INT-FE-API-002. Nunca correo ni credenciales. */
+	public record PersonRef(
+			@JsonProperty("id") @NotNull UUID id,
+			@JsonProperty("name") @NotBlank @Size(max = 200) String name) {
 	}
 
 }

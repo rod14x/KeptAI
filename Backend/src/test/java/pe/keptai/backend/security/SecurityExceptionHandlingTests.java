@@ -52,7 +52,7 @@ class SecurityExceptionHandlingTests {
 	@RestController
 	static class Probe {
 
-		@GetMapping("/api/v1/orders/{order_id}")
+		@GetMapping(value="/api/v1/orders/{order_id}",params="mode")
 		String order(@PathVariable("order_id") String id, @RequestParam String mode) {
 			return throwFor(mode);
 		}

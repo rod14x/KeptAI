@@ -105,7 +105,7 @@ public final class ExtractionDtos {
 	 */
 	public record ExtractionDraft(
 			@JsonProperty("id") @NotNull UUID id,
-			@JsonProperty("evidence_id") @NotNull UUID evidenceId,
+			@JsonProperty("evidence_id") UUID evidenceId,
 			@JsonProperty("draft_type") @NotNull DraftType draftType,
 			@JsonProperty("status") @NotNull DraftStatus status,
 			@JsonProperty("revision") @NotNull @Min(1) @Max(1_000_000) Integer revision,
@@ -176,14 +176,23 @@ public final class ExtractionDtos {
 	public record CorrectDraftRequest(
 			@JsonProperty("expected_revision") @NotNull @Min(1) @Max(1_000_000) Integer expectedRevision,
 			@JsonProperty("order_fields") @Valid OrderFieldsCorrection orderFields,
-			@JsonProperty("voucher_fields") @Valid VoucherFieldsCorrection voucherFields) {
+			@JsonProperty("voucher_fields") @Valid VoucherFieldsCorrection voucherFields,
+            @JsonProperty("items") @Size(min=1,max=100) java.util.List<@Valid ReviewItem> items,
+            @JsonProperty("payment_condition") @Pattern(regexp="CONTADO|CREDITO|ANTICIPO") String paymentCondition,
+            @JsonProperty("credit_term_days") @Min(15) @Max(30) Integer creditTermDays,
+            @JsonProperty("downpayment") @Valid pe.keptai.backend.contract.CommonDtos.NonNegativeMoney downpayment) {
+        public CorrectDraftRequest(Integer revision, OrderFieldsCorrection order, VoucherFieldsCorrection voucher) { this(revision,order,voucher,null,null,null,null); }
 
 		@JsonIgnore
 		@AssertTrue(message = "envie exactamente uno de order_fields o voucher_fields")
 		public boolean isExactlyOneFieldGroup() {
-			return (orderFields != null) != (voucherFields != null);
+			return (voucherFields != null) != (orderFields != null || items != null || paymentCondition != null || creditTermDays != null || downpayment != null);
 		}
 	}
+
+    public record ReviewItem(@JsonProperty("description") @jakarta.validation.constraints.NotBlank @Size(max=1000) String description,
+        @JsonProperty("quantity") @NotNull @Min(1) @Max(1000000) Integer quantity,
+        @JsonProperty("unit_price") @NotNull @Valid pe.keptai.backend.contract.CommonDtos.NonNegativeMoney unitPrice) { }
 
 	public record ConfirmDraftRequest(
 			@JsonProperty("expected_revision") @NotNull @Min(1) @Max(1_000_000) Integer expectedRevision) {
