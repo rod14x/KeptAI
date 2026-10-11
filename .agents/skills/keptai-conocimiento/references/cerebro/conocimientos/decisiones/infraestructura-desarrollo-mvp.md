@@ -3,17 +3,19 @@
 > ID: PROP-INFRA-001. Versión: 1.2. Fecha: 10 de octubre de 2026, America/Lima.
 > Origen: solicitud del usuario de completar el roadmap con infraestructura y tecnologías.
 > Estado: recomendación técnica para comenzar. No acredita cuentas creadas, servicios contratados, código implementado ni aprobación empresarial de políticas.
+> Actualización D-005 (10/10/2026): WhatsApp entra al MVP mediante Evolution API y n8n, como prueba con un número y un contacto; n8n invoca la IA y entrega JSON a Spring, que sigue siendo el único backend con reglas. Plazo de crédito de 15 a 30 días y una sola obligación por orden; el vendedor aprueba el crédito y la mora solo genera un aviso, sin bloqueo. KeptAI no integra el banco: concilia. Detalle en [actores, flujos y DER](actores-flujos-y-der-mvp.md). Lo que este documento diga en contrario queda como antecedente.
+> Pendiente: asignar responsable de los workflows de n8n y de la instancia de Evolution API.
 > Alcance: prototipo funcional de captura, conciliación, cobranza y rentabilidad/caja. Miguel y Andrés backend; Germán e Isabella frontend. No incluye preparación de pitch.
 
 ## 1. Recomendación principal y criterio de elección
 
 La dirección vigente del usuario es **Spring Boot como único backend**: Miguel y Andrés conocen Spring y lo han manejado (USR-EQUIPO-003, D-004). Esto sustituye FastAPI, recomendado antes de conocer esa experiencia. La familiaridad del equipo reduce el esfuerzo de arranque; la falta de datos ERP/CRM define las entradas, no demuestra una superioridad universal del framework.
 
-Stack: React/TypeScript/Vite en Cloudflare Workers Static Assets; Spring Boot/Java en Render mediante Docker; PostgreSQL/Auth/Storage de Supabase; Gemini para extracción. No se requieren datos, API, exportaciones o credenciales de ERP/CRM. Entradas del MVP: chat pegado/cargado, vouchers y audio aportados manualmente, registros manuales/CSV y semilla ficticia de pedidos, costos, vencimientos y caja. Los conectores externos quedan fuera del MVP, sin pasos de conexión ni accesos que bloqueen H1.
+Stack: React/TypeScript/Vite en Cloudflare Workers Static Assets; Spring Boot/Java en Render mediante Docker; PostgreSQL/Auth/Storage de Supabase; Gemini para extracción. No se requieren datos, API, exportaciones o credenciales de ERP/CRM. Entradas del MVP: chat pegado/cargado, vouchers y audio aportados manualmente, registros manuales/CSV y semilla ficticia de pedidos, costos, vencimientos y caja. Por D-005 se añade la entrada por WhatsApp con Evolution API y n8n (un número y un contacto de prueba); la carga manual queda como respaldo. Los conectores ERP/CRM quedan fuera del MVP, sin pasos de conexión ni accesos que bloqueen H1.
 
 **Andrés es responsable del diseño de base de datos**, además del motor financiero. Miguel revisa el esquema y construye API/captura; no se incorpora un quinto integrante sin nombre. [Modelo de base propuesto](modelo-base-datos-mvp.md). Germán ejecuta el [roadmap frontend](roadmap-german-frontend.md) basado en el prompt recibido, coordinado con Isabella.
 
-La aplicación vive en un repo separado del cerebro. Un monolito modular Spring Boot basta al comienzo: captura, pedidos/pagos, cobranza y resultados/caja. Se conserva el núcleo de D-003 y no se avanza pitch. Esta documentación no crea repos ni acredita despliegue.
+Para el trabajo vigente de Miguel (D-006), usar Backend/ de este checkout; cerebro/ mantiene documentación y BD/ conserva diseño de Andrés. No crear otro repo. Un monolito modular Spring Boot basta al comienzo: captura, pedidos/pagos, cobranza y resultados/caja. Se conserva el núcleo de D-003 y no se avanza pitch. Esta documentación no acredita implementación ni despliegue.
 
 ## 2. Tecnologías por componente
 
@@ -53,7 +55,7 @@ La configuración SPA y los builds están documentados por el proveedor. [SPA](h
 
 Primera versión: una instancia; pool HikariCP pequeño ajustado a las conexiones disponibles. Docker local para PostgreSQL/API es útil, pero no requiere Kubernetes. Flyway se ejecuta como paso controlado de release con rol migrador, antes de iniciar API con rol runtime; en el servicio runtime desactivar migración automática (`spring.flyway.enabled=false`) y usar `ddl-auto=validate`, nunca `update/create` en entorno compartido.
 
-Gemini se invoca desde Java mediante cliente HTTP con timeout, límites y respuesta DTO validada. No añadir un backend Python para esa llamada. Si tarda más que la solicitud, persistir trabajo y estado; tareas en memoria o `@Async` no garantizan reintento tras reinicio. Un worker del mismo código solo se añade si las muestras lo necesitan.
+Por D-005, n8n orquesta la extracción: llama a la IA y envía el JSON a Spring, que valida el DTO y lo deja como borrador a revisar. Lo siguiente aplica solo si se conserva una llamada directa como respaldo: Gemini se invoca desde Java mediante cliente HTTP con timeout, límites y respuesta DTO validada. No añadir un backend Python para esa llamada. Si tarda más que la solicitud, persistir trabajo y estado; tareas en memoria o `@Async` no garantizan reintento tras reinicio. Un worker del mismo código solo se añade si las muestras lo necesitan.
 
 ### Datos y transacciones — Andrés
 
@@ -98,7 +100,7 @@ Empezar con alertas persistidas en PostgreSQL y evaluación al actualizar el ped
 
 Para cada trabajo guardar estado, intentos, próxima ejecución y error. Una reejecución no duplica alertas ni pagos. El cron ejecuta un comando del mismo backend, por ejemplo `java -jar app.jar --spring.profiles.active=job-vencimientos` con modo sin servidor web y salida al terminar, que termina al completar el lote. Configurar calendario UTC y convertir reglas de fecha a America/Lima. No ejecutar un scheduler en cada worker HTTP; no activar además Supabase Cron para el mismo trabajo. El cron no sustituye un worker continuo y su costo requiere revisión. Eliminar avisos pendientes cuando se confirme pago, y suspender avisos externos si saldo o conciliación están desactualizados.
 
-Durante el MVP, las alertas se muestran en la aplicación. WhatsApp/correo reales entran cuando exista canal autorizado y configuración comprobada. ERP, CRM, Apps Script y WhatsApp vivo quedan fuera del MVP: no hay datos ni integración. Un CSV o chat cargado manualmente no acredita conexión al sistema de origen.
+Durante el MVP, las alertas internas se muestran en la aplicación. Por D-005, los mensajes de resumen y cobranza al cliente salen por WhatsApp mediante n8n (WF3) y Evolution API, solo al contacto de prueba; Spring decide qué y cuándo se envía. Correo, ERP, CRM y Apps Script quedan fuera del MVP: no hay datos ni integración. Un CSV o chat cargado manualmente no acredita conexión al sistema de origen.
 
 ### Pruebas y operación — cada dueño de módulo
 
@@ -116,7 +118,10 @@ flowchart LR
     WEB --> AUTH[Supabase Auth]
     WEB --> FILE[Supabase Storage privado]
     WEB --> API[Spring Boot Java en Render: API autenticada]
-    API --> IA[Gemini: extracción de borradores]
+    WA[Evolution API: WhatsApp de prueba] --> N8N[n8n: WF1 orden, WF2 voucher, WF3 salientes]
+    N8N --> IA[IA: extracción de borradores]
+    N8N --> API
+    API --> N8N
     API --> DB[(PostgreSQL: RLS y operaciones transaccionales)]
     DB --> RULES[Saldo, costos, margen y caja a 4 semanas]
     RULES --> API
@@ -124,7 +129,7 @@ flowchart LR
     CRON[Render Cron Job: comando backend] --> DB
     DB --> REPORT[Reporte y CSV]
     REPORT --> WEB
-    INPUT[Chat, vouchers y audio manuales; CSV y seed ficticio] --> API
+    INPUT[Respaldo: chat, vouchers y audio manuales; CSV y seed ficticio] --> API
 ```
 
 La carga directa a Storage solo está permitida con sesión y política de organización. La extracción corre en backend. El comprobante pasa por borrador, revisión, verificación y aplicación; solo la última operación modifica el saldo. Los cargos internos afectan resultados de gestión según la regla, pero no crean entrada bancaria externa.
@@ -187,7 +192,7 @@ Validar sesión/JWT, pertenencia, rol y permiso en cada operación. CORS restrin
 ### Orden concreto para comenzar
 
 1. **Andrés + Miguel:** comprobar acceso a Supabase, Render y al proveedor IA; decidir región del proyecto según disponibilidad y latencia probada. No asumir región o plan de la cuenta.
-2. **Germán:** inicializar React/TypeScript con Vite en el repo de aplicación acordado, fijar Node/lockfile y publicar una página mínima en Cloudflare.
+2. **Germán:** inicializar React/TypeScript con Vite en la carpeta de aplicación acordada del repo existente, fijar Node/lockfile y publicar una página mínima en Cloudflare.
 3. **Andrés:** ER/diccionario, migración Flyway inicial, membresías, RLS/grants y datos ficticios P-001/P-002; preparar operación de pago transaccional.
 4. **Miguel:** API Spring Boot: salud, consulta autenticada y extracción de una muestra; publicar en Render; configurar secretos, timeout y corrección humana.
 5. **Germán + Isabella:** iniciar sesión, cargar evidencia privada y consultar el mismo pedido mediante API.

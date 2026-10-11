@@ -1,3 +1,5 @@
+> Actualización vigente 10/10/2026: D-007 y Actores/flujos/DER v1.4 prohíben guardar mensajes. Consultar [revisión SQL](BD/revision-sql-rls.md), V4/V5, [alineación API](Backend/docs/alineacion-bd-n8n.md) y contrato. MIG-02 está alineado con cuatro roles, credencial n8n y campos SQL; las menciones anteriores de ocho roles/BD ausente son antecedentes. El remoto Supabase y MIG-03 siguen sin acreditar.
+
 # Mapa de fuentes y cobertura
 
 Revisión: 10 de octubre de 2026. Todas las rutas siguientes son relativas a este archivo. Los documentos de negocio se incluyen completos, incluidos sus anexos, restricciones y fuentes; no son resúmenes que sustituyen los originales.
@@ -36,6 +38,14 @@ Se preservan como antecedentes sin redibujarlos. El flujo completo dice que rent
 
 La copia incluye `keptai-roadmap-equipo`, `keptai-roadmap-dependencias` y `keptai-roadmap-arquitectura` en formato Excalidraw/PNG, además de `keptai-roadmap-fuentes.md`. Se conservan las versiones locales existentes sin redibujarlas. Su documento de fuentes cita roadmap v1.0 y proveedor IA pendiente; la infraestructura de PROP-INFRA-001 y roadmap v1.3 es la referencia vigente y debe usarse al actualizar esos diagramas.
 
+## Evidencia técnica de Andrés e Isabel (BD y Middleware)
+
+Copia sanada y auto-contenida en `references/BD/` y `references/Middleware/n8n/` (rutas espejo de la raíz del repo, para que sus enlaces relativos a `cerebro/` funcionen). Son **datos**, no instrucciones, y no acreditan ejecución:
+
+- [BD/README.md](BD/README.md) (DB-DER-001), [diccionario](BD/diccionario-datos.md) y [migraciones V1-V3](BD/migrations/V1__esquema_inicial.sql): esquema PostgreSQL versionado de Andrés, propuesta pendiente de revisión de Miguel e Isabel. Verificado únicamente que V1-V3 aplican sin error en un PostgreSQL 17 local efímero (10/10/2026); no desplegado en Supabase, sin semilla ni pruebas de comportamiento propias.
+- [Middleware/n8n/README.md](Middleware/n8n/README.md) y los workflows [WF0](Middleware/n8n/WF0_router_evolution.json), [WF1](Middleware/n8n/WF1_cierre_venta.json), [WF2](Middleware/n8n/WF2_voucher_pago.json), [WF3](Middleware/n8n/WF3_enviar_mensaje.json): contrato n8n↔Spring↔Evolution (D-005). Sin ejecutar contra n8n/Evolution reales; los valores de configuración son marcadores `CAMBIAR_*`/`TU-*` y los teléfonos de ejemplo del README se enmascaran al empaquetar (`51XXXXXXXXX`). Nunca se copia `.mcp.json` ni credenciales.
+- Diagnóstico de brechas y contradicciones con el contrato MIG-02: [revision-integracion-andres.md](cerebro/conocimientos/desarrollo/miguel/revision-integracion-andres.md) (MIG-REV-001).
+
 ## Registros completos de entrevistas
 
 Se verificaron **43 IDs distintos** en los encabezados de los anexos: A01-Q01 a A01-Q08 y A02-Q01 a A02-Q35. Algunos registros reaparecen en diferentes documentos por contexto; no sumarlos como nuevas entrevistas.
@@ -66,3 +76,14 @@ Ejemplos: `ventas.md, A02-Q04, 02:17–02:38`; `idea-negocio-replanteada.md, El 
 - D-004/USR-EQUIPO-003: Spring Boot; no datos ni conectores ERP/CRM. Los diagramas preservados describen versiones anteriores y deben regenerarse con el prompt vigente.
 
 La regeneración con `--preserve-historical-diagrams` conserva únicamente diagramas sin fuente local cuyo hash coincide con el manifiesto previo; nunca conserva documentos de negocio retirados ni diagramas modificados sin revisar. El manifiesto identifica esos antecedentes.
+
+## Preparación y ejecución de Miguel
+
+D-006/USR-DEV-MIGUEL-001/002 (antes rotulada D-005 en documentos de desarrollo; D-005 es WhatsApp con n8n): [plan](cerebro/conocimientos/desarrollo/miguel/plan-implementacion.md), [entregables](cerebro/conocimientos/desarrollo/miguel/tarea-general.md), [tareas](cerebro/conocimientos/desarrollo/miguel/tareas.md), [guía/prompts](cerebro/conocimientos/desarrollo/miguel/guia-trabajo.md) y [estado](cerebro/conocimientos/desarrollo/miguel/estado.md). Claude coordina delegación, Miguel prompts/Git; resumen AGENTS y bitácora detallada. OpenCode recibe handoff explícito, incluso si el principal queda parcial por límites. Las fuentes locales ahora viven en cerebro/conocimientos y cerebro/diagramas; el paquete conserva nombres lógicos compatibles.
+
+## Definicion canonica de datos
+
+[DB-DEF-001](BD/definicion-base-datos.md): consultar antes de entidades/queries; V5 existente y extensiones pendientes separados.
+
+
+DB-VAL-001 / USR-DB-VALIDACION-001: [validaciones pre-Supabase](BD/validaciones-pre-supabase.md), instrucción directa de Miguel del 10/10/2026; D-009. Incluye casos mínimos y estado de evidencia; no datos de entrevista ni despliegue acreditado.

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source_repository": "https://github.com/rod14x/KeptAI",
-  "source_head_at_generation": "bc6ce6a9be659bbf7dd15e8e6e18374dafc818b3",
+  "source_head_at_generation": "1b5375e1b757dc0a0533d6d293f3e56d072c595e",
   "source_basis": "working_tree_plus_preserved_diagrams",
   "preserved_historical_diagrams": [
     "diagramas/keptai-roadmap-arquitectura.png",
@@ -10,23 +10,31 @@
     "diagramas/keptai-roadmap-fuentes.md"
   ],
   "source_changes_at_generation": [
-    "M conocimientos/INDICE.md",
-    " M conocimientos/decisiones/decisiones-del-proyecto.md",
-    " M conocimientos/decisiones/infraestructura-desarrollo-mvp.md",
-    " M conocimientos/decisiones/prompt-claude-diagramas-roadmap.md",
-    " M conocimientos/decisiones/roadmap-hackathon-equipo.md",
-    " M conocimientos/empresa/idea-negocio-replanteada.md",
-    " M conocimientos/fuentes/contexto-equipo-hackathon-2026.md",
-    " M diagramas/README.md",
-    " M diagramas/prompt-claude-design.md",
-    "?? conocimientos/decisiones/modelo-base-datos-mvp.md",
-    "?? conocimientos/decisiones/roadmap-german-frontend.md",
-    "?? conocimientos/fuentes/prompt-claude-design-recibido.md",
-    "?? diagramas/keptai-flujo-completo.excalidraw",
-    "?? diagramas/keptai-flujo-completo.png",
-    "?? diagramas/keptai-roadmap-arquitectura.excalidraw",
-    "?? diagramas/keptai-roadmap-dependencias.excalidraw",
-    "?? diagramas/keptai-roadmap-equipo.excalidraw"
+    "M  cerebro/conocimientos/INDICE.md",
+    "M  cerebro/conocimientos/decisiones/actores-flujos-y-der-mvp.md",
+    "M  cerebro/conocimientos/decisiones/decisiones-del-proyecto.md",
+    "M  cerebro/conocimientos/decisiones/infraestructura-desarrollo-mvp.md",
+    "M  cerebro/conocimientos/decisiones/modelo-base-datos-mvp.md",
+    "M  cerebro/conocimientos/decisiones/reto-6-corpotex-conciliacion-y-rentabilidad.md",
+    "M  cerebro/conocimientos/decisiones/roadmap-german-frontend.md",
+    "M  cerebro/conocimientos/decisiones/roadmap-hackathon-equipo.md",
+    "A  cerebro/conocimientos/decisiones/trazabilidad-tablas-mvp.md",
+    "M  cerebro/conocimientos/desarrollo/miguel/estado.md",
+    "M  cerebro/conocimientos/desarrollo/miguel/plan-implementacion.md",
+    "A  cerebro/conocimientos/desarrollo/miguel/preparacion-supabase-rls.md",
+    "M  cerebro/conocimientos/desarrollo/miguel/prompt-claude.md",
+    "A  cerebro/conocimientos/desarrollo/miguel/revision-integracion-andres.md",
+    "M  cerebro/conocimientos/desarrollo/miguel/tareas.md",
+    "A  cerebro/diagramas/keptai-der-v5-01.png",
+    "A  cerebro/diagramas/keptai-der-v5-02.png",
+    "A  cerebro/diagramas/keptai-der-v5-03.png",
+    "A  cerebro/diagramas/keptai-der-v5.md",
+    "A  cerebro/diagramas/keptai-der-v6-01.png",
+    "A  cerebro/diagramas/keptai-der-v6-02.png",
+    "A  cerebro/diagramas/keptai-der-v6-03.png",
+    "A  cerebro/diagramas/keptai-der-v6.md",
+    "A  cerebro/diagramas/render-der-v5.py",
+    "A  cerebro/diagramas/render-der-v6.py"
   ],
   "note": "Hashes describen los archivos empaquetados. HEAD es procedencia anterior a publicar, no el commit de publicación ni prueba de frescura del remoto.",
   "interview_ids": [
@@ -77,58 +85,113 @@
   "files": [
     {
       "path": "conocimientos/INDICE.md",
-      "bytes": 3581,
-      "sha256": "a20c02171e0d7a8c46e06d58cacf38aeefbed2c01010b283af74bd1e31ca26c4"
+      "bytes": 6593,
+      "sha256": "7d575e0465a80bd7e11181cf77df1f02846737c35f4a891189468bd33b02ff08"
+    },
+    {
+      "path": "conocimientos/decisiones/actores-flujos-y-der-mvp.md",
+      "bytes": 21095,
+      "sha256": "3d98284297e0798a2844164ee6c6edb7e4288a5d59d9b987687071af3233e4e1"
     },
     {
       "path": "conocimientos/decisiones/decisiones-del-proyecto.md",
-      "bytes": 31846,
-      "sha256": "dfe708e38e667d21846337a8293c41e2be77a498fb63295fa99338cee1d0c6cc"
+      "bytes": 37230,
+      "sha256": "192c6d447b4d390bff0ffcc61d4127e35a0e492acbbefc70a23272da11191d4b"
     },
     {
       "path": "conocimientos/decisiones/infraestructura-desarrollo-mvp.md",
-      "bytes": 25832,
-      "sha256": "e500548400c3ea6a4b288f6f377a4fc1728bbb715af4229972b3f6296a2ca990"
+      "bytes": 27170,
+      "sha256": "1525f8eda1fe42f154dc860b18791564f05776820537befa865dd872831e042b"
     },
     {
       "path": "conocimientos/decisiones/modelo-base-datos-mvp.md",
-      "bytes": 5908,
-      "sha256": "266a1d9113e47f2bdc76cce8f4b534414966e51a28f2d1599b8ebb48aa0bdc84"
+      "bytes": 7060,
+      "sha256": "0da6fcb721606b68443c9f00160fe8117e347193a432e2281800cb9099cb244f"
     },
     {
       "path": "conocimientos/decisiones/prompt-claude-diagramas-roadmap.md",
-      "bytes": 7179,
-      "sha256": "3d2c53860692984de0ae92a75a2732ad6adcad4277203a8dbd41f156acd6b357"
+      "bytes": 7802,
+      "sha256": "fd6053835c6be5cdba7d082c962ef290355a5dd829be67cf5c4d868b86ef775f"
     },
     {
       "path": "conocimientos/decisiones/reto-6-corpotex-conciliacion-y-rentabilidad.md",
-      "bytes": 14116,
-      "sha256": "dfb9dd4d8448c6eb328e644f7773728603ed453a714c67702821adc70ea18da9"
+      "bytes": 14449,
+      "sha256": "11829301a65d9863b1e533e66ebafd30f0baa4c26db9c1fe1e95a2cb256748cd"
     },
     {
       "path": "conocimientos/decisiones/roadmap-german-frontend.md",
-      "bytes": 13456,
-      "sha256": "6599cb625259f39fde3007fa692d719c9d48f53faa60728738160545024ba84f"
+      "bytes": 14714,
+      "sha256": "11b626b121fff89fc03e3b8f809709cb63b8c21b43e63e13225315bc76505a69"
     },
     {
       "path": "conocimientos/decisiones/roadmap-hackathon-equipo.md",
-      "bytes": 34559,
-      "sha256": "e6aa21c79e4324cee785b72a5fae9c40cdabf0aa9cdbb297fdf587084ddd4b5a"
+      "bytes": 36355,
+      "sha256": "7a3eb8072b8d68625d11278155e0d5c1a50daa847af49e2f1bca5f6471b81add"
+    },
+    {
+      "path": "conocimientos/decisiones/trazabilidad-tablas-mvp.md",
+      "bytes": 19146,
+      "sha256": "40de383840e250a158efe8de21d25c0e3748435d509e3b9f682b245de823535a"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/estado.md",
+      "bytes": 29388,
+      "sha256": "d35611f2ac7512aa42e0e036b02ad2e1697f5b3ad2c1847340be22eb97758960"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/guia-trabajo.md",
+      "bytes": 5054,
+      "sha256": "a330836d823078e998a7a20b601a36a357e26d6166ae48e8ced668f46a897be9"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/plan-implementacion.md",
+      "bytes": 7626,
+      "sha256": "e621c5579752cdf02d33c445a28c14e916119c0b38cd9774dd352f60c4caa9d2"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/preparacion-supabase-rls.md",
+      "bytes": 7010,
+      "sha256": "6890ef566034c4d920ec624251077469bbbd2205ec6eb299f996f85ae75a5cfb"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/prompt-claude.md",
+      "bytes": 3036,
+      "sha256": "8bb5f1bd1a1340fc6cacdbbc6848901e7acfb28413440c812b2ee976cf2520a1"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/revision-integracion-andres.md",
+      "bytes": 14274,
+      "sha256": "ff5c76254bd8aec7cc07b0437b5142b43e6b94abe842b72531d586cc7cad7253"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/tarea-general.md",
+      "bytes": 7756,
+      "sha256": "540ed4ce7ed85ea0899e4f4a1fde6e64832bc18eec1cbee8b35236fc61364a39"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/tareas.md",
+      "bytes": 10578,
+      "sha256": "0f6a60e1b149f1131869e887f39273ff6bddabf7f2f780eb8389752a85a9c6ad"
+    },
+    {
+      "path": "conocimientos/desarrollo/miguel/traspaso-opencode.md",
+      "bytes": 2182,
+      "sha256": "9580bfb1904a0187e4a476e07bd97b11a76d7b3902c81a9d0b6edc860da889f4"
     },
     {
       "path": "conocimientos/empresa/descripcion.md",
-      "bytes": 9206,
-      "sha256": "1f07c61d225ca74e004bdce260aa65c5c150cde8c2634b7a37d2f04d8c472240"
+      "bytes": 9070,
+      "sha256": "50f043e6869a6bca288eb47b7daf9a92a4ff0e57d7e761c9cedc788193a7db81"
     },
     {
       "path": "conocimientos/empresa/idea-negocio-replanteada.md",
-      "bytes": 7250,
-      "sha256": "e4ab5427d34fa2c58815adfb294bf8f9db95554f314b680d5dd5ac16a909c03c"
+      "bytes": 7545,
+      "sha256": "88fd1d56f4681de5abe9abda62d098f8135fafd3d79bc22429a0f6d95dfd952a"
     },
     {
       "path": "conocimientos/empresa/objetivos.md",
-      "bytes": 13235,
-      "sha256": "d6ab8cba43e68b447e69147f8ee2c900cb77f6e3e69547cc0dba2a7698ee1c08"
+      "bytes": 13061,
+      "sha256": "5923d4763a9071859ef7ea6209303105cf30209bc59b954e25268970954d3b9f"
     },
     {
       "path": "conocimientos/fuentes/contexto-equipo-hackathon-2026.md",
@@ -142,33 +205,83 @@
     },
     {
       "path": "conocimientos/procesos/atencion-cliente.md",
-      "bytes": 15088,
-      "sha256": "27762791fb1e49779f3ab796647b34953de49875bd879d327bd08dc6121af7bf"
+      "bytes": 14833,
+      "sha256": "808d9fac29fbb2efa59b1fb4d672e252061bb87d6fa796d987cb7da167971837"
     },
     {
       "path": "conocimientos/procesos/flujo-cliente-empresa.md",
-      "bytes": 5600,
-      "sha256": "006358f5e0b42b35bd2829966d56a195604d707948d2efdb81b01819aab5895c"
+      "bytes": 5752,
+      "sha256": "1d0a315f11468477b2ee24d6b651e9e34f7fb04dee09499a3db0bfe400d69566"
     },
     {
       "path": "conocimientos/procesos/rediseno-procesos-credito-y-cobranza.md",
-      "bytes": 13299,
-      "sha256": "ca11d75d0f65d0f9171810107a62246b6396b92a4bdff50ac538e0f365e5847d"
+      "bytes": 14089,
+      "sha256": "ca1625428f6c7f3de901244647b1129d380225f18063e62dec2fbc81a20551db"
     },
     {
       "path": "conocimientos/procesos/ventas.md",
-      "bytes": 19215,
-      "sha256": "33d1d5ab5624175e92356e2a176bd6a0414defde6b08d9b33eec367773ec20a0"
+      "bytes": 18912,
+      "sha256": "8d96a9d9692ebf846ac5bcecaa6061245932bc415bc447baec904da8e09c433d"
     },
     {
       "path": "conocimientos/productos/catalogo.md",
-      "bytes": 7268,
-      "sha256": "6400aa306296186527959e7c6d9fa2285dd540739d8de475df1ffb73127cb216"
+      "bytes": 7140,
+      "sha256": "989c66965605a671cf7840332039143fab56c2a45b51fb879801c833fbdb2071"
     },
     {
       "path": "diagramas/README.md",
       "bytes": 1947,
       "sha256": "908e457465b8583de5f015e76a140d289b43dd7df0961f8969e79d165dfd166d"
+    },
+    {
+      "path": "diagramas/keptai-base-datos-spring-v1-3.excalidraw",
+      "bytes": 110684,
+      "sha256": "57a7bd790a243daa2bd80df820381590df64fbdbf548411448cbb66a0cc1551a"
+    },
+    {
+      "path": "diagramas/keptai-base-datos-spring-v1-3.png",
+      "bytes": 448812,
+      "sha256": "7376b5c79c5b08ca548bb140d83b95cc330c1b334eba0226ceea8c1bea010cee"
+    },
+    {
+      "path": "diagramas/keptai-der-v5-01.png",
+      "bytes": 108554,
+      "sha256": "7fea7974893cdd3e71ccdc39c7b94ea8ba3e7d539f7a127f6859de81fadd77a8"
+    },
+    {
+      "path": "diagramas/keptai-der-v5-02.png",
+      "bytes": 99021,
+      "sha256": "758fed4eb5f1d94615b7c876a8a5b1206b46ad34d8b1d3195773adc6e7a318d4"
+    },
+    {
+      "path": "diagramas/keptai-der-v5-03.png",
+      "bytes": 106652,
+      "sha256": "99c2439a7a3688cc87da930550266a7ddda9040cad12f250ba85f90d9f150a19"
+    },
+    {
+      "path": "diagramas/keptai-der-v5.md",
+      "bytes": 4976,
+      "sha256": "67d8a00988e1f9c0b5061533279fae0d505907bb632c7a4fa9150622d73c3752"
+    },
+    {
+      "path": "diagramas/keptai-der-v6-01.png",
+      "bytes": 108966,
+      "sha256": "6275885552073a46f09602bbf22f208192de81a099b8adaa4b2ef3b8e17ef127"
+    },
+    {
+      "path": "diagramas/keptai-der-v6-02.png",
+      "bytes": 99417,
+      "sha256": "6979b58dc8b363aa195b1e24ba8ea46e403e3e68afd243633932a32ba698401e"
+    },
+    {
+      "path": "diagramas/keptai-der-v6-03.png",
+      "bytes": 88561,
+      "sha256": "be4718fb719f352352d071bc4f543aeef993717861c16b9a1a58f708d1bc45b8"
+    },
+    {
+      "path": "diagramas/keptai-der-v6.md",
+      "bytes": 4751,
+      "sha256": "346552c11355f804e3b503cc7a88c2ff59d5b54646c6ff8a3ee10ca3dd7f3363"
     },
     {
       "path": "diagramas/keptai-flujo-completo.excalidraw",
@@ -191,6 +304,16 @@
       "sha256": "31d0b24e0f034bf89b7bea5288b467450a140dbf51061643f9ade69c36eca501"
     },
     {
+      "path": "diagramas/keptai-roadmap-arquitectura-spring-v1-3.excalidraw",
+      "bytes": 116929,
+      "sha256": "c7726b0626d6b2014a574c0bb2d07bb89cf411d237546763aa7791ef4a136555"
+    },
+    {
+      "path": "diagramas/keptai-roadmap-arquitectura-spring-v1-3.png",
+      "bytes": 517462,
+      "sha256": "42972b4ab0568502345f8354c0ef7ae5986a5486af991069997ac9e1be03943c"
+    },
+    {
       "path": "diagramas/keptai-roadmap-arquitectura.excalidraw",
       "bytes": 113088,
       "sha256": "f4d7e793b5206ed7cf34c1c25e517d7c16cecd14e1b5d182d106b0d7b91ea862"
@@ -199,6 +322,16 @@
       "path": "diagramas/keptai-roadmap-arquitectura.png",
       "bytes": 453871,
       "sha256": "ade8526366bf42eb054187b535614e99bb2f9ff4ba6a4849956e3bf647a6f6d0"
+    },
+    {
+      "path": "diagramas/keptai-roadmap-dependencias-spring-v1-3.excalidraw",
+      "bytes": 96529,
+      "sha256": "01f33a3788a1e0fcce4630202d9d524a84036cb3da5c18975d933e961f28dc8a"
+    },
+    {
+      "path": "diagramas/keptai-roadmap-dependencias-spring-v1-3.png",
+      "bytes": 376609,
+      "sha256": "510341e264a69168416ae4e6a1620a4fb3058646fd038daea1d4358e4b8c2f5f"
     },
     {
       "path": "diagramas/keptai-roadmap-dependencias.excalidraw",
@@ -211,6 +344,16 @@
       "sha256": "d7761e645ed8634d7e5dd67f8674be2cd43da70923f7e8944e93bdd2ff923c64"
     },
     {
+      "path": "diagramas/keptai-roadmap-equipo-spring-v1-3.excalidraw",
+      "bytes": 126820,
+      "sha256": "9b7934046d76b1e2c1ecb669aeca6aa1d26c1bcc2b5d2c5ef2e276d32ff676df"
+    },
+    {
+      "path": "diagramas/keptai-roadmap-equipo-spring-v1-3.png",
+      "bytes": 598631,
+      "sha256": "7e4c6fdf469ae502f39326634cbe2cb152cb984474992daa6109b7e70b67b62d"
+    },
+    {
       "path": "diagramas/keptai-roadmap-equipo.excalidraw",
       "bytes": 124773,
       "sha256": "652de5e6d98664376095edfa6429f3df804fcd6716d6630e7a2edc742e2eee59"
@@ -221,14 +364,176 @@
       "sha256": "4a042251b052a7ad937ca5650b1994350397e67e697610b83f31be307faaf0ab"
     },
     {
+      "path": "diagramas/keptai-roadmap-fuentes-spring-v1-3.md",
+      "bytes": 5110,
+      "sha256": "025171e945388260539cd605ba2b92515295890f03ec87c1f57d34307e21a175"
+    },
+    {
       "path": "diagramas/keptai-roadmap-fuentes.md",
       "bytes": 3819,
       "sha256": "2c54a9392f3f91c62123d04975cc5cda6ef0f34c2c81f34a28afdbd4319948b0"
     },
     {
       "path": "diagramas/prompt-claude-design.md",
-      "bytes": 12288,
-      "sha256": "e68eedfc43fa062393c58a8c6e35046d1df46227dad6e1802b487ade79d53e0e"
+      "bytes": 13189,
+      "sha256": "77a96b196e00abfb644fbb1c184011da4c90a5d108a26254585f0cab5ccbb037"
+    }
+  ],
+  "technical_note": "BD/ y Middleware/ se incluyen como datos sanados (rutas relativas a references/); su copia puede diferir de la fuente solo por el enmascarado de REDACTIONS. No acreditan ejecución en Supabase, n8n ni Evolution.",
+  "technical_files": [
+    {
+      "path": "BD/README.md",
+      "bytes": 4560,
+      "sha256": "512d2e4521409dfa5684c737560e7b8dbf9d50817060ad2e14e0cec51283290a",
+      "source_sha256": "512d2e4521409dfa5684c737560e7b8dbf9d50817060ad2e14e0cec51283290a",
+      "sanitized": false
+    },
+    {
+      "path": "BD/definicion-base-datos.md",
+      "bytes": 21605,
+      "sha256": "7f462eac4f4b7b73b9ef403bad0eb214c083a4383b2d4820dd3ecd62cfa6d235",
+      "source_sha256": "7f462eac4f4b7b73b9ef403bad0eb214c083a4383b2d4820dd3ecd62cfa6d235",
+      "sanitized": false
+    },
+    {
+      "path": "BD/diccionario-datos.md",
+      "bytes": 15628,
+      "sha256": "59c2f1b907e5d33db3bb89ab104ab4af557e22532e881dfce4fa87aaf42afe4e",
+      "source_sha256": "59c2f1b907e5d33db3bb89ab104ab4af557e22532e881dfce4fa87aaf42afe4e",
+      "sanitized": false
+    },
+    {
+      "path": "BD/local/README.md",
+      "bytes": 7998,
+      "sha256": "382ee93a5bb29429244646777cfad381d80bb6e969ee6155dbed71fdfdcbe5cf",
+      "source_sha256": "382ee93a5bb29429244646777cfad381d80bb6e969ee6155dbed71fdfdcbe5cf",
+      "sanitized": false
+    },
+    {
+      "path": "BD/local/provisionar-runtime.sql",
+      "bytes": 768,
+      "sha256": "01f4c6b9586a9cbf6fbd1a7d540f9d7864287297d082e85b2f055fe680326e9e",
+      "source_sha256": "01f4c6b9586a9cbf6fbd1a7d540f9d7864287297d082e85b2f055fe680326e9e",
+      "sanitized": false
+    },
+    {
+      "path": "BD/migrations/V1__esquema_inicial.sql",
+      "bytes": 33056,
+      "sha256": "ec7aad386f53630c78f98be8e10bf8ef1935a7ff9af75ae1a28ff536ed7c59ac",
+      "source_sha256": "ec7aad386f53630c78f98be8e10bf8ef1935a7ff9af75ae1a28ff536ed7c59ac",
+      "sanitized": false
+    },
+    {
+      "path": "BD/migrations/V2__rls_organizacion.sql",
+      "bytes": 1918,
+      "sha256": "801f29063bafeb2b92762d5a9296e565213180783398d4e981bbef14617754b5",
+      "source_sha256": "801f29063bafeb2b92762d5a9296e565213180783398d4e981bbef14617754b5",
+      "sanitized": false
+    },
+    {
+      "path": "BD/migrations/V3__nota_cliente.sql",
+      "bytes": 1804,
+      "sha256": "ad27bc3c42b13c086bb4cb0883b684a7a547984b7f620c959ec5c5cd39c1c521",
+      "source_sha256": "ad27bc3c42b13c086bb4cb0883b684a7a547984b7f620c959ec5c5cd39c1c521",
+      "sanitized": false
+    },
+    {
+      "path": "BD/migrations/V4__vouchers_contexto_y_rls.sql",
+      "bytes": 10427,
+      "sha256": "5c295a8f5e29f68ae94dbb2068277c2ec0e561054d33595dfe8f91d3c0a66439",
+      "source_sha256": "5c295a8f5e29f68ae94dbb2068277c2ec0e561054d33595dfe8f91d3c0a66439",
+      "sanitized": false
+    },
+    {
+      "path": "BD/migrations/V5__integridad_financiera_indices.sql",
+      "bytes": 10384,
+      "sha256": "eabda332b04acc23ad8812d4d4fe54e66164121a47e671b27d6a98935622bfa6",
+      "source_sha256": "eabda332b04acc23ad8812d4d4fe54e66164121a47e671b27d6a98935622bfa6",
+      "sanitized": false
+    },
+    {
+      "path": "BD/migrations/V6__mvp_25_tablas.sql",
+      "bytes": 629,
+      "sha256": "f92c8ae3928b7d6fefcce9e382ea31328ba448c4c726d582a3c169ea0a1ea651",
+      "source_sha256": "f92c8ae3928b7d6fefcce9e382ea31328ba448c4c726d582a3c169ea0a1ea651",
+      "sanitized": false
+    },
+    {
+      "path": "BD/revision-sql-rls.md",
+      "bytes": 6856,
+      "sha256": "6139996a497494eaf0b29c6d755acee07df9ccee227fccdf5c7c1b68bf91d3ea",
+      "source_sha256": "6139996a497494eaf0b29c6d755acee07df9ccee227fccdf5c7c1b68bf91d3ea",
+      "sanitized": false
+    },
+    {
+      "path": "BD/supabase/vouchers_storage.sql",
+      "bytes": 3334,
+      "sha256": "4405300d3169b0fb3888f65e036775c0a5e9eb1a7d33c62b7298f18e97287746",
+      "source_sha256": "4405300d3169b0fb3888f65e036775c0a5e9eb1a7d33c62b7298f18e97287746",
+      "sanitized": false
+    },
+    {
+      "path": "BD/validaciones-pre-supabase.md",
+      "bytes": 11435,
+      "sha256": "e083c7d8091a35147fbc736d76c26964831dbfaa011802524ae0525e253a9f21",
+      "source_sha256": "e083c7d8091a35147fbc736d76c26964831dbfaa011802524ae0525e253a9f21",
+      "sanitized": false
+    },
+    {
+      "path": "Backend/docs/alineacion-bd-n8n.md",
+      "bytes": 4815,
+      "sha256": "85acab094bf0490059df401be00972ce0af5403fee3630341330e838c0f0f3f2",
+      "source_sha256": "85acab094bf0490059df401be00972ce0af5403fee3630341330e838c0f0f3f2",
+      "sanitized": false
+    },
+    {
+      "path": "Backend/docs/contrato-api.md",
+      "bytes": 8586,
+      "sha256": "c2d45bad9a30c5c3786068faf1b128d01e0d4935a0be53b862cb0bf02e093241",
+      "source_sha256": "c2d45bad9a30c5c3786068faf1b128d01e0d4935a0be53b862cb0bf02e093241",
+      "sanitized": false
+    },
+    {
+      "path": "Backend/docs/openapi.yaml",
+      "bytes": 209656,
+      "sha256": "e61f5d2fef4b145b202bb68b039536e6ba292330898eeb432a9d97ded5720464",
+      "source_sha256": "6dc17a7a527f35b57c48192afb4c1a2e199fa777b00b6d50c28afe9e11945dd9",
+      "sanitized": true
+    },
+    {
+      "path": "Middleware/n8n/README.md",
+      "bytes": 6790,
+      "sha256": "da90a7935caa03664964d2623463ab3d7da51490616eddecd5ab06a36b1f94b6",
+      "source_sha256": "b45cff3631ba71f87cca3ca77c97a21449c4a994246846e1e43eb5b443130851",
+      "sanitized": true
+    },
+    {
+      "path": "Middleware/n8n/WF0_router_evolution.json",
+      "bytes": 10804,
+      "sha256": "5dc9ee2e8459c825da68d75765d6cc10774ad039761717a05116f39c0d962118",
+      "source_sha256": "5dc9ee2e8459c825da68d75765d6cc10774ad039761717a05116f39c0d962118",
+      "sanitized": false
+    },
+    {
+      "path": "Middleware/n8n/WF1_cierre_venta.json",
+      "bytes": 24038,
+      "sha256": "eb489ea8cf6e8c028a1d4554a6975afe29aae4aab2c693393304bc8c39d897b2",
+      "source_sha256": "eb489ea8cf6e8c028a1d4554a6975afe29aae4aab2c693393304bc8c39d897b2",
+      "sanitized": false
+    },
+    {
+      "path": "Middleware/n8n/WF2_voucher_pago.json",
+      "bytes": 10686,
+      "sha256": "c004516440f8ff8fa7780888b4af24c237411aebb2ea39d9a5ce4f8f0588ad5a",
+      "source_sha256": "c004516440f8ff8fa7780888b4af24c237411aebb2ea39d9a5ce4f8f0588ad5a",
+      "sanitized": false
+    },
+    {
+      "path": "Middleware/n8n/WF3_enviar_mensaje.json",
+      "bytes": 14468,
+      "sha256": "594fc207a7ae9eb751f389ee9ef395230747717b1adcb16914a16757a6f712e1",
+      "source_sha256": "594fc207a7ae9eb751f389ee9ef395230747717b1adcb16914a16757a6f712e1",
+      "sanitized": false
     }
   ]
 }

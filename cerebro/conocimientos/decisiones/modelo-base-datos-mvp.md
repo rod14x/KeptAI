@@ -1,10 +1,16 @@
 # Modelo de base de datos del MVP — responsable Andrés
 
+> **Definicion tecnica vigente:** [DB-DEF-001](../../../BD/definicion-base-datos.md). Este modelo inicial es antecedente: evidencia de texto, jobs, tokens y cargos internos no acreditan tablas existentes. Usar V5/diccionario/DER fisico; extensiones definidas aparte, sin implementacion.
+
 > ID: PROP-DB-001. Versión 1.0. Fecha: 10 de octubre de 2026. Dirección USR-EQUIPO-003/D-004; modelo propuesto, aún no implementado. Andrés define la base; Miguel revisa contratos/API, Isabella valida significado y Germán consume DTOs.
 
 > Actualización (10/10/2026): las entidades de este documento se fusionaron con el DER de Isabel en [actores, flujos y DER](actores-flujos-y-der-mvp.md), PROP-FLUJO-DER-001, con tabla de equivalencias. Invariantes, transacción de pago, semilla y aceptación de este documento siguen vigentes.
 
+> Actualización (10/10/2026): Andrés versionó el esquema en `BD/` (README DB-DER-001, diccionario y migraciones V1-V3, en español y con `obligacion_cobro` en lugar de `receivable`). Sigue siendo propuesta pendiente de revisión de Miguel e Isabel y no está desplegada en Supabase; las diferencias con el contrato MIG-02 están en [revisión MIG-REV-001](../desarrollo/miguel/revision-integracion-andres.md).
+
 ## Entregable temprano B0/B1
+
+Consultar [necesidad por tabla DB-MAP-001](trazabilidad-tablas-mvp.md): las entidades siguientes son antecedentes y no un conteo obligatorio.
 
 Andrés entrega diagrama entidad-relación, diccionario con PK/FK/nulabilidad/moneda, migración Flyway inicial, restricciones/índices y semilla ficticia reiniciable. Miguel revisa antes de cerrar DTOs. No leer datos del ERP/CRM ni diseñar una migración desde sistemas sin acceso. Fuente operativa del MVP: base propia, entrada manual/CSV y evidencia revisada; no implica sustituir el registro oficial empresarial.
 
@@ -26,7 +32,7 @@ Todas las tablas de negocio llevan `organization_id`; claves únicas/FK compuest
 
 - Importes PEN `numeric(18,2)`/Java `BigDecimal`; moneda explícita; fechas de negocio locales e instantes `timestamptz`. Límites y redondeo documentados. Contrato frontend propuesto: importes en centavos enteros, con límites dentro del rango seguro de JavaScript; convertir explícitamente desde/hacia BigDecimal, sin confundir soles con centavos.
 - DTO no acepta saldo/margen como verdad desde navegador. Calcular saldo de obligación a partir de aplicaciones válidas, no de OCR o promesa.
-- Servicio Spring `@Transactional`: verificar usuario/membresía/rol, bloquear obligación/pago, comprobar verificación/moneda/saldo y registrar aplicación + auditoría + cambio de alerta juntos. Una falla revierte todo.
+- Servicio Spring `@Transactional`: verificar usuario/membresía/rol, bloquear pago y después obligación, comprobar verificación/moneda/saldo y registrar aplicación + auditoría + cambio de alerta juntos. Una falla revierte todo.
 - Clave de idempotencia única por organización/operación; misma clave y contenido devuelve resultado previo, misma clave con contenido distinto se rechaza. Concurrencia no sobreaplica saldo; hash/referencia son señales de duplicación a revisar.
 - Estado duplicado/huérfano/diferencia no altera deuda. Si se admite sobrepago o corrección, requiere regla explícita; no inventarla. No borrar aplicaciones/auditoría para corregir historial.
 - Rol runtime no dueño/BYPASSRLS, esquema privado no expuesto a Data API, RLS con contexto autorizado por transacción; FK y filtros por organización. JWT Spring no establece contexto JDBC automáticamente. Storage tiene políticas independientes.

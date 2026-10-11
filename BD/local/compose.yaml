@@ -1,0 +1,37 @@
+name: keptai-local
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${KEPTAI_DB_NAME}
+      POSTGRES_USER: ${KEPTAI_MIGRATOR_USER}
+      POSTGRES_PASSWORD: ${KEPTAI_MIGRATOR_PASSWORD}
+      KEPTAI_RUNTIME_PASSWORD: ${KEPTAI_RUNTIME_PASSWORD}
+      KEPTAI_RUNTIME_USER: ${KEPTAI_RUNTIME_USER}
+    ports:
+      - "127.0.0.1:${KEPTAI_DB_PORT}:5432"
+    volumes:
+      - keptai_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  flyway:
+    image: flyway/flyway:12.4.0
+    profiles: ["tools"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/${KEPTAI_DB_NAME}
+      FLYWAY_USER: ${KEPTAI_MIGRATOR_USER}
+      FLYWAY_PASSWORD: ${KEPTAI_MIGRATOR_PASSWORD}
+      FLYWAY_SCHEMAS: keptai
+      FLYWAY_DEFAULT_SCHEMA: keptai
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_CLEAN_DISABLED: "true"
+    volumes:
+      - ../migrations:/flyway/sql:ro
+volumes:
+  keptai_pg_data:

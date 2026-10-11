@@ -1,0 +1,12 @@
+spring:
+  # Solo dev/test: arrancar sin BD ni credenciales hasta que Andrés entregue el esquema.
+  # En prod NO se excluye nada: sin SPRING_DATASOURCE_URL la aplicación falla al iniciar.
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
+      - org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration
+      - org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration
+      - org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration
+logging:
+  level:
+    root: WARN

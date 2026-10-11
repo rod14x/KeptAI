@@ -152,6 +152,8 @@ El requisito de vista consolidada no elimina el aislamiento por entidad del dise
 
 ## Recorrido de demostración propuesto
 
+> Actualizacion por D-007: la captura del criterio C-03 puede procesar texto/audio transitoriamente. En el recorrido propuesto siguiente, conservar evidencia significa vouchers privados y datos de negocio; no chats, transcripciones ni audios. La ficha original se conserva como fuente. Ver [DB-MAP-001](trazabilidad-tablas-mvp.md).
+
 1. Recibir texto, audio e imagen de WhatsApp y conservar la evidencia.
 2. Extraer un borrador de pedido o pago y validarlo con una persona.
 3. Vincular el pedido a entidad, marca, línea y modalidad de producción.

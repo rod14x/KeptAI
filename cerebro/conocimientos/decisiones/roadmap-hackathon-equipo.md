@@ -9,6 +9,8 @@
 > Alcance de esta documentación: desarrollo, integración, QA y preparación técnica de la demostración. **No se asignan tareas de pitch, slides ni exposición.**
 
 ## 1. Resultado que debe existir al terminar
+Cierre obligatorio D-009: [DB-VAL-001](../../../BD/validaciones-pre-supabase.md). Andrés entrega integridad, transacciones, anulación y concurrencia del motor; Miguel entrega idempotencia HTTP, contexto de organización y validación de permisos; Germán e Isabella comprueban el recorrido y las cifras mostradas. Consolidación por marca/línea/centro y costos compartidos pertenecen a la aceptación del reto y siguen pendientes, junto con vencimiento desde despacho y caja sin doble conteo. No declarar listo para Supabase por una migración exitosa.
+
 
 Un prototipo funcional de la capa de caja de KeptAI, con tres pantallas y un mismo conjunto de datos, que permita:
 
@@ -85,7 +87,7 @@ No tenemos datos ERP/CRM. El MVP funciona sin esos sistemas: chat pegado/cargado
 - Germán conecta y estabiliza el frontend; Miguel conecta captura y servicios; Andrés controla persistencia y cálculo. Cada frontera tiene una única fórmula y un contrato compartido.
 - Cada persona prueba su módulo. Andrés coordina QA integrado; no queda como único responsable de encontrar errores ajenos.
 - Cada checkpoint dura como máximo 10 minutos: avance verificable, bloqueo y siguiente dependencia. Los cambios de alcance se resuelven en conjunto, sin convertir a Isabella en PM de tiempo completo.
-- Trabajar en ramas propias y dividir archivos. En un checkout compartido, evitar escritores simultáneos sobre el mismo archivo. El código se desarrolla en un repo de aplicación separado del cerebro; esta documentación no crea ese repo.
+- Trabajar en ramas propias y dividir archivos. En un checkout compartido, evitar escritores simultáneos sobre el mismo archivo. Por D-006, el trabajo de Miguel usa Backend/ de este checkout y cerebro/ conserva documentos; BD/ es diseño de Andrés, Frontend/ el trabajo frontend. No crear otro repo.
 
 **Fundamento de roles:** [contexto del equipo](../fuentes/contexto-equipo-hackathon-2026.md), USR-EQUIPO-002. Las tareas concretas son una propuesta de este roadmap.
 

@@ -1,5 +1,7 @@
 # Roadmap técnico de Germán y prompt Claude Design vigente
 
+> Alineacion vigente D-007/DB-MAP-001: [mapa de tablas](trazabilidad-tablas-mvp.md). Chat/audio son entrada transitoria; solo vouchers se persisten como evidencia. No construir lista de mensajes guardados. Token publico/configuracion persistida/cargo interno siguen siendo diseno pendiente; costo por linea/centro no es motor V5 entregado. Contacto/notas no obligan pantallas adicionales.
+
 > Actualización D-005 (10/10/2026): WhatsApp entra al MVP mediante Evolution API y n8n, como prueba con un número y un contacto; n8n invoca la IA y entrega JSON a Spring, que sigue siendo el único backend con reglas. Plazo de crédito de 15 a 30 días y una sola obligación por orden; el vendedor aprueba el crédito y la mora solo genera un aviso, sin bloqueo. KeptAI no integra el banco: concilia. Detalle en [actores, flujos y DER](actores-flujos-y-der-mvp.md). Lo que este documento diga en contrario queda como antecedente.
 > ID: PROP-FRONT-001. Versión 1.0. Fecha: 10 de octubre de 2026. Fuente: USR-DESIGN-001 y aclaración USR-EQUIPO-003. Plan de desarrollo; no acredita interfaz implementada.
 

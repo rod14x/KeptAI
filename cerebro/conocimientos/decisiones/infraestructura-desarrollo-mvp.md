@@ -15,7 +15,7 @@ Stack: React/TypeScript/Vite en Cloudflare Workers Static Assets; Spring Boot/Ja
 
 **Andrés es responsable del diseño de base de datos**, además del motor financiero. Miguel revisa el esquema y construye API/captura; no se incorpora un quinto integrante sin nombre. [Modelo de base propuesto](modelo-base-datos-mvp.md). Germán ejecuta el [roadmap frontend](roadmap-german-frontend.md) basado en el prompt recibido, coordinado con Isabella.
 
-La aplicación vive en un repo separado del cerebro. Un monolito modular Spring Boot basta al comienzo: captura, pedidos/pagos, cobranza y resultados/caja. Se conserva el núcleo de D-003 y no se avanza pitch. Esta documentación no crea repos ni acredita despliegue.
+Para el trabajo vigente de Miguel (D-006), usar Backend/ de este checkout; cerebro/ mantiene documentación y BD/ conserva diseño de Andrés. No crear otro repo. Un monolito modular Spring Boot basta al comienzo: captura, pedidos/pagos, cobranza y resultados/caja. Se conserva el núcleo de D-003 y no se avanza pitch. Esta documentación no acredita implementación ni despliegue.
 
 ## 2. Tecnologías por componente
 
@@ -192,7 +192,7 @@ Validar sesión/JWT, pertenencia, rol y permiso en cada operación. CORS restrin
 ### Orden concreto para comenzar
 
 1. **Andrés + Miguel:** comprobar acceso a Supabase, Render y al proveedor IA; decidir región del proyecto según disponibilidad y latencia probada. No asumir región o plan de la cuenta.
-2. **Germán:** inicializar React/TypeScript con Vite en el repo de aplicación acordado, fijar Node/lockfile y publicar una página mínima en Cloudflare.
+2. **Germán:** inicializar React/TypeScript con Vite en la carpeta de aplicación acordada del repo existente, fijar Node/lockfile y publicar una página mínima en Cloudflare.
 3. **Andrés:** ER/diccionario, migración Flyway inicial, membresías, RLS/grants y datos ficticios P-001/P-002; preparar operación de pago transaccional.
 4. **Miguel:** API Spring Boot: salud, consulta autenticada y extracción de una muestra; publicar en Render; configurar secretos, timeout y corrección humana.
 5. **Germán + Isabella:** iniciar sesión, cargar evidencia privada y consultar el mismo pedido mediante API.
