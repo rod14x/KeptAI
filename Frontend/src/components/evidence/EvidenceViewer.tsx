@@ -10,7 +10,7 @@ export function VoucherMock({ ev, compact = false }: { ev: Evidence; compact?: b
   return (
     <figure className={cx("relative mx-auto w-full overflow-hidden rounded-[20px] bg-card ring-1 ring-line", compact ? "max-w-[220px]" : "max-w-[300px]")}>
       <div className={cx("transition", !ev.legible && "blur-[3px] grayscale")}>
-        <div className="bg-[#2a2440] px-5 pb-6 pt-5 text-white">
+        <div className="bg-navy px-5 pb-6 pt-5 text-white">
           <p className="text-xs font-semibold text-white/70">{f.channel ?? "Billetera"}</p>
           <p className="mt-3 text-[13px] text-white/80">Pago exitoso</p>
           <p className={cx("tabular font-extrabold tracking-tight", compact ? "text-2xl" : "text-[34px]")}>

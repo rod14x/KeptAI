@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { motion } from "motion/react";
-import { Link, useParams } from "react-router";
-import { ArrowLeft, ChatCircleText, Check, CheckCircle, Factory, Hourglass, Info, LockOpen, Prohibit, Robot, Truck, UploadSimple, WarningCircle } from "../components/ui/icons";
+import { Link, useParams, useSearchParams } from "react-router";
+import { ArrowLeft, ArrowRight, CaretDown, ChatCircleText, Check, CheckCircle, Factory, Hourglass, Info, LockOpen, Prohibit, Robot, Truck, UploadSimple, WarningCircle } from "../components/ui/icons";
 import { capabilities, commands, getOrder, MESSAGE_LABEL, PLAZO_MAX, PLAZO_MIN, type OrderDetailDTO, type PaymentTerms } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useMe } from "../context/AuthContext";
@@ -62,7 +62,10 @@ function lifecycleIndex(d: OrderDetailDTO) {
 
 function Detail({ d }: { d: OrderDetailDTO }) {
   const o = d.order;
+  const [params, setParams] = useSearchParams();
+  const tab = params.get("tab") === "pagos" ? "pagos" : params.get("tab") === "mensajes" ? "mensajes" : "pedido";
   const idx = lifecycleIndex(d);
+  const pending = o.estado === "pendiente_aprobacion";
   return (
     <Stagger className="mx-auto flex max-w-[1320px] flex-col gap-6">
       <MotionLink to="/pedidos" variants={itemVariants} {...press} className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-full pr-3 text-sm font-semibold text-muted transition-colors hover:text-ink">
@@ -133,22 +136,49 @@ function Detail({ d }: { d: OrderDetailDTO }) {
             })}
           </ol>
         )}
+        <NextStep d={d} />
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+      <Segmented kind="tab" label="Detalle del pedido" value={tab} onChange={(value) => setParams(value === "pedido" ? {} : { tab: value })} options={[{ value: "pedido", label: "Pedido y condiciones" }, { value: "pagos", label: "Pagos y fechas" }, { value: "mensajes", label: "Seguimiento" }]} />
+      {tab === "pedido" && <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-6">
           <HojaCard d={d} />
+          {pending && <ConditionCard d={d} />}
           <ItemsCard d={d} />
-          <MessagesCard d={d} />
         </div>
         <div className="flex min-w-0 flex-col gap-6">
-          <ConditionCard d={d} />
+          {!pending && <ConditionCard d={d} />}
           <DatesCard d={d} />
-          <PaymentsCard d={d} />
-          <MarginCard d={d} />
         </div>
-      </div>
+      </div>}
+      {tab === "pagos" && <div className="grid items-start gap-6 xl:grid-cols-2"><div className="flex min-w-0 flex-col gap-6"><PaymentsCard d={d} /><MarginCard d={d} /></div><DatesCard d={d} /></div>}
+      {tab === "mensajes" && <MessagesCard d={d} />}
     </Stagger>
+  );
+}
+
+/** Quién mueve la orden ahora: así nadie tiene que acordarse del flujo. */
+function NextStep({ d }: { d: OrderDetailDTO }) {
+  const o = d.order;
+  if (o.estado === "rechazada") return null;
+  const step =
+    o.estado === "pendiente_aprobacion"
+      ? `${d.seller ? `${d.seller} (vendedor)` : "El vendedor"} confirma la orden y decide el crédito.`
+      : o.estado === "retenida"
+        ? `Administración confirma que llegó el anticipo de ${formatMoney(d.card.anticipoPendienteCents)}.`
+        : o.estado === "en_produccion"
+          ? "El Jefe de taller registra el despacho. Desde ahí corre el plazo de pago."
+          : d.card.balanceCents > 0
+            ? `El cliente paga ${formatMoney(d.card.balanceCents)}${d.card.dueDate ? ` antes del ${formatDate(d.card.dueDate)}` : ""}; Administración revisa el comprobante.`
+            : null;
+  return (
+    <p className={cx("flex items-start gap-2 rounded-xl px-3.5 py-2.5 text-[13px]", step ? "bg-violet-wash text-violet-ink" : "bg-ok-tint text-ok")}>
+      {step ? <ArrowRight size={16} weight="bold" className="mt-0.5 shrink-0" /> : <CheckCircle size={16} weight="bold" className="mt-0.5 shrink-0" />}
+      <span>
+        <span className="font-bold">{step ? "Siguiente paso: " : "Listo: "}</span>
+        {step ?? "orden cobrada por completo. No queda nada por hacer."}
+      </span>
+    </p>
   );
 }
 
@@ -168,7 +198,7 @@ function HojaCard({ d }: { d: OrderDetailDTO }) {
           <p className="flex items-center gap-1.5 text-xs font-semibold text-muted">
             {h.origen === "whatsapp" ? (
               <>
-                <Robot size={14} weight="bold" /> Extraída por la IA desde WhatsApp (n8n WF1, /cerrar)
+                <Robot size={14} weight="bold" /> Datos extraídos de WhatsApp
               </>
             ) : (
               <>
@@ -239,6 +269,12 @@ function ItemsCard({ d }: { d: OrderDetailDTO }) {
 
 const PLAZOS = [15, 20, 25, 30];
 
+function termsLabel(tipo: PaymentTerms["tipo"], plazo: string, pct: string) {
+  if (tipo === "contado") return "Contado";
+  if (tipo === "anticipo") return `Anticipo ${pct}% y saldo a ${plazo} días`;
+  return `Crédito a ${plazo} días desde el despacho`;
+}
+
 function ConditionCard({ d }: { d: OrderDetailDTO }) {
   const me = useMe();
   const toast = useToast();
@@ -251,6 +287,7 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
   const [moraOpen, setMoraOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [reason, setReason] = useState("");
+  const [customize, setCustomize] = useState(false);
 
   const terms = (): PaymentTerms => ({ tipo, plazoDias: Number(plazo), anticipoPct: tipo === "anticipo" ? Number(pct) : null });
   const confirm = async (moraAcknowledged: boolean) => {
@@ -320,7 +357,7 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
   return (
     <Card className="p-5 sm:p-6">
       <h2 className="text-section font-bold">Condición de pago y crédito</h2>
-      <p className="mt-1 text-[13px] text-muted">El vendedor revisa la hoja, elige la condición y confirma. Equivale a escribir /ok {o.ref} en WhatsApp.</p>
+      <p className="mt-1 text-[13px] text-muted">Revisa la hoja y confirma. Equivale a escribir /ok {o.ref} en WhatsApp.</p>
 
       {d.credit.aviso && (
         <p className="mt-4 flex items-start gap-2 rounded-xl bg-warn-tint px-3.5 py-2.5 text-[13px] font-medium text-warn">
@@ -343,61 +380,75 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
         </p>
       ) : (
         <div className="mt-5 flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <span className="text-[13px] font-semibold">Condición</span>
-            <Segmented
-              label="Condición de pago"
-              value={tipo}
-              onChange={setTipo}
-              className="flex w-full [&>button]:flex-1"
-              options={[
-                { value: "credito", label: "Crédito" },
-                { value: "anticipo", label: "Anticipo" },
-                { value: "contado", label: "Contado" },
-              ]}
-            />
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-block)] bg-panel px-4 py-3 ring-1 ring-line/70">
+            <span className="text-sm">
+              <span className="font-bold">{termsLabel(tipo, plazo, pct)}</span>
+              <span className="block text-xs text-muted">
+                {tipo === "credito" ? "Con crédito, la orden pasa directo a producción." : tipo === "anticipo" ? "Queda retenida hasta que llegue el anticipo." : "Queda retenida hasta que llegue el pago completo."}
+              </span>
+            </span>
+            <button
+              onClick={() => setCustomize((c) => !c)}
+              aria-expanded={customize}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink"
+            >
+              <CaretDown size={14} weight="bold" className={cx("transition-transform", customize && "rotate-180")} />
+              Cambiar condición
+            </button>
           </div>
-          {tipo !== "contado" && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="plazo" className="text-[13px] font-semibold">
-                  Plazo desde el despacho
-                </label>
-                <select id="plazo" value={plazo} onChange={(e) => setPlazo(e.target.value)} className={inputClass}>
-                  {PLAZOS.map((p) => (
-                    <option key={p} value={p}>
-                      {p} días
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {tipo === "anticipo" && (
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="pct" className="text-[13px] font-semibold">
-                    Anticipo (%)
-                  </label>
-                  <input id="pct" inputMode="numeric" value={pct} onChange={(e) => setPct(e.target.value)} className={cx(inputClass, "tabular")} />
+
+          {customize && (
+            <motion.div variants={itemVariants} initial="hidden" animate="show" className="flex flex-col gap-4">
+              <Segmented
+                label="Condición de pago"
+                value={tipo}
+                onChange={setTipo}
+                className="flex w-full [&>button]:flex-1"
+                options={[
+                  { value: "credito", label: "Crédito" },
+                  { value: "anticipo", label: "Anticipo" },
+                  { value: "contado", label: "Contado" },
+                ]}
+              />
+              {tipo !== "contado" && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="plazo" className="text-[13px] font-semibold">
+                      Plazo desde el despacho
+                    </label>
+                    <select id="plazo" value={plazo} onChange={(e) => setPlazo(e.target.value)} className={inputClass}>
+                      {PLAZOS.map((p) => (
+                        <option key={p} value={p}>
+                          {p} días
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {tipo === "anticipo" && (
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="pct" className="text-[13px] font-semibold">
+                        Anticipo (%)
+                      </label>
+                      <input id="pct" inputMode="numeric" value={pct} onChange={(e) => setPct(e.target.value)} className={cx(inputClass, "tabular")} />
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="nota" className="text-[13px] font-semibold">
+                  Nota (opcional)
+                </label>
+                <input id="nota" value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ej. cliente frecuente, tallas llegan el lunes" className={inputClass} />
+              </div>
+            </motion.div>
           )}
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="nota" className="text-[13px] font-semibold">
-              Nota (opcional)
-            </label>
-            <input id="nota" value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ej. cliente frecuente, tallas llegan el lunes" className={inputClass} />
-          </div>
-          <p className="text-xs text-muted">
-            {tipo === "credito" ? "Con crédito aprobado la orden pasa directo a producción." : tipo === "anticipo" ? "La orden queda retenida hasta verificar el anticipo en banco." : "La orden queda retenida hasta verificar el pago completo."}
-          </p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button size="lg" className="flex-1" icon={<Check size={18} weight="bold" />} onClick={() => confirm(false)}>
-              Confirmar orden
-            </Button>
-            <Button size="lg" variant="danger" icon={<Prohibit size={18} weight="bold" />} onClick={() => setRejectOpen(true)}>
-              Rechazar
-            </Button>
-          </div>
+
+          <Button size="lg" className="w-full" icon={<Check size={18} weight="bold" />} onClick={() => confirm(false)}>
+            Confirmar orden
+          </Button>
+          <button onClick={() => setRejectOpen(true)} className="min-h-10 self-center rounded-full px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-bad-tint hover:text-bad">
+            Rechazar pedido
+          </button>
         </div>
       )}
 

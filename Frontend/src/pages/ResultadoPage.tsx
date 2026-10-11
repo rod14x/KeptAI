@@ -110,12 +110,12 @@ function BrandSummary({ d }: { d: ResultsDTO }) {
           );
         })}
       </ul>
-      <h3 className="mt-6 text-sm font-bold">Por línea</h3>
+      <details className="quiet-disclosure mt-5"><summary>Ver margen por línea</summary>
       <motion.ul variants={listVariants} className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {d.byLine.map((l) => {
           const pct = l.saleCents && l.marginCents != null ? Math.round((l.marginCents / l.saleCents) * 1000) / 10 : null;
           return (
-            <motion.li key={l.line} variants={itemVariants} className="rounded-[var(--radius-block)] bg-panel p-3.5 ring-1 ring-line/70">
+            <motion.li key={l.line} variants={itemVariants} className="border-t border-line p-3.5">
               <p className="truncate text-[13px] font-semibold">{l.line}</p>
               <p className={cx("tabular mt-1 text-lg font-extrabold", (l.marginCents ?? 0) < 0 ? "text-bad" : "text-ink")}>{formatMoney(l.marginCents)}</p>
               <p className="tabular text-xs text-muted">
@@ -126,6 +126,7 @@ function BrandSummary({ d }: { d: ResultsDTO }) {
           );
         })}
       </motion.ul>
+      </details>
     </Card>
   );
 }
@@ -329,7 +330,7 @@ function Workshop({ d, scope }: { d: ResultsDTO; scope: Scope }) {
 
 function FlowBox({ icon, title, value, note, struck }: { icon: React.ReactNode; title: string; value: number | null; note: string; struck?: boolean }) {
   return (
-    <div className={cx("rounded-[var(--radius-block)] bg-panel p-4", struck ? "border border-dashed border-[#d3d0c9]" : "ring-1 ring-line")}>
+    <div className={cx("p-4", struck ? "border border-dashed border-line" : "border-t border-line")}>
       <p className="flex items-center gap-2 text-[13px] font-semibold text-muted">
         {icon}
         {title}
@@ -350,7 +351,7 @@ function FlowArrow() {
 
 function ResultCell({ label, value, hint, strong }: { label: string; value: number | null; hint: string; strong?: boolean }) {
   return (
-    <div className={cx("rounded-[var(--radius-block)] p-4", strong ? "bg-ink text-white" : "bg-card ring-1 ring-line")}>
+    <div className={cx("rounded-[var(--radius-block)] p-4", strong ? "bg-navy text-white" : "bg-panel")}>
       <dt className={cx("text-[13px] font-semibold", strong ? "text-white/70" : "text-muted")}>{label}</dt>
       <dd className={cx("mt-1 text-xl font-extrabold", (value ?? 0) < 0 && (strong ? "text-[#ffb4ab]" : "text-bad"))}>
         <Money cents={value} />

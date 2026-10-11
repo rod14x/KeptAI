@@ -1,22 +1,18 @@
-import { lazy, Suspense, useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "motion/react";
-import { Item, Stagger, itemVariants, listVariants } from "../components/motion/primitives";
-import { DialogShell } from "../components/ui/Dialog";
 
 const ERROR_IN = { opacity: 0, y: -4 };
 const ERROR_SHOW = { opacity: 1, y: 0 };
 import { Navigate, useLocation, useNavigate } from "react-router";
-import { Eye, EyeSlash, X } from "../components/ui/icons";
+import { Eye, EyeSlash } from "../components/ui/icons";
 import { Logo } from "../components/layout/Logo";
 import { Button } from "../components/ui/Button";
 import { DemoBadge } from "../components/ui/States";
-import { Skeleton } from "../components/ui/States";
 import { prefetch } from "../lib/prefetch";
 import { useAuth } from "../context/AuthContext";
 import { cx } from "../lib/format";
 import { IS_MOCK } from "../config";
-
-const LoginPreviewChart = lazy(() => import("../components/charts/LoginPreviewChart"));
+import { ThemeToggle } from "../components/layout/ThemeToggle";
 
 // MOCK: cuentas de la semilla de demostración. En modo api se entra con Supabase Auth.
 const DEMO_ACCOUNTS = [
@@ -31,73 +27,37 @@ export function LoginPage() {
   const { person } = useAuth();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? "/";
-  const [open, setOpen] = useState(Boolean((location.state as { from?: string } | null)?.from));
 
-  // Mientras la persona escribe, se descarga el dashboard: entrar es inmediato.
-  useEffect(() => prefetch(["dashboard"]), []);
+  // Mientras la persona escribe, se descarga la pantalla de inicio: entrar es inmediato.
+  useEffect(() => prefetch(["pendientes"]), []);
 
   if (person) return <Navigate to={from} replace />;
 
   return (
-    <div className="relative isolate min-h-[100dvh] overflow-hidden bg-[#f6f4fb]">
-      {/* Atmósfera de marca: los mismos volúmenes violeta y verde del asistente y de los cobros. */}
-      <div aria-hidden="true" className="pointer-events-none absolute -right-40 -top-40 -z-10 size-[620px] rounded-full bg-[radial-gradient(circle,#e4dcfa_0%,rgba(228,220,250,0)_70%)]" />
-      <div aria-hidden="true" className="pointer-events-none absolute -bottom-56 -left-40 -z-10 size-[560px] rounded-full bg-[radial-gradient(circle,#dcf1e5_0%,rgba(220,241,229,0)_70%)]" />
-      <div aria-hidden="true" className="pointer-events-none absolute right-[18%] top-[58%] -z-10 size-28 rounded-full bg-white/70" />
-
-      <div className="mx-auto flex max-w-[1280px] flex-col px-4 pt-4 sm:px-6 lg:px-8">
-        <nav className="flex h-[72px] items-center justify-between rounded-[22px] bg-white/80 px-4 shadow-[0_1px_2px_rgb(23_23_26/0.04)] ring-1 ring-white sm:px-6">
-          <Logo />
-          <Button size="sm" onClick={() => setOpen(true)}>
-            Acceder
-          </Button>
-        </nav>
-
-        <Stagger className="grid items-center gap-12 py-12 lg:min-h-[calc(100dvh-104px)] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:py-16">
-          {/* El mensaje entra en orden de lectura: titular, explicación y acción. */}
-          <motion.section variants={listVariants} className="max-w-xl">
-            <motion.h1 variants={itemVariants} className="text-hero font-extrabold">
-              Cobra con evidencia. <span className="text-violet">Proyecta tu caja.</span>
-            </motion.h1>
-            <motion.p variants={itemVariants} className="mt-6 max-w-[46ch] text-lg leading-relaxed text-muted">
-              Convierte los pagos que llegan por WhatsApp en saldos conciliados, margen por pedido y caja a cuatro semanas.
-            </motion.p>
-            <Item className="mt-8">
-              <Button size="lg" onClick={() => setOpen(true)} className="w-full sm:w-auto">
-                Acceder
-              </Button>
-            </Item>
-          </motion.section>
-
-          <motion.section variants={itemVariants} aria-label="Vista previa del panel" className="relative">
-            <div className="rounded-[28px] bg-white/70 p-2.5 shadow-[var(--shadow-lift)] ring-1 ring-white lg:rotate-[-1.2deg]">
-              <div className="rounded-[22px] bg-card p-5 ring-1 ring-line/70 sm:p-6">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold text-violet-ink">Corpotex + Unicrack</p>
-                    <p className="text-section font-bold">Caja a 4 semanas</p>
-                  </div>
-                  <DemoBadge />
-                </div>
-                <div className="mt-4">
-                  <Suspense fallback={<Skeleton className="h-[284px] rounded-2xl" />}>
-                    <LoginPreviewChart />
-                  </Suspense>
-                </div>
-              </div>
-            </div>
-          </motion.section>
-        </Stagger>
-      </div>
-
-      <DialogShell open={open} onClose={() => setOpen(false)} labelledBy="login-title" overlayClassName="bg-[#2a2440]/45" panelClassName="max-w-[460px] rounded-[28px] p-6 sm:p-9">
-        <LoginForm from={from} onClose={() => setOpen(false)} />
-      </DialogShell>
+    <div className="login-layout">
+      <aside className="login-story">
+        <Logo />
+        <div className="my-8 max-w-lg md:my-12">
+          <h1 className="text-hero font-semibold">Cada cobro,<br />en su lugar.</h1>
+          <p className="mt-5 max-w-[36ch] text-base leading-relaxed text-muted">Del comprobante recibido a una visión clara de tu caja.</p>
+          <ol className="login-workflow">
+            <li><span>01</span><div><p className="font-semibold">Revisa la evidencia</p><p className="mt-1 text-sm text-muted">Pedidos y comprobantes en una sola bandeja.</p></div></li>
+            <li><span>02</span><div><p className="font-semibold">Confirma el pago</p><p className="mt-1 text-sm text-muted">Verifica el ingreso antes de descontar la deuda.</p></div></li>
+            <li><span>03</span><div><p className="font-semibold">Anticipa tu caja</p><p className="mt-1 text-sm text-muted">Consulta vencimientos y las próximas cuatro semanas.</p></div></li>
+          </ol>
+        </div>
+        <p className="login-story-footer text-xs text-muted">KeptAI · Gestión de cobros y caja</p>
+      </aside>
+      <main className="login-form-panel">
+        <div className="mb-8 flex items-center justify-between gap-3"><DemoBadge /><ThemeToggle /></div>
+        <section aria-labelledby="login-title"><LoginForm from={from} /></section>
+        <p className="mt-10 text-center text-xs text-muted">Tu espacio de trabajo, según tu rol.</p>
+      </main>
     </div>
   );
 }
 
-function LoginForm({ from, onClose }: { from: string; onClose: () => void }) {
+function LoginForm({ from }: { from: string }) {
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState(IS_MOCK ? "carmen.ramos@keptai.pe" : "");
@@ -126,14 +86,10 @@ function LoginForm({ from, onClose }: { from: string; onClose: () => void }) {
 
   return (
     <>
-        <button onClick={onClose} aria-label="Cerrar" className="absolute right-4 top-4 flex size-11 items-center justify-center rounded-full text-muted hover:bg-line-soft hover:text-ink">
-          <X size={20} />
-        </button>
-        <span className="flex size-11 items-center justify-center rounded-[13px] bg-ink text-lg font-extrabold text-white">K</span>
-        <h2 id="login-title" className="mt-5 text-title font-extrabold">
+        <h2 id="login-title" className="text-title font-bold">
           Iniciar sesión
         </h2>
-        <p className="mt-1 text-[15px] text-muted">Accede al panel de cobros y caja.</p>
+        <p className="mt-3 text-sm text-muted">Ingresa con tu cuenta para continuar.</p>
 
         <form onSubmit={submit} noValidate className="mt-7 flex flex-col gap-5">
           <div className="flex flex-col gap-2">
@@ -165,7 +121,7 @@ function LoginForm({ from, onClose }: { from: string; onClose: () => void }) {
               <label htmlFor="password" className="text-sm font-semibold">
                 Contraseña
               </label>
-              <button type="button" onClick={() => setHelp((h) => !h)} aria-expanded={help} className="text-[13px] font-semibold text-violet-ink hover:underline">
+              <button type="button" onClick={() => setHelp((h) => !h)} aria-expanded={help} className="min-h-11 text-xs font-semibold text-violet-ink hover:underline">
                 ¿Olvidaste tu contraseña?
               </button>
             </div>
@@ -205,28 +161,13 @@ function LoginForm({ from, onClose }: { from: string; onClose: () => void }) {
           </div>
 
           {IS_MOCK && (
-          <fieldset>
-            <legend className="text-[13px] font-semibold text-muted">Cuentas de demostración</legend>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {DEMO_ACCOUNTS.map((a) => (
-                <button
-                  key={a.email}
-                  type="button"
-                  onClick={() => {
-                    setEmail(a.email);
-                    setErrors({});
-                  }}
-                  aria-pressed={email === a.email}
-                  className={cx(
-                    "min-h-10 rounded-full px-3.5 text-xs font-semibold ring-1 transition-colors",
-                    email === a.email ? "bg-ink text-white ring-ink" : "bg-card text-muted ring-line hover:text-ink",
-                  )}
-                >
-                  {a.label}
-                </button>
-              ))}
-            </div>
-          </fieldset>
+          <div className="border-t border-line pt-5">
+            <label htmlFor="demo-account" className="text-[13px] font-semibold text-muted">Probar otro rol</label>
+            <select id="demo-account" value={DEMO_ACCOUNTS.some((a) => a.email === email) ? email : ""} onChange={(e) => { setEmail(e.target.value); setPassword("demo1234"); setErrors({}); }} className="mt-2 h-11 w-full rounded-lg border border-line bg-panel px-3 text-sm">
+              <option value="" disabled>Selecciona una cuenta de demostración</option>
+              {DEMO_ACCOUNTS.map((a) => <option key={a.email} value={a.email}>{a.label}</option>)}
+            </select>
+          </div>
           )}
 
           {errors.form && (

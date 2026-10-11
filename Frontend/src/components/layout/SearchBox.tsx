@@ -1,4 +1,4 @@
-import { useDeferredValue, useRef, useState } from "react";
+import { useDeferredValue, useId, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { MagnifyingGlass } from "../ui/icons";
@@ -10,6 +10,7 @@ import { useAuth } from "../../context/AuthContext";
 
 export function SearchBox({ className }: { className?: string }) {
   const [q, setQ] = useState("");
+  const id = useId();
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ export function SearchBox({ className }: { className?: string }) {
 
   return (
     <div className={cx("relative", className)}>
-      <label className="flex h-11 items-center gap-2 rounded-full bg-card px-4 shadow-[0_1px_2px_rgb(23_23_26/0.04)] ring-1 ring-line focus-within:ring-2 focus-within:ring-violet">
+      <label className="flex h-11 items-center gap-2 rounded-lg bg-panel px-3 ring-1 ring-line focus-within:ring-2 focus-within:ring-violet">
         <MagnifyingGlass size={18} className="shrink-0 text-faint" />
         <span className="sr-only">Buscar pedido, comprobante o cliente</span>
         <input
@@ -42,22 +43,23 @@ export function SearchBox({ className }: { className?: string }) {
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 120)}
           onKeyDown={(e) => {
-            if (e.key === "ArrowDown") setActive((a) => Math.min(a + 1, hits.length - 1));
-            if (e.key === "ArrowUp") setActive((a) => Math.max(a - 1, 0));
+            if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.max(0, Math.min(a + 1, hits.length - 1))); }
+            if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
             if (e.key === "Enter" && hits[active]) go(hits[active]);
             if (e.key === "Escape") setOpen(false);
           }}
-          placeholder="Buscar cliente, orden o pago"
+          placeholder="Buscar…"
           className="w-full bg-transparent text-sm outline-none placeholder:text-faint"
           role="combobox"
           aria-expanded={open && q.length > 0}
-          aria-controls="search-results"
+          aria-controls={id}
+          aria-activedescendant={open && hits[active] ? `${id}-${active}` : undefined}
         />
       </label>
       <AnimatePresence>
       {open && q.trim() && (
         <motion.ul
-          id="search-results"
+          id={id}
           role="listbox"
           variants={popVariants}
           initial="hidden"
@@ -67,7 +69,7 @@ export function SearchBox({ className }: { className?: string }) {
           className="absolute inset-x-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-2xl bg-card p-1.5 shadow-[var(--shadow-lift)] ring-1 ring-line">
           {hits.length === 0 && <li className="px-3 py-3 text-sm text-muted">Sin resultados para “{q}”.</li>}
           {hits.map((h, i) => (
-            <li key={h.href} role="option" aria-selected={i === active}>
+            <li key={h.href} id={`${id}-${i}`} role="option" aria-selected={i === active}>
               <button
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => go(h)}

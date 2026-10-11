@@ -1,4 +1,4 @@
-// Mide la carga del login: tiempo al titular, peso descargado, apertura del modal y paso al dashboard.
+// Mide la carga del login directo: titular, formulario, peso descargado y paso al inicio.
 // Uso: node e2e/rendimiento.mjs http://localhost:5173  (o la URL de `npm run preview`).
 import { chromium } from "playwright-core";
 
@@ -33,7 +33,7 @@ await page.evaluate(() => {
 });
 const t1 = Date.now();
 await page.goto(`${BASE}/login`);
-await page.waitForSelector("text=Cobra con evidencia");
+await page.getByRole("heading", { name: "Cada cobro, en su lugar." }).waitFor();
 const tHero = Date.now() - t1;
 await page.waitForLoadState("networkidle");
 const tIdle = Date.now() - t1;
@@ -44,12 +44,11 @@ const nav = await page.evaluate(() => {
   return { dcl: Math.round(n.domContentLoadedEventEnd), load: Math.round(n.loadEventEnd), fcp: fcp ? Math.round(fcp.startTime) : null };
 });
 
-// Click Acceder -> modal visible
+// El formulario se muestra directamente, sin un modal intermedio.
 const c0 = Date.now();
-await page.getByRole("button", { name: "Acceder" }).first().click();
 await page.waitForSelector("#email", { state: "visible" });
-const tModal = Date.now() - c0;
-// Frame rate while modal animates
+const tForm = Date.now() - c0;
+// Capacidad de respuesta una vez visible el formulario.
 const fps = await page.evaluate(
   () =>
     new Promise((res) => {
@@ -67,11 +66,11 @@ const fps = await page.evaluate(
 // Login -> dashboard
 const l0 = Date.now();
 await page.getByRole("button", { name: "Iniciar sesión" }).click();
-await page.waitForSelector("text=Ingresos esperados");
+await page.getByRole("heading", { name: "Tu jornada" }).waitFor();
 const tLogin = Date.now() - l0;
 
 const long = await page.evaluate(() => window.__long);
 const totalKB = Math.round(reqs.reduce((s, r) => s + r.size, 0) / 1024);
 const big = [...reqs].sort((a, b) => b.size - a.size).slice(0, 8);
-console.log(JSON.stringify({ BASE, tHeroVisible: tHero, tNetworkIdle: tIdle, nav, tModalOpen: tModal, fpsDuringModal: fps, tLoginToDashboard: tLogin, requests: reqs.length, totalKB, longTasks: long, biggest: big.map((b) => `${Math.round(b.size / 1024)}KB ${b.ms}ms ${b.url.slice(0, 90)}`) }, null, 1));
+console.log(JSON.stringify({ BASE, tHeroVisible: tHero, tNetworkIdle: tIdle, nav, tFormVisible: tForm, fpsIdle: fps, tLoginToHome: tLogin, requests: reqs.length, totalKB, longTasks: long, biggest: big.map((b) => `${Math.round(b.size / 1024)}KB ${b.ms}ms ${b.url.slice(0, 90)}`) }, null, 1));
 await browser.close();

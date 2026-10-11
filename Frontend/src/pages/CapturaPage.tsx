@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { motion } from "motion/react";
 import { useNavigate, useSearchParams } from "react-router";
-import { Image, Info, Receipt, UploadSimple, NotePencil } from "../components/ui/icons";
+import { Image, Receipt, UploadSimple, NotePencil } from "../components/ui/icons";
 import { capabilities, commands, getCaptureOptions } from "../api/client";
 import type { Brand } from "../api/model";
 import { useApi } from "../hooks/useApi";
@@ -41,12 +41,7 @@ export function CapturaPage() {
   const tab: Tab = params.get("tipo") === "orden" && capabilities.manualOrderCapture ? "orden" : "comprobante";
   return (
     <Stagger className="mx-auto flex max-w-[860px] flex-col gap-6">
-      <PageHeader title="Carga manual" subtitle="Respaldo cuando WhatsApp no trae el dato. Lo que cargues aquí pasa por la misma revisión que lo que lee la IA." actions={IS_MOCK ? <DemoBadge /> : undefined} />
-      <motion.p variants={itemVariants} className="flex items-start gap-2 rounded-2xl bg-info-tint px-4 py-3 text-[13px] text-info">
-        <Info size={18} weight="bold" className="mt-px shrink-0" />
-        En la operación normal, el vendedor escribe /cerrar y n8n arma la hoja de resumen; el cliente envía su voucher y n8n lo lee.{" "}
-        {capabilities.voucherNeedsFile ? "Aquí subes la imagen del voucher y la IA propone los datos para revisar." : "Esta pantalla no usa IA: tú escribes los datos."}
-      </motion.p>
+      <PageHeader title={tab === "orden" ? "Registrar pedido" : "Subir comprobante"} subtitle="Registra la información. Podrás revisarla antes de aplicarla al saldo." actions={IS_MOCK ? <DemoBadge /> : undefined} />
       {capabilities.manualOrderCapture && (
       <motion.div variants={itemVariants}>
         <Segmented
@@ -62,6 +57,7 @@ export function CapturaPage() {
       </motion.div>
       )}
       <Stagger key={tab}>{tab === "comprobante" ? <VoucherForm /> : <OrderForm />}</Stagger>
+      <details className="quiet-disclosure"><summary>Sobre el registro manual</summary><p className="mt-2 text-[13px] leading-relaxed text-muted">{capabilities.voucherNeedsFile ? "Sube la imagen del comprobante. La extracción propone datos que debes revisar antes de confirmar el pago." : "En esta demostración escribes los datos manualmente; no se ejecuta extracción de IA."} Un comprobante recibido no confirma el ingreso en banca.</p></details>
     </Stagger>
   );
 }

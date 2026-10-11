@@ -61,16 +61,25 @@ await page.evaluate(() => {
   sessionStorage.clear();
 });
 
-/* 1. Recorrido del cerebro (Administración) */
+/* 0. Menos opciones: inicio con pendientes y menú corto por rol */
 await login("carmen.ramos@keptai.pe");
+await page.waitForSelector("text=Pagos por revisar");
+check(0, "Administración entra a sus pendientes", /empieza por aquí/i.test(await text("main")));
+check(0, "Menú de Administración con 4 opciones", (await page.locator("nav[aria-label=Principal] a").count()) === 4);
+await shot("00-pendientes");
+
+/* 1. Recorrido del cerebro (Administración) */
 await page.goto(`${BASE}/conciliacion/V-002`);
 await page.waitForSelector("text=Llegó por WhatsApp");
 await shot("01-conciliacion");
-let t = await confirmStep("1. Verificar en banco", "Verificado");
-check(1, "V-002 verificado en banco", /verificado en banco/i.test(t), t);
-t = await confirmStep("2. Aplicar a la orden", "Aplicar pago");
-check(1, "V-002 aplicado deja ORD-002 en S/ 400", /ORD-002: S\/ 400\.00/.test(t), t);
-await page.getByRole("button", { name: /Reintentar aplicación/ }).click();
+let t = await confirmStep("Sí, llegó al banco", "Sí, llegó");
+check(1, "V-002 verificado y descontado: ORD-002 queda en S/ 400", /ORD-002: S\/ 400\.00/.test(t), t);
+await page.waitForURL((u) => /\/conciliacion\/V-/.test(u.pathname) && !u.pathname.endsWith("/V-002"));
+check(1, "La bandeja pasa sola al siguiente pago", true);
+await page.goto(`${BASE}/conciliacion/V-002`);
+await page.waitForSelector("text=Pago descontado de la deuda");
+await page.getByRole("button", { name: "Más opciones" }).click();
+await page.getByRole("button", { name: /Reintentar descuento/ }).click();
 t = await toast();
 check(1, "Reaplicar no duplica", /ya fue aplicado/i.test(t), t);
 await page.goto(`${BASE}/conciliacion/V-003`);
@@ -83,9 +92,8 @@ check(5, "Administración sin acceso a Resultado (solo GERENTE)", (await text("m
 
 /* 3. Anticipo libera la orden retenida */
 await page.goto(`${BASE}/conciliacion/V-007`);
-await page.waitForSelector("text=Datos leídos del comprobante", { state: "attached" });
-await confirmStep("1. Verificar en banco", "Verificado");
-t = await confirmStep("2. Aplicar a la orden", "Aplicar pago");
+await page.waitForSelector("text=Datos del comprobante");
+t = await confirmStep("Sí, llegó al banco", "Sí, llegó");
 check(3, "Anticipo de ORD-014 libera a producción", /pasa a producción/i.test(t), t);
 await page.goto(`${BASE}/pedidos/ORD-014`);
 await page.waitForSelector("text=Condición de pago");
@@ -113,10 +121,12 @@ await logout();
 /* 2. Orden por WhatsApp con aviso de mora (Vendedor Unicrack) */
 await login("luis.yarleque@keptai.pe");
 check(5, "Vendedor ve solo su marca", (await text("header")).includes("Unicrack"));
-check(5, "Vendedor no ve Conciliación", (await page.locator("nav[aria-label=Principal] >> text=Conciliación").count()) === 0);
+check(5, "Vendedor no ve Pagos", (await page.locator("nav[aria-label=Principal] >> text=Pagos").count()) === 0);
+check(0, "Vendedor ve sus pedidos por confirmar", (await text("main")).includes("Pedidos por confirmar"));
 await page.goto(`${BASE}/pedidos/ORD-013`);
 await page.waitForSelector("text=Hoja de resumen");
 await shot("04-orden-borrador");
+await page.getByRole("button", { name: "Cambiar condición" }).click();
 await page.locator("#plazo").selectOption("20");
 await page.getByRole("button", { name: "Confirmar orden" }).click();
 await page.waitForSelector("text=Este cliente está en mora");
@@ -137,6 +147,7 @@ await logout();
 /* 2 (cont.). Jefe de taller registra el despacho */
 await login("jorge.ipanaque@keptai.pe");
 check(5, "Jefe de taller entra directo a /taller", page.url().endsWith("/taller"), page.url());
+check(0, "Jefe de taller sin menú: una sola pantalla", (await page.locator("nav[aria-label=Principal]").count()) === 0);
 await page.waitForSelector("text=En producción");
 const row = page.locator("li", { hasText: "ORD-013" }).first();
 await row.getByRole("button", { name: "Registrar despacho" }).click();
@@ -161,10 +172,10 @@ await page.fill("#v-payer", "Club Deportivo Tallán");
 await page.getByRole("button", { name: "Registrar como recibido" }).click();
 await page.waitForURL(/conciliacion\/V-/);
 await page.waitForSelector("text=Cargado a mano");
-await confirmStep("1. Verificar en banco", "Verificado");
-t = await confirmStep("2. Aplicar a la orden", "Aplicar pago");
+t = await confirmStep("Sí, llegó al banco", "Sí, llegó");
 check(4, "Pago completo cancela recordatorios y alertas", /S\/ 0\.00/.test(t) && /cancelan/.test(t), t);
 await page.goto(`${BASE}/pedidos/ORD-002`);
+await page.getByRole("tab", { name: "Seguimiento" }).click();
 await page.waitForSelector("text=Mensajes al cliente");
 check(4, "Alerta de ORD-002 cancelada", (await text("main")).includes("Cancelada"));
 await logout();
