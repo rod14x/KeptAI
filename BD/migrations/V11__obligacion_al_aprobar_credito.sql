@@ -1,9 +1,10 @@
--- INT-FE-API-001 (11/10/2026): conexion del panel con Spring. Mantener V1-V9 intactas. Sin tablas ni columnas nuevas.
+-- INT-FE-API-001 (11/10/2026): conexion del panel con Spring. Mantener V1-V10 intactas. Sin tablas ni columnas nuevas.
+-- Era V10 en develop; se renumero a V11 al integrar backend-partefinal (V10__contacto_whatsapp). Ninguna estaba en Supabase.
 -- Brecha H1 (auditoria-backend-2026-10-11): el vendedor decide el credito (V7) pero obligacion_cobro solo la escribe
 -- ADMIN (V4). Sin obligacion no hay despacho que fije vencimiento ni pago que aplicar. Esta funcion la crea cuando la
 -- decision ya esta APROBADA, por el total de la orden, sin vencimiento hasta el acta (D-005). Pendiente de revision de Andres.
 DO $$ BEGIN
- IF current_schema() <> 'keptai' THEN RAISE EXCEPTION 'Configurar defaultSchema=keptai antes de V10'; END IF;
+ IF current_schema() <> 'keptai' THEN RAISE EXCEPTION 'Configurar defaultSchema=keptai antes de V11'; END IF;
 END $$;
 
 -- DEFINER porque VENDEDOR no inserta obligacion_cobro por RLS. Solo VENDEDOR/ADMIN de la organizacion del contexto,

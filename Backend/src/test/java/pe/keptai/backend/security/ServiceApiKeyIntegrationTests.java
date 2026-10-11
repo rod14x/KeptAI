@@ -127,6 +127,8 @@ class ServiceApiKeyIntegrationTests {
 			s.execute("INSERT INTO cliente(organizacion_id,razon_social,tipo) VALUES "
 					+ "('" + ORG_A + "','Cliente A1','EMPRESA'),('" + ORG_B + "','Cliente B1','EMPRESA')");
 			s.execute("INSERT INTO pago(id,organizacion_id,monto,fecha_pago,medio,idempotency_key) VALUES ('" + PAGO_A + "','" + ORG_A + "',10,current_date,'YAPE','fixture-pago-a')");
+			// V10: contacto registrado del cliente existente «Cliente A1» (no se agregan clientes: otras pruebas cuentan los de A).
+			s.execute("INSERT INTO contacto(organizacion_id,cliente_id,nombre,whatsapp_jid) SELECT organizacion_id, id, 'Contacto A', '51900000000@s.whatsapp.net' FROM cliente WHERE razon_social = 'Cliente A1'");
 			s.execute("CREATE ROLE keptai_app LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS PASSWORD 'fixture-only'");
 			s.execute("GRANT keptai_runtime TO keptai_app");
 		}
@@ -327,7 +329,7 @@ class ServiceApiKeyIntegrationTests {
 	}
 
 	@Test
-	void realApiKeyCanValidateAnOrderPayloadWithoutCreatingAnOrder() throws Exception {
+	void realApiKeyPersistsAValidOrderPayloadAsADraftOnly() throws Exception {
 		var spec = new org.yaml.snakeyaml.Yaml(new org.yaml.snakeyaml.constructor.SafeConstructor(new org.yaml.snakeyaml.LoaderOptions()));
 		java.util.Map<?, ?> root = spec.load(java.nio.file.Files.readString(java.nio.file.Path.of("docs/openapi.yaml")));
 		var components = (java.util.Map<?, ?>) root.get("components");
@@ -343,18 +345,21 @@ class ServiceApiKeyIntegrationTests {
 		}
 		mvc.perform(post("/api/v1/ordenes/ingesta").header("X-Api-Key", KEY_ING_A)
 			.contentType("application/json").content(body))
-			.andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("VALIDADO_SIN_PERSISTIR"))
-			.andExpect(jsonPath("$.persistido").value(false)).andExpect(jsonPath("$.procesado").value(false));
-		try (Connection c = owner(); Statement s = c.createStatement(); var rs = s.executeQuery("SELECT count(*) FROM keptai.orden")) {
-			rs.next(); assertThat(rs.getLong(1)).isEqualTo(before);
+			.andExpect(status().isCreated()).andExpect(jsonPath("$.estado").value("BORRADOR")).andExpect(jsonPath("$.ref").isNotEmpty())
+			.andExpect(jsonPath("$.hojaResumenVersion").value(1)).andExpect(jsonPath("$.persistido").doesNotExist());
+		try (Connection c = owner(); Statement s = c.createStatement(); var rs = s.executeQuery("SELECT count(*) FILTER (WHERE estado = 'BORRADOR'), count(*) FROM keptai.orden")) {
+			rs.next();
+			// Se persiste un único BORRADOR; nada se confirma ni se libera.
+			assertThat(rs.getLong(2)).isEqualTo(before + 1);
+			assertThat(rs.getLong(1)).isEqualTo(rs.getLong(2));
 		}
 	}
 
 	@Test
 	void anAuthenticatedServiceIsAuthorizedOnlyWhereThePolicyOpensItAndNothingIsImplementedThere() throws Exception {
-		// Ingesta tiene recepción validada ({} -> 400); voucher todavía no tiene controlador (404).
+		// Ingesta y voucher están implementadas para INGESTA: un cuerpo vacío es 400 (antes el voucher daba 404 por ausencia).
 		for (String path : new String[] { "/api/v1/ordenes/ingesta", "/api/v1/pagos/voucher" }) {
-			mvc.perform(post(path).header("X-Api-Key", KEY_ING_A).contentType("application/json").content("{}")).andExpect(path.equals("/api/v1/ordenes/ingesta") ? status().isBadRequest() : status().isNotFound());
+			mvc.perform(post(path).header("X-Api-Key", KEY_ING_A).contentType("application/json").content("{}")).andExpect(status().isBadRequest());
 			mvc.perform(post(path).header("X-Api-Key", KEY_SCH_A).contentType("application/json").content("{}"))
 				.andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("FORBIDDEN"));
 		}

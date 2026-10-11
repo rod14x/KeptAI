@@ -19,8 +19,8 @@ DO $$ BEGIN
  IF current_setting('keptai.permitir_semilla', true) IS DISTINCT FROM 'demo' THEN
   RAISE EXCEPTION 'Semilla bloqueada: ejecutar con SET keptai.permitir_semilla = ''demo'' (db.sh seed-escenarios lo hace)';
  END IF;
- IF NOT EXISTS (SELECT 1 FROM keptai.flyway_schema_history WHERE version = '10' AND success) THEN
-  RAISE EXCEPTION 'Los escenarios requieren el esquema V10';
+ IF NOT EXISTS (SELECT 1 FROM keptai.flyway_schema_history WHERE version = '11' AND success) THEN
+  RAISE EXCEPTION 'Los escenarios requieren el esquema V11';
  END IF;
  IF NOT EXISTS (SELECT 1 FROM keptai.orden WHERE id = 'a0000000-0000-4000-8000-000000000002'
                 AND organizacion_id = '10000000-0000-4000-8000-000000000001') THEN
@@ -57,7 +57,16 @@ INSERT INTO cliente (id, organizacion_id, razon_social, tipo, limite_credito, cr
  ('44444444-4444-4444-8444-444444444443', '10000000-0000-4000-8000-000000000001', 'Academia Deportiva Cuatro Vientos', 'EMPRESA', 1500, '2025-09-15 09:00-05'),
  ('44444444-4444-4444-8444-444444444444', '10000000-0000-4000-8000-000000000001', 'Colegio Nuevo Horizonte',           'COLEGIO', 4000, '2025-02-10 09:00-05');
 
--- Canal de WhatsApp de cada cliente (solo metadatos de origen; sin conversación, D-007).
+-- Contacto registrado de cada cliente (V10, D-011: n8n identifica al cliente por este JID) y su canal de WhatsApp
+-- (solo metadatos de origen; sin conversación, D-007). Números ficticios.
+INSERT INTO contacto (organizacion_id, cliente_id, nombre, whatsapp_jid)
+SELECT '10000000-0000-4000-8000-000000000001', v.cliente, v.nombre, v.jid FROM (VALUES
+ ('11111111-1111-4111-8111-111111111111'::uuid, 'Compras Huancabamba Norte', '51900000214@s.whatsapp.net'),
+ ('22222222-2222-4222-8222-222222222222'::uuid, 'Delegado Club Tallán',      '51900000146@s.whatsapp.net'),
+ ('44444444-4444-4444-8444-444444444441'::uuid, 'Logística Sullana Verde',   '51900000587@s.whatsapp.net'),
+ ('44444444-4444-4444-8444-444444444442'::uuid, 'Flota Sechura Sur',         '51900000903@s.whatsapp.net'),
+ ('44444444-4444-4444-8444-444444444443'::uuid, 'Academia Cuatro Vientos',   '51900000731@s.whatsapp.net'),
+ ('44444444-4444-4444-8444-444444444444'::uuid, 'Dirección Nuevo Horizonte', '51900000368@s.whatsapp.net')) v(cliente, nombre, jid);
 INSERT INTO canal_whatsapp (organizacion_id, cliente_id, vendedor_id, instancia, chat_jid) VALUES
  ('10000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', '70000000-0000-4000-8000-000000000001', 'ventas-demo', '51900000214@s.whatsapp.net'),
  ('10000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222', '70000000-0000-4000-8000-000000000005', 'ventas-demo', '51900000146@s.whatsapp.net'),
@@ -65,6 +74,11 @@ INSERT INTO canal_whatsapp (organizacion_id, cliente_id, vendedor_id, instancia,
  ('10000000-0000-4000-8000-000000000001', '44444444-4444-4444-8444-444444444442', '70000000-0000-4000-8000-000000000001', 'ventas-demo', '51900000903@s.whatsapp.net'),
  ('10000000-0000-4000-8000-000000000001', '44444444-4444-4444-8444-444444444443', '70000000-0000-4000-8000-000000000005', 'ventas-demo', '51900000731@s.whatsapp.net'),
  ('10000000-0000-4000-8000-000000000001', '44444444-4444-4444-8444-444444444444', '70000000-0000-4000-8000-000000000005', 'ventas-demo', '51900000368@s.whatsapp.net');
+
+UPDATE canal_whatsapp c SET contacto_id = k.id
+  FROM contacto k
+ WHERE k.organizacion_id = c.organizacion_id AND k.cliente_id = c.cliente_id AND k.whatsapp_jid = c.chat_jid
+   AND c.organizacion_id = '10000000-0000-4000-8000-000000000001';
 
 -- ---------------------------------------------------------------------------------------------------- P-001 y P-002
 -- Mismos totales que la semilla base (300 = 12 x 25; 500 = 20 x 25); P-002 la vendió Luis (Unicrack).

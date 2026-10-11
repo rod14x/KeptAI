@@ -11,6 +11,13 @@
 - Implementado: exige evidencia de ejecución; estos documentos no acreditan implementación del software.
 
 ## Dirección expresada por el equipo
+### D-011 — Contacto de WhatsApp registrado y asociación contextual voucher → último pedido (V10)
+Fecha: 11/10/2026. Responsable de la dirección: Miguel. Fuente: dirección directa de Miguel (prompt-contacto-pedido-voucher.md). Estado: **implementada y probada en local con PostgreSQL desechable**; aplicación a la base local activa, validación del esquema remoto/runtime y despliegue pendientes. Reintroduce la tabla `contacto` que V6 retiró (D-008) por esta dirección de producto, no por un conteo de tablas.
+
+La entrada n8n identifica al CLIENTE por el JID canónico (`<dígitos>@s.whatsapp.net`, coincidencia exacta) de un CONTACTO previamente registrado de la organización; no por nombre, pushName, últimos dígitos ni extracción de la IA. Un JID de grupo, `@lid` o con dispositivo no se interpreta como teléfono. Contacto inexistente/inactivo/de otra organización → 422 genérico sin crear nada. Demo: Cloud Technologies es CLIENTE de Corpotex y Andrés su CONTACTO; Andrés no es vendedor, ni tenant, ni usuario de Auth.
+
+El voucher se asocia por CONTEXTO (`pago.orden_contexto_id`, distinta de `aplicacion_pago`) al último pedido no cancelado del contacto; no verifica fondos, no aplica pagos ni cambia saldos. Sin pedido elegible queda `SIN_ORDEN`; un empate exacto no se resuelve al azar (`ORDEN_AMBIGUA`). El VENDEDOR sigue PENDIENTE (no hay usuario VENDEDOR): `vendedorJid` no acredita identidad humana y `/ordenes/confirmar`, crédito y cambios financieros conservan sus bloqueos. El resultado de la ingesta sigue siendo `BORRADOR`.
+
 ### D-010 — Autorización crítica por rol (V7)
 Fecha: 10/10/2026. Responsable: Andrés (DB/Flyway, según AGENTS). Fuente: solicitud directa de Andrés de revisar V6 y corregir lo crítico en seguridad. Estado: **implementada y probada en local**; revisión de Miguel y aplicación en Supabase pendientes.
 

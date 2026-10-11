@@ -7,7 +7,7 @@ import org.springframework.http.HttpStatus;
 import pe.keptai.backend.finanzas.MotorFinancieroException;
 
 /**
- * Errores de la base y del motor → respuesta del contrato. Los RAISE de V5–V10 son mensajes de negocio y se exponen;
+ * Errores de la base y del motor → respuesta del contrato. Los RAISE de V5–V11 son mensajes de negocio y se exponen;
  * cualquier otro error SQL queda como 500 genérico (sin texto de PostgreSQL).
  */
 public final class PanelErrors {

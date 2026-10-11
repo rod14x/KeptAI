@@ -23,7 +23,7 @@ Decisiones del adaptador que conviene conocer:
 - Fechas e instantes llegan con desfase de Lima (`-05:00`).
 
 ### Cómo correrlo en local
-1. BD: `./BD/local/db.sh up && ./BD/local/db.sh migrate && ./BD/local/db.sh seed` (V1–V10 y semilla). Opcional: `./BD/local/db.sh seed-escenarios` agrega pedidos por decidir, un pedido por despachar y vouchers por verificar.
+1. BD: `./BD/local/db.sh up && ./BD/local/db.sh migrate && ./BD/local/db.sh seed` (V1–V11 y semilla). Opcional: `./BD/local/db.sh seed-escenarios` agrega pedidos por decidir, un pedido por despachar y vouchers por verificar.
 2. Spring (perfil `local`) con el JWKS de Supabase (`KEPTAI_JWT_*`, ver `Backend/docs/configuracion-supabase-local.md`). Si el 8080 está ocupado: `PORT=8081`; agregar el origen del frontend a `KEPTAI_CORS_ALLOWED_ORIGINS` si no es `localhost:5173`.
 3. Frontend `.env.local`: `VITE_API_MODE=api`, `VITE_API_BASE_URL=http://localhost:8081`, `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` del proyecto.
 4. Cuentas: crear en Supabase Auth un usuario por rol y vincular cada uno: `./BD/local/db.sh link-auth VENDEDOR <uuid-del-usuario-en-Auth>` (igual con ADMIN, GERENTE, JEFE_TALLER; `VENDEDOR2` es el segundo vendedor de los escenarios). Sin vínculo, `/me` responde 403.
@@ -73,7 +73,7 @@ En modo `api` solo hay un módulo conectado: el **inicio de identidad** (`/`, `s
 - Menú: las entradas pendientes son elementos deshabilitados («Pronto»), no enlaces. En `api` no hay buscador, selector de marca/vista, «Reiniciar demo», menú de perfil ni precarga de pantallas (`AppLayout`, `UserMenu`, `LoginPage`).
 - Acceso: tras login o restauración se va siempre a `/` (no se recuerda la ruta de origen); los errores de sesión, «Reintentar» y «Cerrar sesión» siguen en la pantalla de acceso (AUTH-FE-02). La pantalla de acceso del modo `api` no muestra la vista previa ni el distintivo de demostración.
 - `mock` es explícito (`VITE_API_MODE=mock`): conserva el menú, buscador, selector y datos ficticios; no hay respaldo mock cuando falla la API.
-- Pruebas: `src/navigation.test.ts` (17; renderiza las rutas reales de `AppRoutes` con una identidad simulada y falla si se llama a la fachada de datos de negocio) y `e2e/identidad-api.mjs` (`npm run e2e:api`, 30 comprobaciones en Chrome con Vite propio en el puerto 5199 y Supabase/Spring SIMULADOS con `page.route`). Ambas son fixtures: **no prueban Supabase Auth real ni el backend real**. `npm run e2e` (mock) sigue pasando 36/36.
+- Pruebas: `src/navigation.test.ts` (17; renderiza las rutas reales de `AppRoutes` con una identidad simulada y falla si se llama a la fachada de datos de negocio) y `e2e/identidad-api.mjs` (`npm run e2e:api`, 30 comprobaciones en Chrome con Vite propio en el puerto 5199 y Supabase/Spring SIMULADOS con `page.route`). Ambas son fixtures: **no prueban Supabase Auth real ni el backend real**. `npm run e2e` (mock) sigue pasando 36/36. Para la prueba con cuenta real (sin simulaciones, procesos propios en 8081/5174) existe `npm run e2e:real -- sin-membresia|con-membresia` (`e2e/auth-real.mjs`, credenciales en `e2e/auth-real.local`); ver `Backend/docs/prueba-auth-real-local.md`. Aún no se ha ejecutado con una cuenta real.
 
 ## 3. Pantalla → endpoints
 
@@ -182,3 +182,7 @@ npm test: 89 pruebas sin fallos (43 contrato + 39 sesión + 7 adaptador). npm ru
 ### Revisión AUTH-FE-03 (11/10/2026)
 Pruebas finales: 106 tests, build OK, e2e api 31/31 con fixtures en Chrome. Se cierra automáticamente el diálogo ante fallo reintentable en api para acceder al aviso sin Escape. El e2e espera la animación y prueba el botón directamente.
 Configuración Supabase local existente/coherente y JWKS público accesible, pero el modo sigue mock y PostgreSQL local no tiene organizaciones ni usuarios. Auth real, membresía y recorrido contra Spring real siguen pendientes. No confundir claves configuradas con login o Storage operativo.
+
+
+### Aceptación real local (11/10/2026)
+Supabase Auth remoto + Spring8081 + Vite5174 api + PostgreSQL5433: sin membresía7/7; tras alta local autorizada (Liliana, Corpotex, ADMIN), con membresía15/15. JWT real, /me403 y200, identidad exacta, recarga, módulo bloqueado y logout probados sin fixtures. Credenciales ignoradas por Git. npm test106 y build OK; observador e2e corregido para esperar cabeceras y signOut diferido. Servidores8080/5173 conservados; frontend habitual sigue mock. Cuenta/membresía ya no son bloqueo. Renovación real del token,409/otros roles/fallo real de infraestructura siguen pendientes; no cerrar VAL-03 ni módulos de negocio. Detalle Backend/docs/prueba-auth-real-local.md y estado.md.

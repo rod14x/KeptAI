@@ -44,6 +44,12 @@ DELETE FROM hoja_resumen          WHERE organizacion_id IN (SELECT id FROM semil
 DELETE FROM orden_item            WHERE organizacion_id IN (SELECT id FROM semilla_org);
 DELETE FROM orden                 WHERE organizacion_id IN (SELECT id FROM semilla_org);
 DELETE FROM canal_whatsapp        WHERE organizacion_id IN (SELECT id FROM semilla_org);
+-- V10 (contacto de WhatsApp) solo existe desde V10: se limpia si la tabla está.
+DO $$ BEGIN
+ IF to_regclass('keptai.contacto') IS NOT NULL THEN
+  DELETE FROM keptai.contacto WHERE organizacion_id IN (SELECT id FROM semilla_org);
+ END IF;
+END $$;
 DELETE FROM cliente               WHERE organizacion_id IN (SELECT id FROM semilla_org);
 DELETE FROM unidad_produccion     WHERE organizacion_id IN (SELECT id FROM semilla_org);
 DELETE FROM linea_producto        WHERE organizacion_id IN (SELECT id FROM semilla_org);

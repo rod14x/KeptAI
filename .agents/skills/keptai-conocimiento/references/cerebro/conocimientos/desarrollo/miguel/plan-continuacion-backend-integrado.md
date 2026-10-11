@@ -21,3 +21,16 @@ No aplicar automáticamente V8/V9 o seed a una base activa, ni reiniciar proceso
 
 ## Flujo con Claude
 Una entrega delimitada por vez, leer skill/AGENTS y estado vigente, conservar fuentes y propiedad del motor de Andrés. Claude entrega diff/evidencia sin commit/push; Codex revisa y publica cuando lo autoriza Miguel. Fixtures y resultados reales separados. Si faltan datos Auth/membresía, preparar procedimiento parametrizado y pedir solo los datos indispensables; nunca imprimir claves o tokens.
+
+
+## Avance11/10/2026: primer recorrido real completado
+Aceptación básica de etapa1 acreditada: sin-membresia7/7 y con-membresia15/15 (ADMIN de Corpotex), Auth remoto y Spring/PostgreSQL locales reales. Provisión aprobada realizada. Renovación real del token,409/otros roles/infraestructura real pendientes como cobertura ampliada; no confundir con VAL-03 completo. Continuar etapa2 MIG-03-D3, conservando servidores habituales y separación mock/api. Evidencia estado.md.
+
+## Actualización 11/10/2026 — MIG-04/05 mínimo para n8n
+Ingesta y voucher implementados y probados localmente (ver estado.md, última sección y Backend/docs/integracion-n8n-isabella.md). Siguen pendientes: prueba con Supabase Storage real, n8n real, credencial real y despliegue; MIG-04 (lectura privada del panel), MIG-05 restante, MIG-06 y MIG-07 permanecen abiertos.
+
+## Cierre de revisión n8n local — 11/10/2026
+Recepción persistente de ambas rutas publicada tras 321 tests Java, 106 frontend, build, contrato 38/220/25 y 50 HTTP desechables. Clave isabel/INGESTA provisionada solo en Corpotex local; Storage real probado con archivo temporal sintético eliminado. Consultar estado.md y provision-servicios-local.md. Próximo: reiniciar versión local, desplegar y provisionar el servicio en la base del despliegue, prueba real de Isabella. No cerrar el acceso del panel a vouchers, la asociación cliente/orden ni el motor por estas pruebas.
+
+## Actualización 11/10/2026 — contacto registrado y asociación voucher → pedido (V10, D-011)
+Implementado y probado localmente (estado.md, última sección). Antes del despliegue: migrar a V10 (rol migrador; la imagen no migra), validar el esquema remoto/runtime, registrar el contacto real, provisionar la credencial en la base del despliegue, probar Storage y n8n reales y DNS/HTTPS. Vendedor y validación humana de /cerrar siguen pendientes.

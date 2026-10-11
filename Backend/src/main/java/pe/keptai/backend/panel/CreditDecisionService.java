@@ -24,7 +24,7 @@ import pe.keptai.backend.web.RequestIdFilter;
  * <li>ANTICIPO también queda RETENIDA hasta aplicar el anticipo (lo libera {@link PaymentCommands}).</li>
  * <li>{@code rejected}: aprobación RECHAZADO y orden CANCELADA.</li>
  * </ul>
- * La obligación de cobro la crea {@code keptai_private.crear_obligacion_orden} (V10) por el total, sin vencimiento hasta
+ * La obligación de cobro la crea {@code keptai_private.crear_obligacion_orden} (V11) por el total, sin vencimiento hasta
  * el acta de despacho. Autor = usuario del JWT (trigger de autoría V7); historial en {@code evento_auditoria}.
  */
 @Service

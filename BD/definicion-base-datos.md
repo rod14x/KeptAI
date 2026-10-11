@@ -89,7 +89,7 @@ Campos, nulabilidad, PK/FK y restricciones completos: [diccionario V5](diccionar
 
 ## 5. Relaciones y ciclo transaccional
 
-Cliente tiene muchas órdenes; un contacto de prueba se identifica mediante el canal. No existe tabla contacto en V6. Orden tiene muchos ítems/resúmenes/etapas/costos, cero o una aprobación y cero o una obligación/despacho. El borrador puede existir antes de crear la obligación.
+Cliente tiene muchas órdenes y varios contactos de WhatsApp (V10, D-011): `contacto` (organización, cliente, nombre, JID canónico único por organización, activo) identifica al cliente que escribe; `canal_whatsapp.contacto_id` liga el canal a su contacto. No existía tabla contacto en V6 (se reintroduce por dirección de producto, no por conteo). Orden tiene muchos ítems/resúmenes/etapas/costos, cero o una aprobación y cero o una obligación/despacho. El borrador puede existir antes de crear la obligación.
 
 Pago tiene muchos comprobantes y aplicaciones; obligación recibe muchas aplicaciones. Un pago puede cubrir varias obligaciones del **mismo cliente, tenant y moneda**. Un pago sin cliente u orden identificados permanece en revisión, sin reducir saldos.
 
@@ -202,3 +202,11 @@ Aceptación: pago recibido no reduce deuda; duplicado no aplica; parcial correct
 Esquema/diccionario/DER V6 estan locales; V5 es antecedente. La bitácora registra las pruebas SQL anteriores; esta entrega define y organiza el diseño, sin repetir tests de código ni declarar nuevas rutas operativas.
 
 Fuentes técnicas consultadas: [grants y RLS de Supabase](https://supabase.com/docs/guides/database/postgres/row-level-security), [políticas Storage](https://supabase.com/docs/guides/storage/security/access-control) y [RLS de PostgreSQL](https://www.postgresql.org/docs/current/ddl-rowsecurity.html). Fundamentan los mecanismos, no la configuración del proyecto remoto.
+
+
+## V10 — contacto de WhatsApp y asociación contextual (D-011, 11/10/2026)
+- **`contacto`**: `id`, `organizacion_id`, `cliente_id` (FK compuesta organización+cliente), `nombre`, `whatsapp_jid` (CHECK `^[0-9]{5,20}@s\.whatsapp\.net$`: sin dispositivo, sin `@lid`, sin grupos), `activo`, `creado_en`. UNIQUE (organización, jid). Solo metadatos de enrutamiento: ningún mensaje, nota ni texto. Un contacto NO es vendedor, tenant ni usuario de Auth.
+- **RLS/grants**: lectura humana (VENDEDOR, ADMIN, GERENTE); INGESTA lee solo contactos ACTIVOS de su organización y no los crea ni modifica; alta/cambio solo ADMIN (la provisión demo usa el migrador, `Backend/scripts/provisionar-contacto-local.sh`); runtime sin DELETE; `anon`/`authenticated`/`service_role` sin acceso.
+- **Integridad**: `canal_whatsapp` (organización, contacto, cliente, chat_jid) → `contacto`; `orden` (organización, canal, cliente) → `canal_whatsapp`; `pago` (organización, canal, cliente) → canal y (organización, `orden_contexto_id`, cliente/canal) → `orden`; CHECK: una orden de contexto exige cliente y canal. Los cruces entre organizaciones, clientes, contactos y canales fallan en SQL.
+- **`pago.orden_contexto_id`**: último pedido no cancelado del contacto al registrar el voucher; NO es `aplicacion_pago`, no verifica fondos ni cambia saldos. Sin pedido elegible: `estado_conciliacion = SIN_ORDEN`.
+- **Pendiente**: aplicar V10 a la base local activa (hoy en V7; requiere V8/V9) y validar el esquema remoto; vendedor del contacto/cartera sin decidir.

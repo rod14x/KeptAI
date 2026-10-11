@@ -67,3 +67,6 @@ Cierre local MIG-03-D con pruebas; integracion real n8n/Auth/Storage no acredita
 
 ## Orden posterior
 Revisar y publicar D1 antes de D2/D3. AUTH-FE-01..04 sigue como bloque separado; requiere cuenta Auth y membresia local para real. MIG-03-E prueba Auth real; MIG-04 uploader; MIG-05 ingesta e idempotencia; MIG-06 revision; MIG-07 motor; MIG-08 aceptacion D-009. No cerrar requisitos por numero de tests.
+
+## Estado D3 — 11/10/2026
+D3 local entregada (contrato de credenciales, scripts, pruebas y documentación; ver estado.md y Backend/docs/integracion-n8n-isabella.md). La integración externa con los workflows de Isabella permanece pendiente de sus datos; no se modificaron sus workflows.

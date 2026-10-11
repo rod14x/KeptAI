@@ -42,49 +42,19 @@ sequenceDiagram
 
 ## Contratos
 
-Auth: n8n→backend `X-Api-Key`; backend→WF3 `X-Api-Secret`.
+Auth (cuatro canales distintos; ver [configuración de los nodos y datos pendientes](../../Backend/docs/integracion-n8n-isabella.md#mig-03-d3--conexión-de-los-nodos-finales-con-spring-alcance-local--11102026)): Evolution→WF0 y WF0→WF1/WF2 los define el entorno de Isabella; n8n→backend `X-Api-Key` (una clave por organización+instancia+alcance; INGESTA para WF1/WF2); backend→WF3 `X-Api-Secret`. Hoy `/ordenes/ingesta` (201, orden y hoja BORRADOR) y `/pagos/voucher` (201, pago RECIBIDO con `imagen_base64`) están implementadas con Storage simulado en las pruebas; `/ordenes/confirmar` y `/mensajes/{id}/estado` siguen cerradas (403). Instrucciones exactas de los nodos y ejemplo completo de WF2 en la guía enlazada.
 
-### POST /api/v1/ordenes/ingesta — recepción disponible
-El nodo final WF1 debe usar POST, Content-Type: application/json y X-Api-Key de un servicio INGESTA activo. La instancia del JSON debe coincidir con la registrada para esa clave. Body: un objeto, no el array de items de la vista n8n.
+### POST /api/v1/ordenes/ingesta — implementada (MIG-05; cliente por contacto registrado, V10)
+> `chatId` debe ser el JID de un contacto REGISTRADO (`<dígitos>@s.whatsapp.net`); si no existe, 422 `CONTACT_NOT_REGISTERED` y no se crea nada. El vendedor queda pendiente.
+El nodo final de WF1 usa `POST`, `Content-Type: application/json` y `X-Api-Key` de un servicio INGESTA activo; `instancia` debe ser la registrada para la clave (`isabel`). Body: **un objeto** por solicitud (nunca el array de items de n8n). Respuesta: `201` con `ordenId`, `ref`, `estado: BORRADOR`, `hojaResumenVersion`, `camposAusentes`, `avisos` (y `Idempotency-Replayed: true` si repite una solicitud idéntica). Crea solo un borrador sin confirmar ni asociar cliente/marca/vendedor. Los nombres del contrato para los datos extraídos son `cliente={nombre,ruc,tipo}`, `marca=CORPOTEX/UNICRACK_SPORT/UNICRACK_UNIFORMES` e `items` con `detalle_tallas`, `logo_diseno` y `precio_unitario`. Ejemplo ficticio en `Backend/docs/openapi.yaml` (componente `N8nIngestaCredit`). Detalle, errores y reintentos: [guía de integración](../../Backend/docs/integracion-n8n-isabella.md).
 
-Ejemplo ficticio de extracción incompleta, válido para probar recepción:
-```json
-{
-  "origen": "whatsapp",
-  "instancia": "isabel",
-  "chatId": "51900000001@s.whatsapp.net",
-  "vendedorJid": "51900000002@s.whatsapp.net",
-  "clienteNombreChat": "DEMO",
-  "extraccion": {
-    "faltantes": ["datos_pedido"],
-    "confianza": 0
-  },
-  "hojaResumenMd": "Faltan datos del pedido",
-  "transcript": "",
-  "mensajesProcesados": 4,
-  "generadoEn": "2026-10-11T05:38:18.770Z"
-}
-```
-La confianza=0 de este fixture no debe copiarse como valor de una extracción exitosa. Los nombres del contrato para datos extraídos son cliente={nombre,ruc,tipo}, marca=CORPOTEX/UNICRACK_SPORT/UNICRACK_UNIFORMES e items con detalle_tallas, logo_diseno y precio_unitario. El ejemplo anterior cliente string/UNICRACK/talla/logo/precio_unit era antecedente y no cumple el contrato actual.
-
-Respuesta actual: HTTP200 con estado VALIDADO_SIN_PERSISTIR, persistido=false, procesado=false y request_id. Solo valida recepción: no crea pedido ni encola trabajo; Isabella no debe interpretar el 200 como venta guardada. La respuesta201 con ordenId/ref/BORRADOR e idempotencia sigue pendiente de MIG-05. No hay autoría humana resuelta por vendedorJid en esta etapa.
-
-Errores:401 sin clave válida,403 con alcance/instancia incorrectos,400 por JSON/validación (incluido extraccion={} o array),415 si no es application/json,503 si no puede resolverse la credencial. No registrar body/transcript ni credenciales.
-
-URL local de Miguel: http://localhost:8080/api/v1/ordenes/ingesta. Si n8n está en otro equipo/servidor, localhost apunta a ese entorno, no a Miguel: el apiUrl debe ser una dirección alcanzable de Spring acordada por el equipo. No se publicó ni abrió un túnel desde esta tarea.
-
-La clave requiere provisión según Backend/docs/provision-servicios-local.md; no se creó una credencial real ni se modificó la base activa.
+### POST /api/v1/pagos/voucher — implementada (MIG-04/05)
+Un objeto JSON con `instancia`, `chatId`, `clienteJid`, `mensajeId` (id original de Evolution, obligatorio), `pushName`, `recibidoEn`, `extraccion` e `imagen_base64` (Base64 puro del archivo original, sin `data:`). Ejemplo ficticio completo y reproducible: `Backend/docs/ejemplos/wf2-voucher-ficticio.json`.
 
 ### POST /api/v1/ordenes/confirmar
 `{ "ref":"ORD-123", "instancia":"ventas-01", "chatId":"...", "vendedorJid":"...", "mensajeId":"..." }`
 
-### POST /api/v1/pagos/voucher
-```json
-{ "instancia":"ventas-01","chatId":"...","clienteJid":"...","mensajeId":"...","pushName":"...","recibidoEn":"...",
-  "extraccion":{"es_voucher":true,"tipo":"YAPE","banco":"BCP","monto":1000.00,"moneda":"PEN",
-  "fecha":"2026-10-10","hora":"14:02","codigo_operacion":"01234567","remitente":"...","destinatario":"...","confianza":0.9}}
-```
-Estados de conciliación (decide el backend): `APLICADO | PARCIAL | DUPLICADO | SIN_ORDEN | NO_CUADRA`. Duplicado = mismo código de operación + monto + fecha.
+Estados de conciliación que devuelve el backend para un voucher recién registrado: `PENDIENTE` o `DUPLICADO` (mismo código de operación + monto + fecha que un pago anterior). Nunca `APLICADO`: el voucher queda en fase `RECIBIDO`, sin fondos verificados ni saldo modificado (el antecedente de este README que sugería `APLICADO` era incorrecto).
 
 ### Salida a WF3 (Spring → n8n)
 ```json

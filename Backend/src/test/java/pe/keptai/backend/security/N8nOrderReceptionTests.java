@@ -31,11 +31,12 @@ class N8nOrderReceptionTests {
     static ServiceAuthentication actor(AccessRole scope) {
         return new ServiceAuthentication(new ServiceIdentity(UUID.randomUUID(), UUID.randomUUID(), "isabel", scope));
     }
-    @Test void validJsonIsAcknowledgedWithoutInventingAnOrderOrRetainingBody(CapturedOutput output) throws Exception {
+    // MIG-04/05: la recepción sin persistencia ya no existe. Sin base de datos (perfil de prueba) un JSON válido NO puede
+    // registrarse y responde 503 explícito; el 201 con persistencia real se prueba en N8nIngestaVoucherPersistenceTests.
+    @Test void validJsonWithoutADatabaseIsServiceUnavailableNeverASilentSuccess(CapturedOutput output) throws Exception {
         var response=mvc.perform(post("/api/v1/ordenes/ingesta").contentType("application/json")
             .with(authentication(actor(AccessRole.INGESTA))).content(BODY))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("VALIDADO_SIN_PERSISTIR"))
-            .andExpect(jsonPath("$.persistido").value(false)).andExpect(jsonPath("$.procesado").value(false))
+            .andExpect(status().isServiceUnavailable()).andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE"))
             .andExpect(jsonPath("$.request_id").isNotEmpty()).andExpect(jsonPath("$.ordenId").doesNotExist()).andReturn();
         assertThat(response.getResponse().getContentAsString()).doesNotContain("TRANSCRIPT_PRIVADO_PRUEBA");
         assertThat(output.getAll()).doesNotContain("TRANSCRIPT_PRIVADO_PRUEBA");
