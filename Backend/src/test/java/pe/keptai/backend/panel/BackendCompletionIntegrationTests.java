@@ -136,7 +136,8 @@ class BackendCompletionIntegrationTests {
   mvc.perform(post("/api/v1/payments/"+p+"/applications").with(authentication(auth(ADMIN))).contentType("application/json").header("Idempotency-Key","apply-rejected").content(body)).andExpect(status().isForbidden());
   for(int i=0;i<2;i++)mvc.perform(post("/api/v1/payments/"+p+"/applications").with(authentication(auth(SECOND))).contentType("application/json").header("Idempotency-Key","apply-demo").content(body)).andExpect(status().isCreated());
   assertThat(count("SELECT count(*) FROM keptai.aplicacion_pago")).isEqualTo(1);assertThat(count("SELECT count(*) FROM keptai.orden WHERE estado='LIBERADA'")).isEqualTo(1);
-  for(int i=0;i<2;i++)mvc.perform(post("/api/v1/orders/"+o+"/dispatch").with(authentication(auth(ADMIN))).contentType("application/json").header("Idempotency-Key","dispatch-demo").content("{\"dispatch_date\":\"2026-10-11\"}")).andExpect(status().isOk());
+  String today=java.time.LocalDate.now(java.time.ZoneId.of("America/Lima")).toString();
+  for(int i=0;i<2;i++)mvc.perform(post("/api/v1/orders/"+o+"/dispatch").with(authentication(auth(ADMIN))).contentType("application/json").header("Idempotency-Key","dispatch-demo").content("{\"dispatch_date\":\""+today+"\"}")).andExpect(status().isOk());
   assertThat(count("SELECT count(*) FROM keptai.despacho")).isEqualTo(1);
  }
  @Test void concurrentConfirmationRetriesCommitOneDecision()throws Exception {
