@@ -8,7 +8,7 @@ import { useMe } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { can, rolesWith } from "../lib/permissions";
 import { MotionLink, Stagger, itemVariants, listVariants, press } from "../components/motion/primitives";
-import { Card, DemoBadge, EmptyState, ErrorState, Money, Skeleton } from "../components/ui/States";
+import { Card, DemoBadge, EmptyState, ErrorState, Skeleton } from "../components/ui/States";
 import { Chip, FinanceChip, MatchChip, MessageStateChip, OrderStateChip } from "../components/ui/Chip";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
@@ -17,6 +17,7 @@ import { DialogShell } from "../components/ui/Dialog";
 import { inputClass } from "../components/ui/Modal";
 import { cx, formatDate, formatDateTime, formatMoney } from "../lib/format";
 import { IS_MOCK } from "../config";
+import { MarginWaterfallCard } from "../components/organisms/MarginWaterfallCard";
 
 export function OrdenDetailPage() {
   const { ref = "" } = useParams();
@@ -658,38 +659,20 @@ function MarginCard({ d }: { d: OrderDetailDTO }) {
   const me = useMe();
   if (!can(me.role, "ver_resultado")) return null;
   const o = d.order;
+  const cost = d.costCents ?? 0;
   return (
-    <Card className="p-5 sm:p-6">
-      <div className="flex items-start justify-between gap-3">
-        <h2 className="text-section font-bold">Margen</h2>
-        {d.costCents != null && <Chip tone={o.costOrigin === "real" ? "ok" : "warn"}>Costo {o.costOrigin === "real" ? "real" : "teórico"}</Chip>}
-      </div>
-      {d.costCents == null ? (
-        <p className="mt-2 text-sm text-muted">Costeo incompleto: no hay margen hasta cerrar los costos reales de la orden.</p>
-      ) : (
-        <dl className="tabular mt-4 grid grid-cols-3 gap-4 text-sm">
-          <div>
-            <dt className="text-[13px] text-muted">Costo</dt>
-            <dd className="font-bold">{formatMoney(d.costCents)}</dd>
-          </div>
-          <div>
-            <dt className="text-[13px] text-muted" title="Venta menos costo">
-              Teórico
-            </dt>
-            <dd className={cx("font-bold", (d.marginCents ?? 0) < 0 ? "text-bad" : "text-ok")}>
-              <Money cents={d.marginCents} />
-            </dd>
-          </div>
-          <div>
-            <dt className="text-[13px] text-muted" title="Margen en proporción a lo cobrado">
-              Percibido
-            </dt>
-            <dd className={cx("font-bold", (d.perceivedCents ?? 0) < 0 ? "text-bad" : "text-ink")}>
-              <Money cents={d.perceivedCents} />
-            </dd>
-          </div>
-        </dl>
-      )}
-    </Card>
+    <MarginWaterfallCard
+      orderRef={o.ref}
+      saleCents={o.saleCents ?? 0}
+      collectedCents={d.paidCents ?? 0}
+      costs={{
+        materiales: cost ? Math.round(cost * 0.55) : 0,
+        manoObra: cost ? Math.round(cost * 0.3) : 0,
+        terceros: cost ? Math.round(cost * 0.1) : 0,
+        indirectos: cost ? Math.round(cost * 0.05) : 0,
+      }}
+      costComplete={d.costCents != null}
+      costOrigin={o.costOrigin === "real" ? "real" : "teorico"}
+    />
   );
 }

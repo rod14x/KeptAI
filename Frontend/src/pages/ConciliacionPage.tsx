@@ -17,6 +17,7 @@ import { Chip, DueTag, MatchChip } from "../components/ui/Chip";
 import { Button } from "../components/ui/Button";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { EvidenceViewer } from "../components/evidence/EvidenceViewer";
+import { DiscrepancyNotice } from "../components/molecules/DiscrepancyNotice";
 import { cx, formatDate, formatDateTime, formatMoney } from "../lib/format";
 
 // Bandeja de pagos: un comprobante a la vez, una acción principal ("Sí, llegó al banco") y,
@@ -388,21 +389,23 @@ function SplitView({ d, nextHref }: { d: EvidenceDetailDTO; nextHref: string | n
           )}
         </div>
 
-        {d.match === "duplicado" && ev.status !== "descartado" && (
-          <p className="flex items-start gap-2 rounded-xl bg-bad-tint px-3.5 py-2.5 text-[13px] font-medium text-bad">
-            <CopySimple size={18} weight="bold" className="mt-px shrink-0" />
-            <span>
-              Mismo código de operación, monto y fecha que{" "}
-              {d.duplicateOfId ? (
-                <Link to={`/conciliacion/${d.duplicateOfId}`} className="font-bold underline">
-                  {d.duplicateOfRef ?? "otro comprobante"}
-                </Link>
-              ) : (
-                "otro comprobante"
-              )}
-              . Queda en revisión y no se descuenta.
-            </span>
-          </p>
+        {d.match !== "total" && d.match !== "pendiente" && ev.status !== "descartado" && (
+          <DiscrepancyNotice
+            kind={
+              d.match === "duplicado"
+                ? "duplicate"
+                : d.match === "parcial"
+                  ? "partial"
+                  : d.match === "no_cuadra"
+                    ? "amount_mismatch"
+                    : d.match === "excede"
+                      ? "exceeds"
+                      : "incomplete"
+            }
+            voucherAmountCents={ev.fields.amountCents}
+            expectedAmountCents={d.order ? d.order.balanceCents : null}
+            originalRef={d.duplicateOfRef}
+          />
         )}
 
         <section aria-labelledby="leido-title" className="flex flex-col gap-3">

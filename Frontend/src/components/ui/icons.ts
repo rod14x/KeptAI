@@ -3,9 +3,11 @@
 // Para un icono nuevo: agregar su línea aquí e importarlo desde este módulo.
 export { ArrowClockwise } from "@phosphor-icons/react/dist/csr/ArrowClockwise";
 export { ArrowCounterClockwise } from "@phosphor-icons/react/dist/csr/ArrowCounterClockwise";
+export { ArrowDown } from "@phosphor-icons/react/dist/csr/ArrowDown";
 export { ArrowLeft } from "@phosphor-icons/react/dist/csr/ArrowLeft";
 export { ArrowRight } from "@phosphor-icons/react/dist/csr/ArrowRight";
 export { ArrowSquareOut } from "@phosphor-icons/react/dist/csr/ArrowSquareOut";
+export { ArrowUp } from "@phosphor-icons/react/dist/csr/ArrowUp";
 export { Bank } from "@phosphor-icons/react/dist/csr/Bank";
 export { Bell } from "@phosphor-icons/react/dist/csr/Bell";
 export { CalendarBlank } from "@phosphor-icons/react/dist/csr/CalendarBlank";
@@ -59,6 +61,7 @@ export { Receipt } from "@phosphor-icons/react/dist/csr/Receipt";
 export { Robot } from "@phosphor-icons/react/dist/csr/Robot";
 export { Scales } from "@phosphor-icons/react/dist/csr/Scales";
 export { ShareNetwork } from "@phosphor-icons/react/dist/csr/ShareNetwork";
+export { ShieldCheck } from "@phosphor-icons/react/dist/csr/ShieldCheck";
 export { SignOut } from "@phosphor-icons/react/dist/csr/SignOut";
 export { SlidersHorizontal } from "@phosphor-icons/react/dist/csr/SlidersHorizontal";
 export { Sparkle } from "@phosphor-icons/react/dist/csr/Sparkle";
