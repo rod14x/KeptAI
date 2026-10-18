@@ -1,7 +1,7 @@
 name: keptai-backend
 services:
   backend:
-    image: keptai-backend:local
+    container_name: keptai-backend
     build:
       context: .
       dockerfile: Dockerfile
