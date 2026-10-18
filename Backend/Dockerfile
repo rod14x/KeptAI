@@ -13,7 +13,7 @@ WORKDIR /app
 RUN groupadd --gid 10001 keptai && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin keptai
 COPY --from=build --chown=10001:10001 /build/target/keptai-backend-0.0.1-SNAPSHOT.jar ./app.jar
 USER 10001:10001
-ENV SPRING_PROFILES_ACTIVE=prod
+ENV SPRING_PROFILES_ACTIVE=dev
 ENV PORT=8080
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
