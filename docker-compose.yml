@@ -1,10 +1,11 @@
 name: keptai
 services:
   keptai:
-    image: keptai:latest
+    container_name: keptai
     build:
       context: .
       dockerfile: Dockerfile
+    pull_policy: build
     restart: unless-stopped
     ports:
       - "${PORT:-8086}:80"
