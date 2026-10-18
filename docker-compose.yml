@@ -20,4 +20,11 @@ services:
       - KEPTAI_JWT_ISSUER_URI=${KEPTAI_JWT_ISSUER_URI:-}
       - KEPTAI_JWT_JWK_SET_URI=${KEPTAI_JWT_JWK_SET_URI:-}
       - KEPTAI_JWT_AUDIENCES=${KEPTAI_JWT_AUDIENCES:-authenticated}
-      - KEPTAI_CORS_ALLOWED_ORIGINS=${KEPTAI_CORS_ALLOWED_ORIGINS:-*}
+      - KEPTAI_CORS_ALLOWED_ORIGINS=${KEPTAI_CORS_ALLOWED_ORIGINS:-}
+    networks:
+      - default
+      - public
+
+networks:
+  public:
+    external: true
