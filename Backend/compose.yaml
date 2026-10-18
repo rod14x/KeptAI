@@ -33,3 +33,10 @@ services:
       SUPABASE_URL: ${SUPABASE_URL:-}
       SUPABASE_STORAGE_BUCKET: ${SUPABASE_STORAGE_BUCKET:-keptai-vouchers}
       SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
+    networks:
+      - default
+      - public
+
+networks:
+  public:
+    external: true
