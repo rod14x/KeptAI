@@ -1,0 +1,24 @@
+# Environment files (NEVER commit secrets or env files)
+.env
+.env.*
+*.env
+*.env.*
+*.local
+**/.env
+**/.env.*
+
+# Node / Frontend
+node_modules/
+dist/
+e2e/shots/
+
+# Java / Maven
+target/
+*.jar
+
+# IDE & OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml

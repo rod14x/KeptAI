@@ -14,6 +14,7 @@ import { Card, DemoBadge, EmptyState, ErrorState, Money, Skeleton } from "../com
 import { Chip } from "../components/ui/Chip";
 import { Button } from "../components/ui/Button";
 import { cx, formatDate, formatMoney } from "../lib/format";
+import { MarginWaterfallCard } from "../components/organisms/MarginWaterfallCard";
 import type { Scope } from "../api/model";
 
 type Modality = "todas" | "propia" | "tercerizada";
@@ -248,8 +249,15 @@ function OrdersTable({ rows }: { rows: ResultRow[] }) {
                     </tr>
                     {expanded && r.costs && (
                       <tr>
-                        <td colSpan={9} className="pb-4">
-                          <CostBreakdown costs={r.costs} />
+                        <td colSpan={9} className="pb-4 pt-2">
+                          <MarginWaterfallCard
+                            orderRef={r.ref}
+                            saleCents={r.saleCents ?? 0}
+                            collectedCents={r.collectedCents ?? 0}
+                            costs={r.costs}
+                            costComplete={r.costComplete}
+                            costOrigin={r.costOrigin === "real" ? "real" : "teorico"}
+                          />
                         </td>
                       </tr>
                     )}
@@ -264,25 +272,7 @@ function OrdersTable({ rows }: { rows: ResultRow[] }) {
   );
 }
 
-function CostBreakdown({ costs }: { costs: NonNullable<ResultRow["costs"]> }) {
-  const items = [
-    { label: "Materia prima", v: costs.materiales },
-    { label: "Mano de obra", v: costs.manoObra },
-    { label: "Terceros", v: costs.terceros },
-    { label: "Indirectos", v: costs.indirectos, note: "asignación por validar" },
-  ].filter((i) => i.v > 0);
-  return (
-    <motion.div variants={itemVariants} className="grid gap-3 rounded-[var(--radius-block)] bg-panel p-4 ring-1 ring-line sm:grid-cols-4">
-      {items.map((i) => (
-        <div key={i.label}>
-          <p className="text-xs font-semibold text-muted">{i.label}</p>
-          <p className="font-bold">{formatMoney(i.v)}</p>
-          {i.note && <p className="text-[11px] text-warn">{i.note}</p>}
-        </div>
-      ))}
-    </motion.div>
-  );
-}
+
 
 function Workshop({ d, scope }: { d: ResultsDTO; scope: Scope }) {
   const w = d.workshop;

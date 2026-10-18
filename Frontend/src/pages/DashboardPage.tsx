@@ -15,6 +15,7 @@ import { Card, DemoBadge, EmptyState, ErrorState, Money, Skeleton } from "../com
 import { ActivityChip, Chip } from "../components/ui/Chip";
 import { Avatar } from "../components/ui/Avatar";
 import { CashFlowChart } from "../components/charts/CashFlowChart";
+import { CashFlowDrilldown } from "../components/organisms/CashFlowDrilldown";
 import { cx, formatDate, formatDateTime, formatMoney } from "../lib/format";
 
 export function DashboardPage() {
@@ -99,7 +100,7 @@ export function DashboardPage() {
           <Kpis d={d} canResult={can(me.role, "ver_resultado")} />
           {d.weeks ? (
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
-              <CashCard d={d} weeks={d.weeks} />
+              <CashCard d={d} weeks={d.weeks} orders={orders} />
               <AssistantCard notes={d.assistant} />
             </div>
           ) : (
@@ -197,9 +198,11 @@ function Kpis({ d, canResult }: { d: DashboardDTO; canResult: boolean }) {
   );
 }
 
-function CashCard({ d, weeks }: { d: DashboardDTO; weeks: WeekPoint[] }) {
+function CashCard({ d, weeks, orders }: { d: DashboardDTO; weeks: WeekPoint[]; orders: OrderRow[] }) {
   const [table, setTable] = useState(false);
+  const [selectedWeek, setSelectedWeek] = useState<WeekPoint | null>(null);
   const negative = weeks.find((w) => w.balanceCents < 0);
+
   return (
     <Card className="p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -213,15 +216,33 @@ function CashCard({ d, weeks }: { d: DashboardDTO; weeks: WeekPoint[] }) {
           </Chip>
         )}
       </div>
+
       {negative && (
         <p className="mt-4 flex items-start gap-2 rounded-xl bg-bad-tint px-3.5 py-2.5 text-[13px] font-medium text-bad">
           <WarningCircle size={18} weight="bold" className="mt-px shrink-0" />
           La caja queda en {formatMoney(negative.balanceCents)} en la {negative.label.replace("Sem", "semana")} ({negative.range}).
         </p>
       )}
+
       <div className="mt-5">
-        <CashFlowChart weeks={weeks} />
+        <CashFlowChart
+          weeks={weeks}
+          selectedWeek={selectedWeek}
+          onSelectWeek={(w) => setSelectedWeek(selectedWeek?.label === w.label ? null : w)}
+        />
       </div>
+
+      {selectedWeek && (
+        <div className="mt-6">
+          <CashFlowDrilldown
+            week={selectedWeek}
+            factorCobro={d.factorCobro}
+            orders={orders}
+            onClose={() => setSelectedWeek(null)}
+          />
+        </div>
+      )}
+
       <button
         onClick={() => setTable((t) => !t)}
         aria-expanded={table}
@@ -230,6 +251,7 @@ function CashCard({ d, weeks }: { d: DashboardDTO; weeks: WeekPoint[] }) {
         <CaretDown size={14} weight="bold" className={cx("transition-transform", table && "rotate-180")} />
         {table ? "Ocultar tabla" : "Ver como tabla"}
       </button>
+
       {table && (
         <motion.div variants={itemVariants} className="mt-2 overflow-x-auto">
           <table className="tabular w-full min-w-[460px] text-[13px]">
@@ -256,10 +278,11 @@ function CashCard({ d, weeks }: { d: DashboardDTO; weeks: WeekPoint[] }) {
           </table>
         </motion.div>
       )}
-       <details className="quiet-disclosure mt-4">
-         <summary>Cómo se calcula la proyección</summary>
-         <p className="mt-2 text-xs leading-relaxed text-muted">{d.demo && "Fuente: semilla de demostración. "}Saldo inicial = apertura supuesta + pagos aplicados. Un pago aplicado deja de contar como cobro futuro.</p>
-       </details>
+
+      <details className="quiet-disclosure mt-4">
+        <summary>Cómo se calcula la proyección</summary>
+        <p className="mt-2 text-xs leading-relaxed text-muted">{d.demo && "Fuente: semilla de demostración. "}Saldo inicial = apertura supuesta + pagos aplicados. Un pago aplicado deja de contar como cobro futuro.</p>
+      </details>
     </Card>
   );
 }
