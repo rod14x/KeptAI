@@ -129,6 +129,24 @@ function OrderCardView({ card }: { card: OrderCard }) {
         {card.anticipoPendienteCents > 0 && card.estado === "retenida" && <Chip tone="warn">Anticipo {formatMoney(card.anticipoPendienteCents, { short: true })}</Chip>}
       </div>
 
+      {card.saleCents != null && card.saleCents > 0 && (
+        <div className="mt-3">
+          <div className="flex justify-between text-[11px] text-muted mb-1 font-semibold">
+            <span>Cobrado: {Math.max(0, Math.min(100, Math.round(((card.saleCents - card.balanceCents) / card.saleCents) * 100)))}%</span>
+            <span>Saldo: {formatMoney(card.balanceCents)}</span>
+          </div>
+          <div className="h-1.5 w-full bg-line rounded-full overflow-hidden">
+            <div
+              className={cx(
+                "h-full rounded-full transition-all",
+                card.balanceCents === 0 ? "bg-ok" : "bg-brand-blue"
+              )}
+              style={{ width: `${Math.max(0, Math.min(100, ((card.saleCents - card.balanceCents) / card.saleCents) * 100))}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="mt-3 flex items-center justify-between gap-2 border-t border-line-soft pt-3">
         <span className="flex min-w-0 items-center gap-2 text-xs text-muted">
           {card.seller && (
