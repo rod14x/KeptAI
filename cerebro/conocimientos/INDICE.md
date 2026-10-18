@@ -75,3 +75,8 @@ El mapa combina un flujo general propuesto con sistemas descritos en entrevistas
 - [Continuación después de integrar los backends](desarrollo/miguel/plan-continuacion-backend-integrado.md) — MIG-INTEGRADO-001, secuencia vigente y criterios de cierre real.
 
 - [Cierre del backend y aceptación externa](../../Backend/docs/plan-cierre-backend.md): implementación previa al despliegue, D-014 ADMIN crédito, prueba API/Supabase real y pendientes n8n/frontend.
+
+## Despliegue All-in-One y Manufactura Textil (18/10/2026)
+
+- [Despliegue Docker All-in-One y Taller Textil](desarrollo/despliegue-docker-y-taller-manufactura.md) - Guia completa de arquitectura del contenedor unico (Vite + Spring Boot + Nginx en puerto 8086 y SSL Let's Encrypt), solucion a errores de Docker Compose/Portainer (`pull_policy: build`), las 2 modalidades de confeccion de Corpotex (stock base vs rollo) y sincronizacion temporal de despacho en CI.
+- Decisiones [D-015, D-016 y D-017](decisiones/decisiones-del-proyecto.md): contenedor unificado, enrutamiento textil en taller y fix de CI.

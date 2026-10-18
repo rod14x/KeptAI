@@ -432,3 +432,26 @@ Las prioridades, módulos, reglas, diagramas, fases y métricas de este document
 - Sustituye la exclusividad del vendedor de D-005 en esta etapa. ADMIN de la organización puede aprobar/rechazar desde el panel; n8n no autoriza y el vendedor existente no se modifica ni se inventa.
 - Política API y RLS V14; autoría desde PostgreSQL, idempotencia por autor/contenido y obligación/auditoría en una transacción. Mora informativa reconocida antes de decidir. Segregación de verificación/aplicación por dos ADMIN de D-012 se conserva.
 - Sin migración en base activa ni aceptación remota implícita. Acceso general de vendedores/cartera continúa sin definir y cerrado.
+
+## D-015 - Despliegue All-in-One Docker en VPS (Portainer + Nginx-Proxy + SSL Let's Encrypt)
+
+- Fecha: 18/10/2026. Responsable: Isabella. Estado: implementado y operativo en VPS.
+- Se unifica el frontend (Vite/React SPA) y backend (Spring Boot Java 21) en una unica imagen Docker multietapa coordinada por Nginx interno en puerto 80.
+- Expone el puerto `8086` en el host para acceso directo y se conecta a la red externa `public` de Docker para integrarse con `nginx-proxy` y `acme-companion` (SSL automatico de Let's Encrypt).
+- Se establece la directiva `pull_policy: build` y `container_name: keptai` en Compose para evitar que Portainer intente descargar la imagen desde Docker Hub publico (`docker.io/library/keptai`), compilando siempre desde el repositorio Git.
+- Cero credenciales o dominios de produccion en Git; todo secreto se inyecta mediante variables de entorno del stack en Portainer.
+
+## D-016 - Enrutamiento y Trazabilidad Operativa Textil en Taller (/taller)
+
+- Fecha: 18/10/2026. Responsable: Isabella. Fuente: requerimiento de proceso de manufactura de Corpotex. Estado: implementado en frontend con persistencia local reactiva y 108 pruebas vitest en verde.
+- Se implementan las dos modalidades reales de produccion textil:
+  1. *Stock Base en Blanco:* Prenda lisa en inventario que se deriva directamente a Sublimacion/Estampado o Bordado Computarizado, con descuento de unidades en 1 clic.
+  2. *Confeccion Completa:* Fabricacion integral desde rollo de tela virgen (Kg) pasando por Corte & Tizado, Sublimacion por piezas, Costura & Ensamble, Acabado y Control de Calidad (AQL 2.5).
+- Incluye Ficha Tecnica Textil descargable e imprimible (`@media print`) con desglose de tallas (XS a XXL), colores Pantone, ubicacion de artes y consumo de insumos.
+- Monitor de inventario de planta en tiempo real (`TallerInventoryView`) con alertas de stock minimo y reposicion simulada.
+
+## D-017 - Sincronizacion Temporal de Despacho en CI (Fix de Fechas)
+
+- Fecha: 18/10/2026. Responsable: Isabella / Miguel. Estado: implementado y verificado.
+- Correccion en `BackendCompletionIntegrationTests.java`: la prueba de integracion de despacho utilizaba una fecha fija pasada (`2026-10-11`), lo que provocaba un fallo de integridad (`409 Conflict`) contra el trigger de base de datos PostgreSQL `tg_despacho_vencimiento` al ejecutarse en CI en fechas posteriores (`2026-10-18`).
+- Se dinamizo la fecha de despacho con `LocalDate.now(ZoneId.of("America/Lima"))`, garantizando la validez de la regla `fecha_despacho >= fecha_inicio_produccion` en cualquier ejecucion futura del pipeline.
