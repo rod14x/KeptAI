@@ -1,8 +1,35 @@
 import { useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { Link, useParams, useSearchParams } from "react-router";
-import { ArrowLeft, ArrowRight, CaretDown, ChatCircleText, Check, CheckCircle, Factory, Hourglass, Info, LockOpen, Prohibit, Robot, Truck, UploadSimple, WarningCircle } from "../components/ui/icons";
-import { capabilities, commands, getOrder, MESSAGE_LABEL, PLAZO_MAX, PLAZO_MIN, type OrderDetailDTO, type PaymentTerms } from "../api/client";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Bank,
+  CaretDown,
+  ChatCircleText,
+  Check,
+  CheckCircle,
+  Factory,
+  Hourglass,
+  Info,
+  LockOpen,
+  Prohibit,
+  Robot,
+  ShieldCheck,
+  Truck,
+  UploadSimple,
+  WarningCircle,
+} from "../components/ui/icons";
+import {
+  capabilities,
+  commands,
+  getOrder,
+  MESSAGE_LABEL,
+  PLAZO_MAX,
+  PLAZO_MIN,
+  type OrderDetailDTO,
+  type PaymentTerms,
+} from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useMe } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
@@ -18,6 +45,11 @@ import { inputClass } from "../components/ui/Modal";
 import { cx, formatDate, formatDateTime, formatMoney } from "../lib/format";
 import { IS_MOCK } from "../config";
 import { MarginWaterfallCard } from "../components/organisms/MarginWaterfallCard";
+import {
+  OrderLifecycleBar,
+  OrderExecutiveStrip,
+  buildOrderLifecycleSteps,
+} from "../components/organisms/OrderLifecycleBar";
 
 export function OrdenDetailPage() {
   const { ref = "" } = useParams();
@@ -46,144 +78,386 @@ export function OrdenDetailPage() {
   return <Detail d={data} />;
 }
 
-/** Ciclo de la orden según el flujo del DER. */
-const LIFECYCLE = [
-  { key: "pendiente_aprobacion", label: "Por confirmar" },
-  { key: "liberada", label: "Liberada" },
-  { key: "despachada", label: "Despachada" },
-  { key: "cobrada", label: "Cobrada" },
-] as const;
-
-function lifecycleIndex(d: OrderDetailDTO) {
-  const o = d.order;
-  if (o.estado === "pendiente_aprobacion" || o.estado === "rechazada") return 0;
-  if (o.estado === "retenida") return 0.5;
-  if (o.estado === "en_produccion") return 1;
-  return d.card.balanceCents > 0 ? 2 : 3;
-}
-
 function Detail({ d }: { d: OrderDetailDTO }) {
   const o = d.order;
   const [params, setParams] = useSearchParams();
   const tab = params.get("tab") === "pagos" ? "pagos" : params.get("tab") === "mensajes" ? "mensajes" : "pedido";
-  const idx = lifecycleIndex(d);
   const pending = o.estado === "pendiente_aprobacion";
+
+  const lifecycleSteps = buildOrderLifecycleSteps(d);
+
+  const handleStepClick = (stepKey: string) => {
+    if (stepKey === "comercial" || stepKey === "gatekeeper" || stepKey === "taller") {
+      setParams({});
+    } else if (stepKey === "despacho" || stepKey === "cobranza") {
+      setParams({ tab: "pagos" });
+    }
+  };
+
+  const handleNavigateTab = (targetTab: "pedido" | "pagos" | "mensajes") => {
+    setParams(targetTab === "pedido" ? {} : { tab: targetTab });
+  };
+
   return (
     <Stagger className="mx-auto flex max-w-[1320px] flex-col gap-6">
-      <MotionLink to="/pedidos" variants={itemVariants} {...press} className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink">
-        <ArrowLeft size={16} weight="bold" /> Pedidos
-      </MotionLink>
+      {/* Botón de retorno rápido */}
+      <div className="flex items-center justify-between gap-4">
+        <MotionLink
+          to="/pedidos"
+          variants={itemVariants}
+          {...press}
+          className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink"
+        >
+          <ArrowLeft size={16} weight="bold" /> Volver a Pedidos
+        </MotionLink>
 
-      <Card className="flex flex-col gap-5 p-5 sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-title font-extrabold">Pedido {o.ref}</h1>
+        {d.card.demo && <DemoBadge />}
+      </div>
+
+      {/* Cockpit Principal de la Orden (360° en 1 Vistazo) */}
+      <Card className="flex flex-col gap-6 p-5 sm:p-7 shadow-soft">
+        {/* Cabecera de la Orden y Datos Comerciales */}
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between border-b border-line pb-6">
+          <div className="min-w-0 max-w-2xl">
+            {/* Referencia de la Orden y Badges de Estado */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Pedido {o.ref}</h1>
               <OrderStateChip estado={o.estado} />
-              {o.estado === "despachada" && <FinanceChip finance={d.card.finance} daysToDue={d.card.daysToDue ?? undefined} />}
+              {o.estado === "despachada" && (
+                <FinanceChip finance={d.card.finance} daysToDue={d.card.daysToDue ?? undefined} />
+              )}
+              {d.card.clienteEnMora && (
+                <Chip tone="bad" icon={<WarningCircle size={14} weight="bold" />}>
+                  Cliente con mora en cartera
+                </Chip>
+              )}
             </div>
-            {o.description && <p className="mt-1 text-sm font-semibold text-ink-soft">{o.description}</p>}
-            <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted">
+
+            {/* Descripción y resumen comercial */}
+            {o.description && (
+              <p className="mt-1.5 text-base font-semibold text-ink-soft">{o.description}</p>
+            )}
+
+            {/* Metadatos del cliente, marca, taller y vendedor */}
+            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-muted">
               {d.customer.id ? (
-                <Link to={`/clientes/${d.customer.id}`} className="font-semibold text-ink hover:underline">
+                <Link
+                  to={`/clientes/${d.customer.id}`}
+                  className="font-bold text-ink hover:text-brand-blue hover:underline flex items-center gap-1"
+                >
                   {d.customer.name}
+                  {d.customer.rucDni && (
+                    <span className="text-xs font-normal text-muted tabular">({d.customer.rucDni})</span>
+                  )}
                 </Link>
               ) : (
-                <span className="font-semibold text-ink">{d.customer.name}</span>
+                <span className="font-bold text-ink">{d.customer.name}</span>
               )}
-              <span>{[d.card.brand && (d.card.brand === "corpotex" ? "Corpotex" : "Unicrack"), o.line, `producción ${o.modality}`].filter(Boolean).join(" · ")}</span>
+
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <span className="size-1.5 rounded-full bg-line-dark" />
+                {[
+                  d.card.brand && (d.card.brand === "corpotex" ? "Corpotex" : "Unicrack"),
+                  o.line && `Línea ${o.line}`,
+                  `Taller ${o.modality === "tercerizada" ? "Tercerizado" : "Propio Corpotex"}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+
               {d.seller && (
-                <span className="inline-flex items-center gap-1">
-                  <Avatar name={d.seller} size="sm" /> {d.seller}
+                <span className="inline-flex items-center gap-1.5 font-medium">
+                  <span className="size-1.5 rounded-full bg-line-dark" />
+                  <Avatar name={d.seller} size="sm" />
+                  <span>Venta: {d.seller}</span>
                 </span>
               )}
-            </p>
-          </div>
-          <div className="flex items-end gap-6">
-            <dl className="tabular grid grid-cols-3 gap-5 text-sm">
-              <div>
-                <dt className="text-xs text-muted">Total</dt>
-                <dd className="font-extrabold">{formatMoney(o.saleCents)}</dd>
+            </div>
+
+            {/* Alerta de comprobante bancario pendiente de conciliación */}
+            {d.pendingEvidence.length > 0 && (
+              <div className="mt-3.5 flex items-center gap-2">
+                <Link
+                  to={`/conciliacion/${d.pendingEvidence[0].id}`}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-brand-blue/10 px-3 py-1.5 text-xs font-bold text-brand-blue transition-colors hover:bg-brand-blue/20"
+                >
+                  <Bank size={15} weight="bold" />
+                  {d.pendingEvidence.length} comprobante(s) por conciliar ({d.pendingEvidence[0].ref})
+                  <ArrowRight size={13} weight="bold" />
+                </Link>
               </div>
-              <div>
-                <dt className="text-xs text-muted">Cobrado</dt>
-                <dd className="font-extrabold text-ok">{formatMoney(d.paidCents)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted">Saldo</dt>
-                <dd className={cx("font-extrabold", d.card.finance === "vencido" && "text-bad")}>{formatMoney(d.card.balanceCents)}</dd>
-              </div>
-            </dl>
-            {d.card.demo && (
-              <span className="hidden sm:block">
-                <DemoBadge />
-              </span>
             )}
           </div>
+
+          {/* Cifras Globales Resumidas */}
+          <div className="flex items-center gap-4">
+            <dl className="tabular flex flex-wrap items-center gap-6 rounded-xl bg-panel px-4 py-3 border border-line">
+              <div>
+                <dt className="text-xs text-muted">Total Venta</dt>
+                <dd className="font-black text-base text-ink">{formatMoney(o.saleCents)}</dd>
+              </div>
+              <div className="border-l border-line-soft pl-6">
+                <dt className="text-xs text-muted">Cobrado</dt>
+                <dd className="font-black text-base text-ok">{formatMoney(d.paidCents)}</dd>
+              </div>
+              <div className="border-l border-line-soft pl-6">
+                <dt className="text-xs text-muted">Saldo por Cobrar</dt>
+                <dd className={cx("font-black text-base", d.card.finance === "vencido" ? "text-bad" : "text-ink")}>
+                  {formatMoney(d.card.balanceCents)}
+                </dd>
+              </div>
+            </dl>
+          </div>
         </div>
+
+        {/* 1. BANDA EJECUTIVA A UN SOLO VISTAZO (Valor Agregado: Cobro & Caja, Semáforo Taller, Rentabilidad & Plazos) */}
+        <OrderExecutiveStrip d={d} onNavigateTab={handleNavigateTab} />
+
+        {/* 2. BARRA DE TRAZABILIDAD DE 5 ETAPAS CON ICONOS (Order-to-Cash) */}
         {o.estado !== "rechazada" && (
-          <ol className="grid grid-cols-4 gap-1.5" aria-label="Ciclo de la orden">
-            {LIFECYCLE.map((s, i) => {
-              const done = idx >= i;
-              const current = Math.floor(idx) === i;
-              return (
-                <li key={s.key} className="flex min-w-0 flex-col gap-1.5" aria-current={current ? "step" : undefined}>
-                  <span className="h-1.5 overflow-hidden rounded-full bg-line">
-                    <motion.span className={cx("block h-full w-full origin-left rounded-full", current && idx < 3 ? "bg-violet" : "bg-ok")} initial={{ scaleX: 0 }} animate={{ scaleX: done ? 1 : 0 }} />
-                  </span>
-                  <span className={cx("truncate text-[11px] font-semibold", current ? "text-ink" : done ? "text-ok" : "text-faint")}>
-                    {i === 1 && o.estado === "retenida" ? "Retenida" : s.label}
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
+          <OrderLifecycleBar
+            steps={lifecycleSteps}
+            onStepClick={handleStepClick}
+          />
         )}
-        <NextStep d={d} />
+
+        {/* 3. BANDA DE ACCIÓN CLAVE INMEDIATA (Quién tiene la pelota) */}
+        <NextStep d={d} onGoToTab={(t) => setParams(t === "pedido" ? {} : { tab: t })} />
       </Card>
 
-      <Segmented kind="tab" label="Detalle del pedido" value={tab} onChange={(value) => setParams(value === "pedido" ? {} : { tab: value })} options={[{ value: "pedido", label: "Pedido y condiciones" }, { value: "pagos", label: "Pagos y fechas" }, { value: "mensajes", label: "Seguimiento" }]} />
-      {tab === "pedido" && <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <div className="flex min-w-0 flex-col gap-6">
-          {pending && <ConditionCard d={d} />}
-          <HojaCard d={d} />
-          <ItemsCard d={d} />
+      {/* Pestañas de detalle profundo */}
+      <Segmented
+        kind="tab"
+        label="Detalle del pedido"
+        value={tab}
+        onChange={(value) => setParams(value === "pedido" ? {} : { tab: value })}
+        options={[
+          { value: "pedido", label: "Pedido y condiciones" },
+          { value: "pagos", label: "Pagos y rentabilidad" },
+          { value: "mensajes", label: "Seguimiento y auditoría" },
+        ]}
+      />
+
+      {/* Contenido de la pestaña: Pedido y condiciones */}
+      {tab === "pedido" && (
+        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+          <div className="flex min-w-0 flex-col gap-6">
+            {pending && <ConditionCard d={d} />}
+            <HojaCard d={d} />
+            <ItemsCard d={d} />
+          </div>
+          <div className="flex min-w-0 flex-col gap-6">
+            {!pending && <ConditionCard d={d} />}
+            <DatesCard d={d} />
+            <OrderHistoryCard d={d} />
+          </div>
         </div>
-        <div className="flex min-w-0 flex-col gap-6">
-          {!pending && <ConditionCard d={d} />}
-          <DatesCard d={d} />
+      )}
+
+      {/* Contenido de la pestaña: Pagos y rentabilidad */}
+      {tab === "pagos" && (
+        <div className="grid items-start gap-6 xl:grid-cols-2">
+          <div className="flex min-w-0 flex-col gap-6">
+            <PaymentsCard d={d} />
+            <MarginCard d={d} />
+          </div>
+          <div className="flex min-w-0 flex-col gap-6">
+            <DatesCard d={d} />
+            <OrderHistoryCard d={d} />
+          </div>
         </div>
-      </div>}
-      {tab === "pagos" && <div className="grid items-start gap-6 xl:grid-cols-2"><div className="flex min-w-0 flex-col gap-6"><PaymentsCard d={d} /><MarginCard d={d} /></div><DatesCard d={d} /></div>}
-      {tab === "mensajes" && <MessagesCard d={d} />}
+      )}
+
+      {/* Contenido de la pestaña: Seguimiento y auditoría */}
+      {tab === "mensajes" && (
+        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+          <MessagesCard d={d} />
+          <OrderHistoryCard d={d} />
+        </div>
+      )}
     </Stagger>
   );
 }
 
-/** Quién mueve la orden ahora: así nadie tiene que acordarse del flujo. */
-function NextStep({ d }: { d: OrderDetailDTO }) {
+/** Quién mueve la orden ahora y cuál es el botón de acción directa. */
+function NextStep({
+  d,
+  onGoToTab,
+}: {
+  d: OrderDetailDTO;
+  onGoToTab: (tab: "pedido" | "pagos" | "mensajes") => void;
+}) {
   const o = d.order;
   if (o.estado === "rechazada") return null;
-  const step =
-    o.estado === "pendiente_aprobacion"
-      ? IS_MOCK
-        ? `${d.seller ? `${d.seller} (vendedor)` : "El vendedor"} confirma la orden y decide el crédito.`
-        : "Administración confirma la orden y decide el crédito (D-014)."
-      : o.estado === "retenida"
-        ? `Administración confirma que llegó el anticipo de ${formatMoney(d.card.anticipoPendienteCents)}.`
-        : o.estado === "en_produccion"
-          ? "El Jefe de taller registra el despacho. Desde ahí corre el plazo de pago."
-          : d.card.balanceCents > 0
-            ? `El cliente paga ${formatMoney(d.card.balanceCents)}${d.card.dueDate ? ` antes del ${formatDate(d.card.dueDate)}` : ""}; Administración revisa el comprobante.`
-            : null;
+
+  let responsibleRole = "";
+  let actionText = "";
+  let ctaLabel = "";
+  let ctaAction: (() => void) | null = null;
+  let ctaHref: string | null = null;
+
+  if (o.estado === "pendiente_aprobacion") {
+    responsibleRole = IS_MOCK ? "VENDEDOR" : "ADMINISTRACIÓN (D-014)";
+    actionText = "Revisar la hoja de resumen y confirmar la orden definiendo si va a crédito o con anticipo.";
+    ctaLabel = "Revisar y Decidir Crédito";
+    ctaAction = () => onGoToTab("pedido");
+  } else if (o.estado === "retenida") {
+    responsibleRole = "ADMINISTRACIÓN / CAJA";
+    actionText = `Verificar en banca el abono de anticipo de ${formatMoney(d.card.anticipoPendienteCents)} para liberar la orden a taller.`;
+    if (d.pendingEvidence.length > 0) {
+      ctaLabel = `Conciliar Comprobante (${d.pendingEvidence[0].ref})`;
+      ctaHref = `/conciliacion/${d.pendingEvidence[0].id}`;
+    } else {
+      ctaLabel = "Cargar Comprobante Bancario";
+      ctaHref = "/captura";
+    }
+  } else if (o.estado === "en_produccion") {
+    responsibleRole = "JEFE DE TALLER";
+    actionText = "La confección está habilitada. El jefe de taller debe registrar el acta de despacho físico para iniciar el plazo de crédito.";
+    ctaLabel = "Ir al Taller";
+    ctaHref = "/taller";
+  } else if (d.card.balanceCents > 0) {
+    responsibleRole = "COBRANZA / CLIENTE";
+    actionText = `El cliente adeuda ${formatMoney(d.card.balanceCents)}${d.card.dueDate ? ` antes del ${formatDate(d.card.dueDate)}` : ""}. Aplicar comprobante al recibirlo.`;
+    ctaLabel = "Gestionar en Cobranza";
+    ctaHref = "/cobranza";
+  }
+
+  const isComplete = !actionText;
+
   return (
-    <p className={cx("flex items-start gap-2 rounded-xl px-3.5 py-2.5 text-[13px]", step ? "bg-violet-wash text-violet-ink" : "bg-ok-tint text-ok")}>
-      {step ? <ArrowRight size={16} weight="bold" className="mt-0.5 shrink-0" /> : <CheckCircle size={16} weight="bold" className="mt-0.5 shrink-0" />}
-      <span>
-        <span className="font-bold">{step ? "Siguiente paso: " : "Listo: "}</span>
-        {step ?? "orden cobrada por completo. No queda nada por hacer."}
-      </span>
-    </p>
+    <div
+      className={cx(
+        "flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 rounded-xl p-4 transition-all",
+        isComplete
+          ? "bg-ok-tint/80 text-ok border border-ok/20"
+          : "bg-brand-blue/[0.04] text-ink border border-brand-blue/20"
+      )}
+    >
+      <div className="flex items-start gap-3 min-w-0">
+        <span
+          className={cx(
+            "flex size-8 shrink-0 items-center justify-center rounded-lg mt-0.5",
+            isComplete ? "bg-ok text-inverse" : "bg-brand-blue text-inverse"
+          )}
+        >
+          {isComplete ? <CheckCircle size={18} weight="bold" /> : <ArrowRight size={18} weight="bold" />}
+        </span>
+
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted">
+              {isComplete ? "Estado Final" : `Acción Clave · ${responsibleRole}`}
+            </span>
+          </div>
+          <p className="text-sm font-semibold text-ink mt-0.5">
+            {isComplete
+              ? "Orden 100% cobrada y conciliada en banca. No quedan trámites pendientes."
+              : actionText}
+          </p>
+        </div>
+      </div>
+
+      {ctaLabel && (
+        <div className="shrink-0 sm:self-center">
+          {ctaHref ? (
+            <Link
+              to={ctaHref}
+              className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-brand-blue px-4 py-2 text-xs font-bold text-inverse shadow-sm transition-all hover:bg-brand-navy"
+            >
+              {ctaLabel}
+              <ArrowRight size={14} weight="bold" />
+            </Link>
+          ) : (
+            <Button
+              size="md"
+              variant="primary"
+              onClick={ctaAction ?? undefined}
+              icon={<ArrowRight size={14} weight="bold" />}
+            >
+              {ctaLabel}
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Tarjeta cronológica de hitos registrados para trazabilidad completa. */
+function OrderHistoryCard({ d }: { d: OrderDetailDTO }) {
+  const o = d.order;
+  const milestones: Array<{ label: string; date: string | null; by: string | null; icon: ReactNode; detail?: string }> = [
+    {
+      label: "Recepción del Pedido",
+      date: o.issuedOn,
+      by: d.seller ? `Vendedor: ${d.seller}` : null,
+      icon: <ChatCircleText size={15} weight="bold" />,
+      detail: o.hoja?.origen === "whatsapp" ? `Extraído por IA (Hoja v${o.hoja.version})` : "Cargado manualmente",
+    },
+    ...(o.credito
+      ? [
+          {
+            label: `Crédito ${o.credito.decision === "aprobado" ? "Aprobado" : "Rechazado"}`,
+            date: o.credito.at,
+            by: o.credito.by,
+            icon: <ShieldCheck size={15} weight="bold" />,
+            detail: o.credito.nota ?? (o.condicionPago ? `Condición: ${o.condicionPago.tipo}` : undefined),
+          },
+        ]
+      : []),
+    ...(o.inicioProduccion
+      ? [
+          {
+            label: "Entrada a Taller (Confección)",
+            date: o.inicioProduccion,
+            by: `Modalidad ${o.modality}`,
+            icon: <Factory size={15} weight="bold" />,
+            detail: "Superó el gatekeeper financiero",
+          },
+        ]
+      : []),
+    ...(o.despacho
+      ? [
+          {
+            label: "Despacho Físico Registrado",
+            date: o.despacho.fecha,
+            by: o.despacho.by,
+            icon: <Truck size={15} weight="bold" />,
+            detail: `Acta de entrega #${o.despacho.acta}`,
+          },
+        ]
+      : []),
+    ...d.payments.map((p) => ({
+      label: `Abono de Pago (${p.channel})`,
+      date: p.at,
+      by: p.by,
+      icon: <CheckCircle size={15} weight="bold" />,
+      detail: `Importe: ${formatMoney(p.amountCents)}${p.evidenceId ? ` · Voucher ${p.evidenceId}` : ""}`,
+    })),
+  ];
+
+  return (
+    <Card className="p-5 sm:p-6 shadow-soft">
+      <h2 className="text-section font-bold">Línea de Vida y Auditoría</h2>
+      <p className="text-xs text-muted mt-0.5">Registro cronológico de hitos operacionales y contables</p>
+
+      <ol className="mt-4 flex flex-col relative border-l border-line ml-3.5 space-y-4">
+        {milestones.map((m, idx) => (
+          <li key={idx} className="ml-5 relative">
+            <span className="absolute -left-[27px] top-0.5 size-5 rounded-full bg-panel border-2 border-brand-blue flex items-center justify-center text-brand-blue text-[10px]">
+              {m.icon}
+            </span>
+            <div className="flex flex-wrap items-center justify-between gap-1">
+              <span className="text-xs font-bold text-ink">{m.label}</span>
+              {m.date && <span className="text-[11px] text-faint tabular">{formatDate(m.date)}</span>}
+            </div>
+            {m.detail && <p className="text-xs text-muted mt-0.5">{m.detail}</p>}
+            {m.by && <p className="text-[11px] text-faint mt-0.5 tabular">{m.by}</p>}
+          </li>
+        ))}
+      </ol>
+    </Card>
   );
 }
 
@@ -193,11 +467,13 @@ function HojaCard({ d }: { d: OrderDetailDTO }) {
     return (
       <Card className="p-5 sm:p-6">
         <h2 className="text-section font-bold">Hoja de resumen</h2>
-        <p className="mt-2 text-sm text-muted">Orden sin hoja de resumen asociada: registro histórico o creada fuera del flujo de WhatsApp.</p>
+        <p className="mt-2 text-sm text-muted">
+          Orden sin hoja de resumen asociada: registro histórico o creada fuera del flujo de WhatsApp.
+        </p>
       </Card>
     );
   return (
-    <Card className="p-5 sm:p-6">
+    <Card className="p-5 sm:p-6 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="flex items-center gap-1.5 text-xs font-semibold text-muted">
@@ -213,7 +489,9 @@ function HojaCard({ d }: { d: OrderDetailDTO }) {
           </p>
           <h2 className="text-section font-bold">Hoja de resumen · versión {h.version}</h2>
         </div>
-        <Chip tone={h.estado === "confirmada" ? "ok" : "violet"}>{h.estado === "confirmada" ? "Confirmada" : "Borrador"}</Chip>
+        <Chip tone={h.estado === "confirmada" ? "ok" : "violet"}>
+          {h.estado === "confirmada" ? "Confirmada" : "Borrador"}
+        </Chip>
       </div>
       <dl className="mt-4 grid gap-2 rounded-[var(--radius-block)] bg-panel p-4 text-sm ring-1 ring-line/70 sm:grid-cols-2">
         {h.campos.map((c) => (
@@ -226,7 +504,9 @@ function HojaCard({ d }: { d: OrderDetailDTO }) {
         ))}
       </dl>
       <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px]">
-        {h.confianza != null && <Chip tone="neutral">Confianza de la extracción {Math.round(h.confianza * 100)}%</Chip>}
+        {h.confianza != null && (
+          <Chip tone="neutral">Confianza de la extracción {Math.round(h.confianza * 100)}%</Chip>
+        )}
         {h.faltantes.length > 0 ? (
           h.faltantes.map((f) => (
             <Chip key={f} tone="warn" icon={<WarningCircle size={14} weight="bold" />}>
@@ -247,14 +527,16 @@ function HojaCard({ d }: { d: OrderDetailDTO }) {
 }
 
 function ItemsCard({ d }: { d: OrderDetailDTO }) {
-  // Ítems de orden_item (Order.items en la API); la tarjeta solo aparece cuando la fuente los tiene.
   if (!capabilities.orderItems || d.order.items.length === 0) return null;
   return (
-    <Card className="p-5 sm:p-6">
-      <h2 className="text-section font-bold">Ítems</h2>
+    <Card className="p-5 sm:p-6 shadow-soft">
+      <h2 className="text-section font-bold">Ítems de Confección</h2>
       <ul className="mt-3 flex flex-col">
         {d.order.items.map((it, i) => (
-          <li key={i} className="tabular flex items-start justify-between gap-4 border-t border-line-soft py-3 text-sm first:border-t-0">
+          <li
+            key={i}
+            className="tabular flex items-start justify-between gap-4 border-t border-line-soft py-3 text-sm first:border-t-0"
+          >
             <span className="min-w-0">
               <span className="block font-semibold">
                 {it.cantidad} × {it.descripcion}
@@ -284,7 +566,10 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
   const me = useMe();
   const toast = useToast();
   const o = d.order;
-  const canDecide = can(me.role, "aprobar_credito") && can(me.role, "confirmar_orden") && (me.role !== "vendedor" || !me.brand || !d.card.brand || me.brand === d.card.brand);
+  const canDecide =
+    can(me.role, "aprobar_credito") &&
+    can(me.role, "confirmar_orden") &&
+    (me.role !== "vendedor" || !me.brand || !d.card.brand || me.brand === d.card.brand);
   const [tipo, setTipo] = useState<PaymentTerms["tipo"]>("credito");
   const [plazo, setPlazo] = useState(String(Math.min(Math.max(d.plazoDefecto, PLAZO_MIN), PLAZO_MAX)));
   const [pct, setPct] = useState("50");
@@ -294,7 +579,12 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
   const [reason, setReason] = useState("");
   const [customize, setCustomize] = useState(false);
 
-  const terms = (): PaymentTerms => ({ tipo, plazoDias: Number(plazo), anticipoPct: tipo === "anticipo" ? Number(pct) : null });
+  const terms = (): PaymentTerms => ({
+    tipo,
+    plazoDias: Number(plazo),
+    anticipoPct: tipo === "anticipo" ? Number(pct) : null,
+  });
+
   const confirm = async (moraAcknowledged: boolean) => {
     const r = await commands.confirmOrder(o.id, terms(), me, { moraAcknowledged, nota: nota.trim() || null });
     if (!r.ok && r.code === "aviso_mora") {
@@ -309,18 +599,25 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
     const c = o.condicionPago;
     const cr = o.credito;
     return (
-      <Card className="p-5 sm:p-6">
-        <h2 className="text-section font-bold">Condición de pago</h2>
+      <Card className="p-5 sm:p-6 shadow-soft">
+        <h2 className="text-section font-bold">Condición de Pago y Crédito</h2>
         {o.estado === "rechazada" ? (
           <p className="mt-3 flex items-start gap-2 rounded-xl bg-bad-tint px-3.5 py-2.5 text-[13px] text-bad">
-            <Prohibit size={18} weight="bold" className="mt-px shrink-0" /> Rechazada por {cr?.by} el {cr ? formatDateTime(cr.at) : ""}: {cr?.nota}
+            <Prohibit size={18} weight="bold" className="mt-px shrink-0" /> Rechazada por {cr?.by} el{" "}
+            {cr ? formatDateTime(cr.at) : ""}: {cr?.nota}
           </p>
         ) : (
           <>
             <dl className="tabular mt-4 grid grid-cols-2 gap-4 text-sm">
               <div>
                 <dt className="text-[13px] text-muted">Condición</dt>
-                <dd className="font-bold">{c?.tipo === "credito" ? "Crédito" : c?.tipo === "anticipo" ? `Anticipo ${c.anticipoPct}%` : "Contado"}</dd>
+                <dd className="font-bold">
+                  {c?.tipo === "credito"
+                    ? "Crédito"
+                    : c?.tipo === "anticipo"
+                      ? `Anticipo ${c.anticipoPct}%`
+                      : "Contado"}
+                </dd>
               </div>
               <div>
                 <dt className="text-[13px] text-muted">Plazo desde el despacho</dt>
@@ -333,17 +630,24 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
                 </div>
               )}
               <div>
-                <dt className="text-[13px] text-muted">Gatekeeper</dt>
-                <dd className={cx("flex items-center gap-1.5 font-bold", d.gatekeeper ? "text-ok" : "text-warn")}>
+                <dt className="text-[13px] text-muted">Gatekeeper Financiero</dt>
+                <dd
+                  className={cx(
+                    "flex items-center gap-1.5 font-bold",
+                    d.gatekeeper ? "text-ok" : "text-warn"
+                  )}
+                >
                   {d.gatekeeper ? <LockOpen size={16} weight="bold" /> : <Hourglass size={16} weight="bold" />}
-                  {d.gatekeeper ? "Liberada" : "Retenida"}
+                  {d.gatekeeper ? "Liberada para Confección" : "Retenida"}
                 </dd>
               </div>
             </dl>
             {cr && (
               <p className="tabular mt-4 rounded-xl bg-panel px-3.5 py-2.5 text-[13px] text-muted ring-1 ring-line/70">
                 Aprobado por <span className="font-semibold text-ink">{cr.by}</span> el {formatDateTime(cr.at)}.
-                {cr.avisoMoraMostrado && <span className="font-semibold text-warn"> Vio el aviso de mora y confirmó igual.</span>}
+                {cr.avisoMoraMostrado && (
+                  <span className="font-semibold text-warn"> Vio el aviso de mora y confirmó igual.</span>
+                )}
                 {cr.nota && <> {cr.nota}</>}
               </p>
             )}
@@ -373,11 +677,18 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
         </p>
       )}
       {!d.credit.aviso && d.credit.closedCount > 0 && (
-        <p className={cx("mt-4 flex items-start gap-2 rounded-xl px-3.5 py-2.5 text-[13px] font-medium", d.credit.paidOnTime === d.credit.closedCount ? "bg-ok-tint text-ok" : "bg-panel text-ink-soft ring-1 ring-line/70")}>
+        <p
+          className={cx(
+            "mt-4 flex items-start gap-2 rounded-xl px-3.5 py-2.5 text-[13px] font-medium",
+            d.credit.paidOnTime === d.credit.closedCount ? "bg-ok-tint text-ok" : "bg-panel text-ink-soft ring-1 ring-line/70"
+          )}
+        >
           <CheckCircle size={18} weight="bold" className="mt-px shrink-0" />
           {d.credit.paidOnTime === d.credit.closedCount
             ? `Historial al día: ${d.credit.closedCount} de ${d.credit.closedCount} pedidos pagados a tiempo.`
-            : `Sin deuda vencida hoy. Pagó a tiempo ${d.credit.paidOnTime} de ${d.credit.closedCount} pedidos${d.credit.avgDaysLate != null && d.credit.avgDaysLate > 0 ? `; en promedio ${d.credit.avgDaysLate} días después del vencimiento` : ""}.`}
+            : `Sin deuda vencida hoy. Pagó a tiempo ${d.credit.paidOnTime} de ${d.credit.closedCount} pedidos${
+                d.credit.avgDaysLate != null && d.credit.avgDaysLate > 0 ? `; en promedio ${d.credit.avgDaysLate} días después del vencimiento` : ""
+              }.`}
         </p>
       )}
 
@@ -396,7 +707,10 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
               <Button size="md" icon={<Check size={18} weight="bold" />} onClick={() => confirm(false)}>
                 Confirmar orden
               </Button>
-              <button onClick={() => setRejectOpen(true)} className="min-h-10 rounded-lg px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-bad-tint hover:text-bad">
+              <button
+                onClick={() => setRejectOpen(true)}
+                className="min-h-10 rounded-lg px-3 text-[13px] font-semibold text-muted transition-colors hover:bg-bad-tint hover:text-bad"
+              >
                 Rechazar
               </button>
             </div>
@@ -405,7 +719,11 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
             <span className="text-sm">
               <span className="font-bold">{termsLabel(tipo, plazo, pct)}</span>
               <span className="block text-xs text-muted">
-                {tipo === "credito" ? "Con crédito, la orden pasa directo a producción." : tipo === "anticipo" ? "Queda retenida hasta que llegue el anticipo." : "Queda retenida hasta que llegue el pago completo."}
+                {tipo === "credito"
+                  ? "Con crédito, la orden pasa directo a producción."
+                  : tipo === "anticipo"
+                    ? "Queda retenida hasta que llegue el anticipo."
+                    : "Queda retenida hasta que llegue el pago completo."}
               </span>
             </span>
             <button
@@ -450,7 +768,13 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
                       <label htmlFor="pct" className="text-[13px] font-semibold">
                         Anticipo (%)
                       </label>
-                      <input id="pct" inputMode="numeric" value={pct} onChange={(e) => setPct(e.target.value)} className={cx(inputClass, "tabular")} />
+                      <input
+                        id="pct"
+                        inputMode="numeric"
+                        value={pct}
+                        onChange={(e) => setPct(e.target.value)}
+                        className={cx(inputClass, "tabular")}
+                      />
                     </div>
                   )}
                 </div>
@@ -459,7 +783,13 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
                 <label htmlFor="nota" className="text-[13px] font-semibold">
                   Nota (opcional)
                 </label>
-                <input id="nota" value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ej. cliente frecuente, tallas llegan el lunes" className={inputClass} />
+                <input
+                  id="nota"
+                  value={nota}
+                  onChange={(e) => setNota(e.target.value)}
+                  placeholder="Ej. cliente frecuente, tallas llegan el lunes"
+                  className={inputClass}
+                />
               </div>
             </motion.div>
           )}
@@ -536,24 +866,44 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
 function DatesCard({ d }: { d: OrderDetailDTO }) {
   const o = d.order;
   const rows: Array<{ label: string; value: string | null; icon: ReactNode; strong?: boolean; hint?: string; empty?: string }> = [
-    { label: "Pedido", value: o.issuedOn, icon: <ChatCircleText size={16} weight="bold" /> },
-    { label: "Entrega solicitada", value: o.fechaEntregaSolicitada, icon: <Hourglass size={16} weight="bold" />, empty: "Sin fecha" },
-    { label: "Inicio de producción", value: o.inicioProduccion, icon: <Factory size={16} weight="bold" />, hint: "Cuando pasa el gatekeeper" },
-    { label: "Despacho", value: o.despacho?.fecha ?? null, icon: <Truck size={16} weight="bold" />, hint: o.despacho ? `${o.despacho.acta} · ${o.despacho.by}` : "Lo registra el Jefe de taller" },
-    { label: "Vencimiento", value: d.card.dueDate, icon: <WarningCircle size={16} weight="bold" />, strong: true, hint: "Despacho + plazo" },
+    { label: "Emisión de Pedido", value: o.issuedOn, icon: <ChatCircleText size={16} weight="bold" /> },
+    { label: "Fecha Entrega Solicitada", value: o.fechaEntregaSolicitada, icon: <Hourglass size={16} weight="bold" />, empty: "Sin fecha acordada" },
+    { label: "Paso de Gatekeeper / Inicio Confección", value: o.inicioProduccion, icon: <Factory size={16} weight="bold" />, hint: "Liberada para taller" },
+    {
+      label: "Despacho Físico a Cliente",
+      value: o.despacho?.fecha ?? null,
+      icon: <Truck size={16} weight="bold" />,
+      hint: o.despacho ? `${o.despacho.acta} · ${o.despacho.by}` : "Pendiente de registro por taller",
+    },
+    { label: "Fecha de Vencimiento de Factura", value: d.card.dueDate, icon: <WarningCircle size={16} weight="bold" />, strong: true, hint: "Despacho + plazo concedido" },
   ];
+
   return (
-    <Card className="p-5 sm:p-6">
-      <h2 className="text-section font-bold">Fechas</h2>
+    <Card className="p-5 sm:p-6 shadow-soft">
+      <h2 className="text-section font-bold">Cronograma y Fechas Clave</h2>
       <motion.ol variants={listVariants} className="mt-3 flex flex-col">
         {rows.map((r) => (
           <motion.li variants={itemVariants} key={r.label} className="flex items-center gap-3 border-t border-line-soft py-2.5 first:border-t-0">
-            <span className={cx("flex size-8 shrink-0 items-center justify-center rounded-full", r.value ? "bg-violet-tint text-violet-ink" : "bg-line-soft text-faint")}>{r.icon}</span>
+            <span
+              className={cx(
+                "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                r.value ? "bg-brand-blue/10 text-brand-blue" : "bg-line-soft text-faint"
+              )}
+            >
+              {r.icon}
+            </span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-semibold">{r.label}</span>
               {r.hint && <span className="block truncate text-xs text-muted">{r.hint}</span>}
             </span>
-            <span className={cx("tabular text-sm", r.value ? (r.strong ? "font-extrabold" : "font-semibold") : "text-faint")}>{r.value ? formatDate(r.value) : (r.empty ?? "Pendiente")}</span>
+            <span
+              className={cx(
+                "tabular text-sm",
+                r.value ? (r.strong ? "font-extrabold text-ink" : "font-semibold text-ink") : "text-faint"
+              )}
+            >
+              {r.value ? formatDate(r.value) : r.empty ?? "Pendiente"}
+            </span>
           </motion.li>
         ))}
       </motion.ol>
@@ -563,36 +913,48 @@ function DatesCard({ d }: { d: OrderDetailDTO }) {
 
 function PaymentsCard({ d }: { d: OrderDetailDTO }) {
   return (
-    <Card className="p-5 sm:p-6">
-      <h2 className="text-section font-bold">Pagos</h2>
+    <Card className="p-5 sm:p-6 shadow-soft">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-section font-bold">Comprobantes y Pagos Aplicados</h2>
+          <p className="text-xs text-muted mt-0.5">Conciliación bancaria contra la deuda de este pedido</p>
+        </div>
+        <span className="tabular font-extrabold text-sm text-ok">
+          Total cobrado: {formatMoney(d.paidCents)}
+        </span>
+      </div>
+
       {d.payments.length === 0 && d.pendingEvidence.length === 0 ? (
-        <p className="mt-2 text-sm text-muted">Sin pagos registrados.</p>
+        <p className="mt-4 text-sm text-muted">Sin pagos ni comprobantes registrados.</p>
       ) : (
-        <ul className="mt-3 flex flex-col">
+        <ul className="mt-4 flex flex-col">
           {d.pendingEvidence.map((e) => (
-            <li key={e.id} className="flex items-center justify-between gap-3 border-t border-line-soft py-2.5 text-[13px] first:border-t-0">
+            <li key={e.id} className="flex items-center justify-between gap-3 border-t border-line-soft py-3 text-[13px] first:border-t-0">
               <span className="min-w-0">
-                <Link to={`/conciliacion/${e.id}`} className="font-semibold text-violet-ink hover:underline">
+                <Link to={`/conciliacion/${e.id}`} className="font-bold text-brand-blue hover:underline">
                   {e.ref}
                 </Link>{" "}
-                <span className="text-muted">· {e.status === "verificado_banco" ? "verificado, falta aplicar" : "recibido, falta verificar"}</span>
+                <span className="text-muted">
+                  · {e.status === "verificado_banco" ? "Verificado en banca, pendiente de aplicar" : "Recibido, falta verificar"}
+                </span>
                 <span className="tabular block text-xs text-faint">{formatDateTime(e.receivedAt)}</span>
               </span>
               <span className="flex shrink-0 items-center gap-2">
                 <MatchChip match={e.match} />
-                <span className="tabular font-bold">{e.amountCents != null ? formatMoney(e.amountCents) : "S/ ?"}</span>
+                <span className="tabular font-extrabold">{e.amountCents != null ? formatMoney(e.amountCents) : "S/ ?"}</span>
               </span>
             </li>
           ))}
           {d.payments.map((p) => (
-            <li key={p.id} className="flex items-center justify-between gap-3 border-t border-line-soft py-2.5 text-[13px] first:border-t-0">
+            <li key={p.id} className="flex items-center justify-between gap-3 border-t border-line-soft py-3 text-[13px] first:border-t-0">
               <span className="min-w-0">
-                <span className="tabular block font-semibold">{formatDateTime(p.at)}</span>
-                <span className="block truncate text-muted">
-                  {p.channel} · {p.evidenceId ?? "histórico"} · {p.by}
+                <span className="tabular block font-bold text-ink">Abono {p.channel.toUpperCase()}</span>
+                <span className="block truncate text-muted text-xs">
+                  {p.evidenceId ? `Voucher ${p.evidenceId}` : "Pago manual histórico"} · Aplicado por {p.by}
                 </span>
+                <span className="tabular block text-[11px] text-faint">{formatDateTime(p.at)}</span>
               </span>
-              <span className="tabular shrink-0 font-bold text-ok">+{formatMoney(p.amountCents)}</span>
+              <span className="tabular shrink-0 font-extrabold text-ok text-sm">+{formatMoney(p.amountCents)}</span>
             </li>
           ))}
         </ul>
@@ -603,18 +965,20 @@ function PaymentsCard({ d }: { d: OrderDetailDTO }) {
 
 function MessagesCard({ d }: { d: OrderDetailDTO }) {
   return (
-    <Card className="p-5 sm:p-6">
+    <Card className="p-5 sm:p-6 shadow-soft">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-section font-bold">Mensajes al cliente</h2>
-          <p className="mt-0.5 text-[13px] text-muted">Los programa el sistema y los envía WhatsApp (n8n WF3), solo al contacto de prueba.</p>
+          <h2 className="text-section font-bold">Mensajes y Notificaciones al Cliente</h2>
+          <p className="mt-0.5 text-[13px] text-muted">Programados por el sistema y despachados por WhatsApp (n8n WF3).</p>
         </div>
         {d.customer.contactoWhatsapp && <Chip tone="neutral">{d.customer.contactoWhatsapp}</Chip>}
       </div>
       {d.messages === null ? (
-        <p className="mt-3 text-sm text-muted">La bitácora de envíos todavía no tiene endpoint en la API. Las alertas de cobranza sí se muestran abajo.</p>
+        <p className="mt-3 text-sm text-muted">
+          La bitácora de envíos todavía no tiene endpoint en la API. Las alertas de cobranza sí se muestran abajo.
+        </p>
       ) : d.messages.length === 0 ? (
-        <p className="mt-3 text-sm text-muted">Sin mensajes. Los recordatorios −3, 0 y +3 días se programan al despachar.</p>
+        <p className="mt-3 text-sm text-muted">Sin mensajes. Los recordatorios −3, 0 y +3 días se programan automáticamente al despachar.</p>
       ) : (
         <motion.ul variants={listVariants} className="mt-3 flex flex-col">
           {d.messages.map((m) => (
@@ -624,7 +988,9 @@ function MessagesCard({ d }: { d: OrderDetailDTO }) {
                 <MessageStateChip estado={m.estado} />
               </div>
               <p className="tabular mt-1 text-xs text-faint">
-                {m.estado === "enviado" && m.enviadoAt ? `Enviado ${formatDateTime(m.enviadoAt)}` : `Programado ${formatDateTime(m.programadoPara)}`}
+                {m.estado === "enviado" && m.enviadoAt
+                  ? `Enviado ${formatDateTime(m.enviadoAt)}`
+                  : `Programado ${formatDateTime(m.programadoPara)}`}
                 {m.intentos > 1 && ` · ${m.intentos} intentos`}
                 {m.error && ` · ${m.error}`}
               </p>
@@ -633,20 +999,23 @@ function MessagesCard({ d }: { d: OrderDetailDTO }) {
         </motion.ul>
       )}
       {d.alerts.length > 0 && (
-        <div className="mt-4 rounded-xl bg-panel p-3.5 ring-1 ring-line/70">
-          <p className="text-xs font-semibold text-muted">Alertas internas</p>
+        <div className="mt-5 rounded-xl bg-panel p-4 ring-1 ring-line/70">
+          <p className="text-xs font-bold uppercase tracking-wider text-muted">Alertas internas de cobranza</p>
           {d.alerts.map((a) => (
-            <p key={a.id} className="mt-1.5 text-[13px]">
-              <Chip tone={a.estado === "abierta" ? "bad" : "neutral"} className="mr-2">
+            <p key={a.id} className="mt-2 text-[13px] flex items-center gap-2">
+              <Chip tone={a.estado === "abierta" ? "bad" : "neutral"} className="mr-1">
                 {a.estado === "abierta" ? "Abierta" : a.estado === "resuelta" ? "Resuelta" : "Cancelada"}
               </Chip>
-              {a.regla} · {a.responsable}
+              <span className="font-semibold text-ink">{a.regla}</span> · {a.responsable}
               {a.resolucion && <span className="text-muted"> · {a.resolucion}</span>}
             </p>
           ))}
           {d.alerts.some((a) => a.estado === "abierta") && (
-            <Link to="/cobranza?vista=alertas" className="mt-2 inline-block text-[13px] font-semibold text-violet-ink hover:underline">
-              Gestionar en Cobranza
+            <Link
+              to="/cobranza?vista=alertas"
+              className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-brand-blue hover:underline"
+            >
+              Gestionar en módulo de Cobranza <ArrowRight size={12} weight="bold" />
             </Link>
           )}
         </div>
