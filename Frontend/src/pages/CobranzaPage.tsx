@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { Link, useSearchParams } from "react-router";
-import { ArrowClockwise, Bell, ChatCircleText, CheckCircle, Info } from "../components/ui/icons";
+import { ArrowClockwise, Bell, ChatCircleText, CheckCircle, CopySimple, Info, Receipt } from "../components/ui/icons";
 import { capabilities, commands, getCobranza, MESSAGE_LABEL, type AlertRow, type MessageRow, type ReceivableRow } from "../api/client";
 import { IS_MOCK } from "../config";
 import { useApi } from "../hooks/useApi";
@@ -36,10 +36,12 @@ export function CobranzaPage() {
         subtitle={<>Prioriza los vencimientos y da seguimiento a cada saldo. Vista {SCOPE_LABEL[scope]}.</>}
         actions={IS_MOCK ? <DemoBadge /> : undefined}
       />
-      {view === "mensajes" && <motion.p variants={itemVariants} className="flex items-start gap-2 rounded-lg border border-line px-4 py-3 text-[13px] text-muted">
-        <Info size={18} weight="bold" className="mt-px shrink-0" />
-        WhatsApp en modo prueba (D-005): los mensajes salen por n8n WF3 y Evolution API solo al contacto de prueba.{IS_MOCK ? " En esta demo el envío se simula." : " KeptAI no guarda el texto de los mensajes."}
-      </motion.p>}
+      {view === "mensajes" && (
+        <motion.p variants={itemVariants} className="flex items-start gap-2 rounded-lg border border-line px-4 py-3 text-[13px] text-muted">
+          <Info size={18} weight="bold" className="mt-px shrink-0" />
+          WhatsApp en modo prueba (D-005): los mensajes salen por n8n WF3 y Evolution API solo al contacto de prueba.{IS_MOCK ? " En esta demo el envío se simula." : " KeptAI no guarda el texto de los mensajes."}
+        </motion.p>
+      )}
       <motion.div variants={itemVariants}>
         <Segmented
           kind="tab"
@@ -68,58 +70,140 @@ export function CobranzaPage() {
 }
 
 const BUCKETS: Array<{ id: string; label: string; test: (r: ReceivableRow) => boolean; tone: string }> = [
-  { id: "vencido", label: "Vencido", test: (r) => r.daysToDue < 0, tone: "text-bad" },
+  { id: "vencido", label: "Vencido (Crítico)", test: (r) => r.daysToDue < 0, tone: "text-bad" },
   { id: "hoy", label: "Vence hoy o en 3 días", test: (r) => r.daysToDue >= 0 && r.daysToDue <= 3, tone: "text-warn" },
   { id: "dia", label: "Al día", test: (r) => r.daysToDue > 3, tone: "text-ink" },
 ];
 
 function Cartera({ rows }: { rows: ReceivableRow[] }) {
+  const toast = useToast();
+  const [filter, setFilter] = useState<string>("todos");
+
   if (rows.length === 0)
     return (
       <Card className="p-6">
         <EmptyState title="Sin saldos por cobrar">Todo lo despachado está cobrado.</EmptyState>
       </Card>
     );
+
+  const filteredRows = rows.filter((r) => {
+    if (filter === "vencido") return r.daysToDue < 0;
+    if (filter === "hoy") return r.daysToDue >= 0 && r.daysToDue <= 3;
+    if (filter === "dia") return r.daysToDue > 3;
+    return true;
+  });
+
+  const copyWhatsApp = (r: ReceivableRow, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const text = `Estimado(a) ${r.customer}, le saludamos de Corpotex & Unicrack. Le recordamos que el pedido ${r.orderRef} mantiene un saldo pendiente de ${formatMoney(r.balanceCents)} con fecha de vencimiento ${formatDate(r.dueDate)}. Agradeceremos remitir su comprobante de pago a este canal para conciliar su cuenta. ¡Muchas gracias!`;
+    navigator.clipboard.writeText(text);
+    toast(true, `Recordatorio copiado para ${r.customer}`);
+  };
+
   return (
     <>
       <motion.dl variants={listVariants} className="metric-strip grid grid-cols-1 md:grid-cols-3">
         {BUCKETS.map((b) => {
           const list = rows.filter(b.test);
+          const isSelected = filter === b.id;
           return (
-            <motion.div variants={itemVariants} key={b.id}>
-              <dt className="text-[13px] font-semibold text-muted">{b.label}</dt>
+            <motion.div
+              variants={itemVariants}
+              key={b.id}
+              onClick={() => setFilter(isSelected ? "todos" : b.id)}
+              className={cx(
+                "cursor-pointer rounded-xl p-3 transition-colors hover:bg-panel",
+                isSelected && "ring-2 ring-brand-blue bg-panel/70"
+              )}
+            >
+              <dt className="text-[13px] font-semibold text-muted flex items-center justify-between">
+                <span>{b.label}</span>
+                {isSelected && <span className="text-[10px] font-bold text-brand-blue uppercase">Filtro activo</span>}
+              </dt>
               <dd className={cx("tabular mt-1 text-xl font-extrabold", b.tone)}>{formatMoney(list.reduce((s, r) => s + r.balanceCents, 0))}</dd>
               <p className="text-xs text-muted">{list.length} órdenes</p>
             </motion.div>
           );
         })}
       </motion.dl>
+
       <Card className="p-5 sm:p-6">
-        <h2 className="text-section font-bold">Órdenes con saldo</h2>
-        <motion.ul variants={listVariants} className="mt-3 flex flex-col">
-          {rows.map((r) => (
-            <motion.li variants={itemVariants} key={r.id} className="border-t border-line-soft first:border-t-0">
-              <Link to={`/pedidos/${r.id}`} className="-mx-2 grid grid-cols-[1fr_auto] items-center gap-3 rounded-xl px-2 py-3 hover:bg-panel sm:grid-cols-[minmax(0,1fr)_120px_120px_140px]">
-                <span className="flex min-w-0 items-center gap-3">
-                  <Avatar name={r.customer} />
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold">{r.customer}</span>
-                    <span className="block truncate text-[13px] text-muted">{[r.orderRef, r.seller].filter(Boolean).join(" · ")}</span>
-                  </span>
-                </span>
-                <span className="tabular hidden text-[13px] sm:block">
-                  <span className="block text-xs text-muted">Vence</span>
-                  <span className="font-semibold">{formatDate(r.dueDate)}</span>
-                </span>
-                <span className="tabular text-right text-sm font-bold">
-                  <Money cents={r.balanceCents} />
-                </span>
-                <span className="col-span-2 flex justify-start sm:col-span-1 sm:justify-end">
-                  <FinanceChip finance={r.finance} daysToDue={r.daysToDue} />
-                </span>
-              </Link>
-            </motion.li>
-          ))}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
+          <div>
+            <h2 className="text-section font-bold">Órdenes con saldo</h2>
+            <p className="text-xs text-muted">
+              Priorizadas por criticidad y días de vencimiento. Acciones rápidas de contacto en 1 clic.
+            </p>
+          </div>
+          {filter !== "todos" && (
+            <button
+              onClick={() => setFilter("todos")}
+              className="text-xs font-semibold text-brand-blue hover:underline"
+            >
+              Mostrar todas ({rows.length})
+            </button>
+          )}
+        </div>
+
+        <motion.ul variants={listVariants} className="mt-3 flex flex-col divide-y divide-line-soft">
+          {filteredRows.map((r) => {
+            const isOverdue = r.daysToDue < 0;
+            return (
+              <motion.li variants={itemVariants} key={r.id} className="py-3">
+                <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.2fr)_120px_110px_130px_auto] items-center gap-3">
+                  <Link to={`/pedidos/${r.id}`} className="flex min-w-0 items-center gap-3 hover:opacity-80">
+                    <Avatar name={r.customer} />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="block truncate text-sm font-bold text-ink">{r.customer}</span>
+                        {isOverdue && (
+                          <span className="rounded bg-bad-tint px-1.5 py-0.5 text-[10px] font-extrabold text-bad shrink-0">
+                            MORA CRÍTICA
+                          </span>
+                        )}
+                      </div>
+                      <span className="block truncate text-[13px] text-muted">
+                        {[r.orderRef, r.seller].filter(Boolean).join(" · ")}
+                      </span>
+                    </div>
+                  </Link>
+
+                  <div className="tabular text-[13px]">
+                    <span className="block text-xs text-muted">Vence</span>
+                    <span className={cx("font-semibold", isOverdue ? "text-bad" : "text-ink")}>
+                      {formatDate(r.dueDate)}
+                    </span>
+                  </div>
+
+                  <div className="tabular text-right text-sm font-extrabold text-ink">
+                    <Money cents={r.balanceCents} />
+                  </div>
+
+                  <div className="flex justify-start md:justify-end">
+                    <FinanceChip finance={r.finance} daysToDue={r.daysToDue} />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-1.5 shrink-0 pt-2 md:pt-0 border-t border-line-soft md:border-t-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={<CopySimple size={15} weight="bold" />}
+                      onClick={(e) => copyWhatsApp(r, e)}
+                      title="Copiar recordatorio WhatsApp con saldo y cuentas"
+                    >
+                      <span className="hidden lg:inline">WhatsApp</span>
+                    </Button>
+                    <Link to={`/clientes/${r.customerId}/estado-cuenta`} title="Ver estado de cuenta formal">
+                      <Button variant="ghost" size="sm" icon={<Receipt size={15} weight="bold" />}>
+                        <span className="hidden lg:inline">Cuenta</span>
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </motion.li>
+            );
+          })}
         </motion.ul>
       </Card>
     </>
@@ -259,8 +343,7 @@ function Mensajes({ rows }: { rows: MessageRow[] }) {
                   {m.estado === "error" && can(me.role, "gestionar_cobranza") && capabilities.retryMessages && (
                     <Button
                       size="sm"
-                      variant="secondary"
-                      icon={<ArrowClockwise size={14} weight="bold" />}
+                      icon={<ArrowClockwise size={16} />}
                       onClick={async () => {
                         const r = await commands.retryMessage(m.id, me);
                         toast(r.ok, r.message);
@@ -271,17 +354,10 @@ function Mensajes({ rows }: { rows: MessageRow[] }) {
                   )}
                 </span>
               </div>
-              <p className="tabular mt-1 text-xs text-faint">
-                {[
-                  m.contacto,
-                  m.estado === "enviado" && m.enviadoAt ? `enviado ${formatDateTime(m.enviadoAt)}` : `programado ${formatDateTime(m.programadoPara)}`,
-                  m.orderRef,
-                  m.intentos > 1 && `${m.intentos} intentos`,
-                  m.error,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
+              <p className="tabular mt-1 text-xs text-muted">
+                {[m.contacto, m.orderRef, m.enviadoAt ? formatDateTime(m.enviadoAt) : `programado ${formatDateTime(m.programadoPara)}`].filter(Boolean).join(" · ")}
               </p>
+              {m.error && <p className="mt-1 text-xs text-bad">{m.error}</p>}
             </motion.li>
           ))}
         </motion.ul>

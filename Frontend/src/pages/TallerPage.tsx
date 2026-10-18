@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Factory, Hourglass, Truck } from "../components/ui/icons";
+import { CheckCircle, Factory, Hourglass, Info, Package, ShieldCheck, Truck } from "../components/ui/icons";
 import { commands, getTaller, type TallerOrder } from "../api/client";
 import { IS_MOCK } from "../config";
 import { useApi } from "../hooks/useApi";
@@ -14,11 +14,11 @@ import { Card, DemoBadge, EmptyState, ErrorState, Skeleton } from "../components
 import { Chip } from "../components/ui/Chip";
 import { Button } from "../components/ui/Button";
 import { Modal, inputClass } from "../components/ui/Modal";
-import { cx, formatDate } from "../lib/format";
+import { cx, formatDate, formatMoney } from "../lib/format";
 import { addDays, daysBetween } from "../lib/dates";
 
-// Vista mínima del Jefe de taller (decisión de Germán): solo órdenes liberadas y el despacho,
-// que fija el vencimiento. Las etapas Corte → Calidad quedan para la fase 2.
+// Vista del Jefe de taller con Gatekeeper explícito: solo órdenes liberadas para confección
+// y registro del despacho físico que activa el vencimiento comercial.
 
 export function TallerPage() {
   const { scope } = useScope();
@@ -28,7 +28,11 @@ export function TallerPage() {
 
   return (
     <Stagger className="mx-auto flex max-w-[1320px] flex-col gap-6 lg:gap-8">
-      <PageHeader title="Producción y despacho" subtitle={<>Registra la salida de los pedidos listos para entregar. Vista {SCOPE_LABEL[scope]}.</>} actions={IS_MOCK ? <DemoBadge /> : undefined} />
+      <PageHeader
+        title="Producción y despacho"
+        subtitle={<>Control de planta, verificación de anticipo (Gatekeeper) y registro de despacho físico. Vista {SCOPE_LABEL[scope]}.</>}
+        actions={IS_MOCK ? <DemoBadge /> : undefined}
+      />
 
       {error ? (
         <ErrorState error={error} onRetry={reload} />
@@ -37,16 +41,23 @@ export function TallerPage() {
       ) : (
         <Stagger className="flex flex-col gap-6 lg:gap-8">
           <Card className="p-5 sm:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="flex items-center gap-2 text-section font-bold">
-                <Factory size={20} className="text-info" /> En producción
-              </h2>
+            <div className="flex items-center justify-between gap-3 border-b border-line pb-3">
+              <div>
+                <h2 className="flex items-center gap-2 text-section font-bold">
+                  <Factory size={20} className="text-info" /> En producción activa
+                </h2>
+                <p className="mt-0.5 text-[13px] text-muted">
+                  Órdenes con anticipo o crédito verificado. Autorizadas para corte y confección.
+                </p>
+              </div>
               <Chip tone="info">{data.enProduccion.length}</Chip>
             </div>
-            <p className="mt-1 text-[13px] text-muted">Órdenes liberadas en proceso de confección o listas para despacho.</p>
+
             {data.enProduccion.length === 0 ? (
               <div className="mt-4">
-                <EmptyState title="Nada en producción">Cuando el vendedor confirme una orden con crédito, o se verifique un anticipo, aparecerá aquí.</EmptyState>
+                <EmptyState title="Nada en producción">
+                  Cuando el vendedor confirme una orden con crédito, o se verifique un anticipo, aparecerá aquí.
+                </EmptyState>
               </div>
             ) : (
               <motion.ul variants={listVariants} className="mt-4 flex flex-col divide-y divide-line">
@@ -68,29 +79,40 @@ export function TallerPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
             <Card className="flex flex-col h-full p-5 sm:p-6">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="flex items-center gap-2 text-section font-bold">
-                  <Hourglass size={20} className="text-warn" /> Retenidas
-                </h2>
+              <div className="flex items-center justify-between gap-3 border-b border-line pb-3">
+                <div>
+                  <h2 className="flex items-center gap-2 text-section font-bold">
+                    <Hourglass size={20} className="text-warn" /> Retenidas por Gatekeeper
+                  </h2>
+                  <p className="mt-0.5 text-[13px] text-muted">
+                    Prohibido confeccionar: Tesorería aún no valida el anticipo requerido.
+                  </p>
+                </div>
                 {data.retenidas && <Chip tone="warn">{data.retenidas.length}</Chip>}
               </div>
-              <p className="mt-1 text-[13px] text-muted">No se producen hasta que Administración verifique el anticipo.</p>
+
               {data.retenidas === null ? (
                 <div className="mt-4 flex flex-1 items-center justify-center rounded-lg border border-line-soft bg-panel/40 p-6 text-center text-xs text-muted">
-                  Las órdenes retenidas las gestiona Administración: llegan a producción cuando se aplica el anticipo.
+                  Las órdenes retenidas las gestiona Administraciòn: llegan a producción cuando se aplica el anticipo.
                 </div>
               ) : data.retenidas.length > 0 ? (
                 <ul className="mt-4 flex flex-col divide-y divide-line-soft">
                   {data.retenidas.map((o) => (
-                    <li key={o.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3 text-sm">
+                    <li key={o.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3.5 text-sm">
                       <span className="min-w-0">
-                        <span className="block font-bold truncate">
+                        <span className="block font-bold text-ink truncate">
                           {o.ref}
                           {o.customer && ` · ${o.customer}`}
                         </span>
-                        <span className="block truncate text-[13px] text-muted">{o.description}</span>
+                        <span className="block truncate text-xs text-muted">{o.description}</span>
+                        <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-warn">
+                          <Info size={13} weight="bold" /> Falta anticipo de {formatMoney(o.anticipoPendienteCents)}
+                        </span>
                       </span>
-                      <Chip tone="warn" className="shrink-0">Esperando anticipo</Chip>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <Chip tone="warn">Bloqueado en Taller</Chip>
+                        <span className="text-[10px] text-faint">Esperando voucher</span>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -102,29 +124,38 @@ export function TallerPage() {
             </Card>
 
             <Card className="flex flex-col h-full p-5 sm:p-6">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="flex items-center gap-2 text-section font-bold">
-                  <Truck size={20} className="text-ok" /> Últimos despachos
-                </h2>
+              <div className="flex items-center justify-between gap-3 border-b border-line pb-3">
+                <div>
+                  <h2 className="flex items-center gap-2 text-section font-bold">
+                    <Truck size={20} className="text-ok" /> Últimos despachos físicos
+                  </h2>
+                  <p className="mt-0.5 text-[13px] text-muted">
+                    Historial de salida de mercadería con acta y fecha de vencimiento activada.
+                  </p>
+                </div>
                 <Chip tone="ok">{data.despachadas.length}</Chip>
               </div>
-              <p className="mt-1 text-[13px] text-muted">Historial de pedidos despachados con guía y vencimiento.</p>
+
               {data.despachadas.length > 0 ? (
                 <ul className="mt-4 flex flex-col divide-y divide-line-soft">
                   {data.despachadas.map((o) => (
-                    <li key={o.id} className="tabular grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3 text-sm">
+                    <li key={o.id} className="tabular grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3.5 text-sm">
                       <span className="min-w-0">
-                        <span className="block font-bold truncate">
+                        <span className="block font-bold text-ink truncate">
                           {o.ref}
                           {o.customer && ` · ${o.customer}`}
                         </span>
-                        <span className="block truncate text-[13px] text-muted">
-                          {o.despacho?.acta} · {o.despacho?.by}
+                        <span className="block truncate text-xs text-muted">
+                          Acta: <span className="font-semibold text-ink">{o.despacho?.acta}</span> · Despachado por {o.despacho?.by}
                         </span>
                       </span>
                       <span className="shrink-0 text-right text-[13px]">
-                        <span className="block font-semibold">{o.despacho ? formatDate(o.despacho.fecha) : ""}</span>
-                        {o.despacho && o.plazoDias != null && <span className="block text-xs text-muted">vence {formatDate(addDays(o.despacho.fecha, o.plazoDias))}</span>}
+                        <span className="block font-semibold text-ink">{o.despacho ? formatDate(o.despacho.fecha) : ""}</span>
+                        {o.despacho && o.plazoDias != null && (
+                          <span className="block text-xs font-medium text-ok">
+                            vence {formatDate(addDays(o.despacho.fecha, o.plazoDias))}
+                          </span>
+                        )}
                       </span>
                     </li>
                   ))}
@@ -147,39 +178,52 @@ export function TallerPage() {
 function TallerRow({ o, cutDate, onDispatch }: { o: TallerOrder; cutDate: string; onDispatch: () => void }) {
   const me = useMe();
   const daysLeft = o.entregaSolicitada ? daysBetween(cutDate, o.entregaSolicitada) : null;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] items-start md:items-center gap-4 py-5">
       <div className="min-w-0">
-        <p className="font-bold text-ink">
-          {o.ref}
-          {o.customer && ` · ${o.customer}`}
-        </p>
-        <ul className="mt-1 text-[13px] text-muted space-y-0.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-bold text-ink text-base">
+            {o.ref}
+            {o.customer && ` · ${o.customer}`}
+          </p>
+          <Chip tone="ok" className="text-[11px] font-bold">
+            <ShieldCheck size={13} weight="bold" className="inline mr-1" />
+            Liberada para confección
+          </Chip>
+        </div>
+
+        <ul className="mt-2 text-[13px] text-muted space-y-1">
           {o.items.map((it, i) => (
-            <li key={i}>
-              {it.cantidad} × {it.descripcion} · {it.detalle}
+            <li key={i} className="flex items-center gap-2">
+              <Package size={14} className="text-faint shrink-0" />
+              <span>
+                <strong className="text-ink">{it.cantidad} {it.cantidad === 1 ? "unidad" : "unidades"}</strong> · {it.descripcion} ({it.detalle})
+              </span>
             </li>
           ))}
         </ul>
-        <p className="tabular mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+
+        <p className="tabular mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
           <span>Producción desde {o.inicioProduccion ? formatDate(o.inicioProduccion) : "sin fecha"}</span>
           <span>·</span>
-          <span>{o.modality === "propia" ? "Taller interno" : "Taller tercero"}</span>
+          <span className="font-medium text-ink">{o.modality === "propia" ? "Taller interno" : "Taller tercerizado"}</span>
           {o.entregaSolicitada && (
             <>
               <span>·</span>
               <span className={cx("font-semibold", daysLeft !== null && daysLeft <= 3 ? "text-bad" : "text-ink")}>
-                Entrega pedida {formatDate(o.entregaSolicitada)}
+                Entrega solicitada: {formatDate(o.entregaSolicitada)}
                 {daysLeft !== null && (daysLeft < 0 ? ` (atrasada ${-daysLeft} d)` : ` (en ${daysLeft} d)`)}
               </span>
             </>
           )}
         </p>
       </div>
+
       <div className="flex shrink-0 items-center justify-start md:justify-end w-full md:w-auto">
         {can(me.role, "registrar_despacho") ? (
           <Button icon={<Truck size={18} weight="bold" />} onClick={onDispatch} className="w-full md:w-auto">
-            Registrar despacho
+            Registrar despacho físico
           </Button>
         ) : (
           <Chip tone="neutral">Lo despacha el Jefe de taller</Chip>
@@ -195,16 +239,23 @@ function DispatchModal({ open, order, cutDate, onClose }: { open: boolean; order
   const [fecha, setFecha] = useState(cutDate);
   const [acta, setActa] = useState("");
   const [err, setErr] = useState<string | null>(null);
+
   if (!order) return null;
   const due = order.plazoDias != null && fecha ? addDays(fecha, order.plazoDias) : null;
+
   return (
-    <Modal open={open} onClose={onClose} title={`Despachar ${order.ref}`} subtitle={`${order.customer ? `${order.customer}. ` : ""}El acta fija el vencimiento: despacho + ${order.plazoDias ?? 0} días.`}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={`Despacho físico: ${order.ref}`}
+      subtitle={`${order.customer ? `${order.customer}. ` : ""}El registro del despacho activa formalmente el plazo de crédito (${order.plazoDias ?? 0} días).`}
+    >
       <form
         noValidate
         className="flex flex-col gap-4"
         onSubmit={async (e) => {
           e.preventDefault();
-          const r = await commands.registerDispatch(order.id, fecha, acta, me);
+          const r = await commands.registerDispatch(order.id, fecha, acta || `ACTA-${order.ref.replace("P-", "")}`, me);
           if (!r.ok) {
             setErr(r.message);
             return;
@@ -215,36 +266,76 @@ function DispatchModal({ open, order, cutDate, onClose }: { open: boolean; order
           onClose();
         }}
       >
+        {/* Previsualización de ítems en despacho */}
+        <div className="rounded-xl border border-line-soft bg-panel/50 p-3.5">
+          <p className="text-xs font-bold text-ink uppercase tracking-wide">
+            Prendas a entregar según orden:
+          </p>
+          <ul className="mt-2 space-y-1 text-xs text-muted">
+            {order.items.map((it, idx) => (
+              <li key={idx} className="flex items-center justify-between">
+                <span>{it.descripcion} ({it.detalle})</span>
+                <span className="font-bold text-ink">{it.cantidad} uds</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="d-fecha" className="text-[13px] font-semibold">
-              Fecha de despacho
+            <label htmlFor="d-fecha" className="text-[13px] font-semibold text-ink">
+              Fecha de despacho físico
             </label>
-            <input id="d-fecha" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={cx(inputClass, "tabular")} />
+            <input
+              id="d-fecha"
+              type="date"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              className={cx(inputClass, "tabular")}
+            />
           </div>
+
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="d-acta" className="text-[13px] font-semibold">
-              N.° de acta o guía
+            <label htmlFor="d-acta" className="text-[13px] font-semibold text-ink">
+              N.° de acta de entrega o guía
             </label>
-            <input id="d-acta" value={acta} onChange={(e) => setActa(e.target.value)} placeholder="Ej. Guía 016-10" className={inputClass} />
+            <input
+              id="d-acta"
+              value={acta}
+              onChange={(e) => setActa(e.target.value)}
+              placeholder={`Ej. ACTA-${order.ref.replace("P-", "")}`}
+              className={inputClass}
+            />
           </div>
         </div>
+
         {due && (
-          <p className="tabular rounded-xl bg-violet-wash px-3.5 py-2.5 text-[13px] text-violet-ink">
-            Vencerá el <span className="font-bold">{formatDate(due)}</span>. Se programan recordatorios por WhatsApp −3, 0 y +3 días.
-          </p>
+          <div className="tabular flex items-start gap-2.5 rounded-xl border border-brand-blue/20 bg-brand-blue/5 p-3.5 text-[13px] text-ink">
+            <CheckCircle size={18} className="text-brand-blue shrink-0 mt-0.5" weight="bold" />
+            <div>
+              <p className="font-semibold text-brand-blue">
+                Impacto en Cobranzas y Flujo de Caja:
+              </p>
+              <p className="mt-0.5 text-xs text-muted">
+                La fecha de vencimiento quedará fijada para el{" "}
+                <span className="font-bold text-ink">{formatDate(due)}</span>. El sistema programará automáticamente los recordatorios por WhatsApp para el cliente.
+              </p>
+            </div>
+          </div>
         )}
+
         {err && (
           <p role="alert" className="rounded-xl bg-bad-tint px-3.5 py-2.5 text-[13px] font-medium text-bad">
             {err}
           </p>
         )}
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
           <Button type="submit" icon={<Truck size={16} weight="bold" />}>
-            Registrar despacho
+            Confirmar y Despachar
           </Button>
         </div>
       </form>
