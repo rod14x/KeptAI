@@ -1,4 +1,4 @@
--- V23: Asegurar ON DELETE CASCADE en tablas dependientes de orden para Supabase SQL Editor
+-- V23: Asegurar ON DELETE CASCADE en tablas dependientes de orden y RLS a keptai_runtime para Supabase SQL Editor
 -- Versión: 1.0 | Fecha: 2026-10-19 | Autora: Isabelita
 SET search_path = keptai, public;
 
@@ -54,4 +54,18 @@ DO $$ BEGIN
       ADD CONSTRAINT fk_orden_partida_orden
       FOREIGN KEY (organizacion_id, orden_id) REFERENCES keptai.orden (organizacion_id, id) ON DELETE CASCADE;
   END IF;
+END $$;
+
+-- 4. Reasignar politicas RLS de keptai a keptai_runtime para restringir acceso public
+DO $$ 
+DECLARE
+  pol RECORD;
+BEGIN
+  FOR pol IN 
+    SELECT schemaname, tablename, policyname 
+    FROM pg_policies 
+    WHERE schemaname = 'keptai' AND 'public' = ANY(roles)
+  LOOP
+    EXECUTE format('ALTER POLICY %I ON %I.%I TO keptai_runtime', pol.policyname, pol.schemaname, pol.tablename);
+  END LOOP;
 END $$;
