@@ -109,7 +109,7 @@ public class DraftReviewService {
             var current=row(id);revision.put("payment_condition",current.get("condicion_pago"));revision.put("credit_term_days",current.get("plazo_dias"));revision.put("downpayment",current.get("anticipo_requerido"));
             db.update("UPDATE keptai.hoja_resumen SET extraccion=extraccion || jsonb_build_object('revision_humana',?::jsonb),resumen_md=? WHERE id=?",
                 json.writeValueAsString(revision),"# Pedido revisado\nCliente: "+current.get("razon_social")+"\nMarca: "+current.get("marca")+"\nTotal PEN: "+current.get("total")+"\nCondición: "+current.get("condicion_pago"),id);
-            audit(id,"BORRADOR_CORREGIDO",json.writeValueAsString(Map.of("expected_revision",req.expectedRevision(), precedenceOrEmpty(before),after,"changes",req)));
+            audit(id,"BORRADOR_CORREGIDO",json.writeValueAsString(Map.of("expected_revision",req.expectedRevision(),"before",before,"after",after,"changes",req)));
             return after;
         });
     }
@@ -161,7 +161,6 @@ public class DraftReviewService {
             audit(id,"BORRADOR_DESCARTADO","{}");return draft(id);
         });
     }
-    private static String precedenceOrEmpty(ExtractionDraft before) { return "before"; }
     private void audit(UUID id,String operation,String changes) {
         panel.jdbc().update("INSERT INTO keptai.evento_auditoria(organizacion_id,usuario_id,actor,operacion,entidad,entidad_id,cambios,request_id) VALUES(keptai.app_organizacion_actual(),?, 'USUARIO',?, 'hoja_resumen',?,?::jsonb,?)",panel.identity().usuarioId(),operation,id,changes,MDC.get(RequestIdFilter.MDC_KEY));
     }
