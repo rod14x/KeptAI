@@ -24,10 +24,10 @@ public final class CustomerDtos {
 			@JsonProperty("id") @NotNull UUID id,
 			@JsonProperty("customer_id") @JsonAlias("cliente_id") @NotNull UUID customerId,
 			@JsonProperty("name") @JsonAlias("nombre") @NotBlank @Size(max = 200) String name,
-			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("whatsapp_jid") String whatsappJid,
-			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("phone") @JsonAlias("telefono") String phone,
-			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("email") String email,
-			@JsonProperty("active") @JsonAlias("activo") boolean active,
+			@JsonProperty("whatsapp_jid") @Size(max = 100) String whatsappJid,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("phone") @JsonAlias("telefono") @Size(max = 30) String phone,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("email") @Size(max = 100) String email,
+			@JsonProperty("active") @JsonAlias("activo") @NotNull Boolean active,
 			@JsonProperty("created_at") @JsonAlias("creado_en") @NotNull OffsetDateTime createdAt) {
 	}
 
@@ -65,8 +65,7 @@ public final class CustomerDtos {
 			@JsonProperty("source_channel") @JsonAlias({"canal_origen", "canalOrigen"}) String sourceChannel,
 			@JsonProperty("assigned_seller_id") @JsonAlias("vendedor_asignado_id") UUID assignedSellerId,
 			@JsonProperty("email_contact") @JsonAlias("email_contacto") String emailContact,
-			@JsonProperty("address") @JsonAlias("direccion") String address,
-			@JsonProperty("credit_limit") @JsonAlias({"limite_credito", "limiteCredito", "limite_credito_cents", "limiteCreditoCents"}) Object creditLimit) {
+			@JsonProperty("address") @JsonAlias("direccion") String address) {
 	}
 
 	@JsonIgnoreProperties(ignoreUnknown = true)
