@@ -82,6 +82,7 @@ paths:
       - ADMIN
       - GERENTE
       - JEFE_TALLER
+      - DISENO
       security:
       - bearerAuth: []
       responses:
@@ -674,7 +675,6 @@ paths:
       - VENDEDOR
       - ADMIN
       - GERENTE
-      - JEFE_TALLER
       security:
       - bearerAuth: []
       parameters:
@@ -768,7 +768,6 @@ paths:
       - VENDEDOR
       - ADMIN
       - GERENTE
-      - JEFE_TALLER
       security:
       - bearerAuth: []
       parameters:
@@ -1768,6 +1767,7 @@ paths:
       - ADMIN
       - GERENTE
       - JEFE_TALLER
+      - DISENO
       security:
       - bearerAuth: []
       parameters:
@@ -1925,6 +1925,7 @@ paths:
       - ADMIN
       - GERENTE
       - JEFE_TALLER
+      - DISENO
       security:
       - bearerAuth: []
       parameters:
@@ -1941,6 +1942,653 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/OrderStage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/orders/production:
+    get:
+      tags:
+      - Taller
+      operationId: listProductionOrders
+      summary: Listar órdenes de producción para taller (sin precios).
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: B-05
+      x-keptai-proposed-roles:
+      - JEFE_TALLER
+      - ADMIN
+      - GERENTE
+      - DISENO
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de órdenes de producción.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductionOrder'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/orders/{order_id}/production:
+    get:
+      tags:
+      - Taller
+      operationId: getProductionOrder
+      summary: Consultar una orden de producción para taller (sin precios).
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: B-05
+      x-keptai-proposed-roles:
+      - JEFE_TALLER
+      - ADMIN
+      - GERENTE
+      - DISENO
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Detalle de orden de producción sin precios.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductionOrder'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/orders/{order_id}/arts:
+    get:
+      tags:
+      - Diseno
+      operationId: listArts
+      summary: Listar artes de diseño y personalización de la orden.
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: B-06
+      x-keptai-proposed-roles:
+      - DISENO
+      - VENDEDOR
+      - ADMIN
+      - JEFE_TALLER
+      - GERENTE
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Lista de artes de diseño.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ArtPiece'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Diseno
+      operationId: createArt
+      summary: Registrar un arte de diseño para la orden.
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: B-06
+      x-keptai-proposed-roles:
+      - DISENO
+      - ADMIN
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateArtRequest'
+      responses:
+        '201':
+          description: Arte registrado exitosamente.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArtPiece'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/orders/{order_id}/arts/{art_id}/approval:
+    post:
+      tags:
+      - Diseno
+      operationId: approveArt
+      summary: Aprobar arte con evidencia y canal (hace la versión inmutable).
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: B-06
+      x-keptai-proposed-roles:
+      - DISENO
+      - ADMIN
+      - VENDEDOR
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      - $ref: '#/components/parameters/ArtId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveArtRequest'
+      responses:
+        '200':
+          description: Arte aprobado exitosamente.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArtPiece'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/orders/{order_id}/personnel:
+    post:
+      tags:
+      - Pedidos
+      operationId: importPersonnel
+      summary: Importar relación de personal desde nómina para generar curva de tallas (B-03).
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: B-03
+      x-keptai-proposed-roles:
+      - VENDEDOR
+      - ADMIN
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportPersonnelRequest'
+      responses:
+        '200':
+          description: Nómina importada y curva de tallas generada.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPersonnelResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/orders/{order_id}/fabric-semaphore:
+    get:
+      tags:
+      - Taller
+      operationId: getFabricSemaphore
+      summary: Consultar propuesta de semáforo automático de tela según stock en kg (Fase 3, B-08).
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 3
+      x-keptai-proposed-roles:
+      - ADMIN
+      - JEFE_TALLER
+      - VENDEDOR
+      - GERENTE
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Propuesta de semáforo de tela calculada automáticamente.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FabricSemaphoreProposal'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/orders/{order_id}/fabric-lots:
+    get:
+      tags:
+      - Taller
+      operationId: getOrderFabricLots
+      summary: Consultar partidas de tela asignadas al pedido y advertencia de mezcla (Fase 3).
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 3
+      x-keptai-proposed-roles:
+      - ADMIN
+      - JEFE_TALLER
+      - GERENTE
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Resumen de partidas asignadas y advertencia de mezcla.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderFabricLotsSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+      - Taller
+      operationId: assignFabricLot
+      summary: Asignar partida de rollo de tela a una orden con reserva atómica (Fase 3).
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 3
+      x-keptai-proposed-roles:
+      - ADMIN
+      - JEFE_TALLER
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignFabricLotRequest'
+      responses:
+        '200':
+          description: Partida asignada y stock de rollo reservado.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderFabricLotsSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/fabric/rolls:
+    get:
+      tags:
+      - Inventario
+      operationId: listFabricRolls
+      summary: Listar rollos de tela con peso disponible y partida de teñido (Fase 3).
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 3
+      x-keptai-proposed-roles:
+      - ADMIN
+      - JEFE_TALLER
+      - GERENTE
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: fabric_type
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: color
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Listado de rollos de tela en inventario.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FabricRoll'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Inventario
+      operationId: createFabricRoll
+      summary: Dar de alta un rollo de tela con su partida de teñido y peso en kg (Fase 3).
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 3
+      x-keptai-proposed-roles:
+      - ADMIN
+      - JEFE_TALLER
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFabricRollRequest'
+      responses:
+        '201':
+          description: Rollo de tela registrado.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FabricRoll'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/supplies:
+    get:
+      tags:
+      - Inventario
+      operationId: listSupplies
+      summary: Listar insumos de producción (hilos, botones, etiquetas) (Fase 3).
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 3
+      x-keptai-proposed-roles:
+      - ADMIN
+      - JEFE_TALLER
+      - GERENTE
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: category
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Listado de insumos.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SupplyItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Inventario
+      operationId: createSupply
+      summary: Dar de alta un insumo de producción (Fase 3).
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 3
+      x-keptai-proposed-roles:
+      - ADMIN
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSupplyRequest'
+      responses:
+        '201':
+          description: Insumo registrado.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplyItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/fabric/requisitions:
+    get:
+      tags:
+      - Taller
+      operationId: listRequisitions
+      summary: Listar requisiciones de compra de tela (B-10).
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: B-10
+      x-keptai-proposed-roles:
+      - ADMIN
+      - JEFE_TALLER
+      - GERENTE
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Listado de requisiciones de compra.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FabricRequisition'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Taller
+      operationId: createRequisition
+      summary: Crear borrador de requisición de compra de tela con merma configurable (B-10).
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: B-10
+      x-keptai-proposed-roles:
+      - ADMIN
+      - JEFE_TALLER
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRequisitionRequest'
+      responses:
+        '201':
+          description: Requisición creada en estado BORRADOR.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FabricRequisition'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/fabric/requisitions/{requisition_id}/approve:
+    post:
+      tags:
+      - Taller
+      operationId: approveRequisition
+      summary: Aprobación administrativa de requisición de compra de tela (B-10).
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: B-10
+      x-keptai-proposed-roles:
+      - ADMIN
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: requisition_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveRequisitionRequest'
+      responses:
+        '200':
+          description: Requisición aprobada.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FabricRequisition'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/fabric/requisitions/{requisition_id}/receive:
+    post:
+      tags:
+      - Taller
+      operationId: receiveRequisition
+      summary: Recepción de tela comprada con partida de teñido e ingreso al almacén (B-10).
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: B-10
+      x-keptai-proposed-roles:
+      - ADMIN
+      - JEFE_TALLER
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: requisition_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceiveRequisitionRequest'
+      responses:
+        '200':
+          description: Tela recibida e ingresada al inventario con su partida.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FabricRequisition'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -2443,6 +3091,155 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/v1/inventory/products:
+    get:
+      tags:
+      - Inventario
+      operationId: listProducts
+      summary: Listar productos y catálogo de existencias por variante de talla.
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Defecto 1
+      x-keptai-proposed-roles:
+      - ADMIN
+      - VENDEDOR
+      - GERENTE
+      - JEFE_TALLER
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de productos con variantes y stock.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Inventario
+      operationId: createProduct
+      summary: Alta de producto con variantes y tallas obligatorias.
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Defecto 1
+      x-keptai-proposed-roles:
+      - ADMIN
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Producto creado con variantes.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/inventory/products/{productId}/stock-matrix:
+    post:
+      tags:
+      - Inventario
+      operationId: registerStockMatrix
+      summary: Registrar ingreso o ajuste de stock mediante matriz talla x cantidad.
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Defecto 1
+      x-keptai-proposed-roles:
+      - ADMIN
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Uuid'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockMatrixMovementRequest'
+      responses:
+        '200':
+          description: Variantes actualizadas con el nuevo stock.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VariantResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/inventory/products/{productId}/movements:
+    get:
+      tags:
+      - Inventario
+      operationId: listProductMovements
+      summary: Historial de movimientos de stock (kárdex) del producto.
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Defecto 1
+      x-keptai-proposed-roles:
+      - ADMIN
+      - GERENTE
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Uuid'
+      responses:
+        '200':
+          description: Lista de movimientos registrados.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InventoryMovementResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2527,6 +3324,12 @@ components:
         $ref: '#/components/schemas/Uuid'
     OrderId:
       name: order_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    ArtId:
+      name: art_id
       in: path
       required: true
       schema:
@@ -3033,6 +3836,380 @@ components:
         notes:
           type: string
           nullable: true
+    ProductResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - codigo
+      - nombre
+      - prenda_tipo
+      - categoria
+      - unidad_medida
+      - activo
+      - creado_en
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        codigo:
+          type: string
+        nombre:
+          type: string
+        prenda_tipo:
+          type: string
+        tela:
+          type: string
+          nullable: true
+        color:
+          type: string
+          nullable: true
+        categoria:
+          type: string
+        unidad_medida:
+          type: string
+        activo:
+          type: boolean
+        variantes:
+          type: array
+          items:
+            $ref: '#/components/schemas/VariantResponse'
+        creado_en:
+          type: string
+          format: date-time
+    VariantResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - producto_id
+      - talla
+      - stock_actual
+      - stock_minimo
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        producto_id:
+          $ref: '#/components/schemas/Uuid'
+        talla:
+          type: string
+        sku:
+          type: string
+          nullable: true
+        stock_actual:
+          type: integer
+        stock_minimo:
+          type: integer
+    CreateProductRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - codigo
+      - nombre
+      - prenda_tipo
+      - variantes
+      properties:
+        codigo:
+          type: string
+        nombre:
+          type: string
+        prenda_tipo:
+          type: string
+        tela:
+          type: string
+          nullable: true
+        color:
+          type: string
+          nullable: true
+        categoria:
+          type: string
+          nullable: true
+        unidad_medida:
+          type: string
+          nullable: true
+        variantes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateVariantRequest'
+    CreateVariantRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - talla
+      properties:
+        talla:
+          type: string
+        sku:
+          type: string
+          nullable: true
+        stock_minimo:
+          type: integer
+          nullable: true
+    StockMatrixMovementRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - tipo
+      - motivo
+      - tallas
+      properties:
+        tipo:
+          type: string
+        motivo:
+          type: string
+        tallas:
+          type: object
+          additionalProperties:
+            type: integer
+    InventoryMovementResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - variante_id
+      - talla
+      - tipo
+      - cantidad
+      - motivo
+      - usuario_id
+      - creado_en
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        variante_id:
+          $ref: '#/components/schemas/Uuid'
+        talla:
+          type: string
+        tipo:
+          type: string
+        cantidad:
+          type: integer
+        motivo:
+          type: string
+        usuario_id:
+          $ref: '#/components/schemas/Uuid'
+        creado_en:
+          type: string
+          format: date-time
+    ProductionCustomerRef:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - name
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+    ProductionOrderItem:
+      type: object
+      additionalProperties: false
+      required:
+      - description
+      - quantity
+      properties:
+        description:
+          type: string
+        quantity:
+          type: integer
+        product_line:
+          type: string
+          nullable: true
+        detail:
+          type: string
+          nullable: true
+    ProductionOrder:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - display_code
+      - production_mode
+      - status
+      - created_at
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        display_code:
+          type: string
+        customer:
+          $ref: '#/components/schemas/ProductionCustomerRef'
+        brand:
+          type: string
+          nullable: true
+        product_line:
+          type: string
+          nullable: true
+        production_mode:
+          $ref: '#/components/schemas/ProductionMode'
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        requested_delivery_date:
+          type: string
+          format: date
+          nullable: true
+        production_start_date:
+          type: string
+          format: date
+          nullable: true
+        dispatch_date:
+          type: string
+          format: date
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductionOrderItem'
+    ArtPiece:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - orderId
+      - technique
+      - location
+      - status
+      - version
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        orderId:
+          $ref: '#/components/schemas/Uuid'
+        technique:
+          type: string
+          enum: [SUBLIMADO, BORDADO, SERIGRAFIA, DTF, VINIL]
+        location:
+          type: string
+        widthCm:
+          type: number
+          nullable: true
+        heightCm:
+          type: number
+          nullable: true
+        colorsOrThreads:
+          type: string
+          nullable: true
+        stitches:
+          type: integer
+          nullable: true
+        storagePath:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [BORRADOR, ENVIADO_CLIENTE, APROBADO, CAMBIOS]
+        version:
+          type: integer
+        approvedBy:
+          $ref: '#/components/schemas/Uuid'
+          nullable: true
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        approvalChannel:
+          type: string
+          nullable: true
+        approvalEvidenceUrl:
+          type: string
+          nullable: true
+        createdBy:
+          $ref: '#/components/schemas/Uuid'
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateArtRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - technique
+      - location
+      properties:
+        technique:
+          type: string
+          enum: [SUBLIMADO, BORDADO, SERIGRAFIA, DTF, VINIL]
+        location:
+          type: string
+        widthCm:
+          type: number
+          nullable: true
+        heightCm:
+          type: number
+          nullable: true
+        colorsOrThreads:
+          type: string
+          nullable: true
+        stitches:
+          type: integer
+          nullable: true
+        storagePath:
+          type: string
+          nullable: true
+    ApproveArtRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        channel:
+          type: string
+        evidenceUrl:
+          type: string
+        notes:
+          type: string
+    ImportPersonnelRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - entries
+      properties:
+        entries:
+          type: array
+          items:
+            type: object
+            required:
+            - size
+            properties:
+              fullName:
+                type: string
+              size:
+                type: string
+              quantity:
+                type: integer
+                default: 1
+              embroideryName:
+                type: string
+              department:
+                type: string
+              notes:
+                type: string
+        closeCurve:
+          type: boolean
+          default: false
+    ImportPersonnelResult:
+      type: object
+      additionalProperties: false
+      required:
+      - totalEntries
+      - totalGarments
+      - generatedCurve
+      - curveStatus
+      properties:
+        totalEntries:
+          type: integer
+        totalGarments:
+          type: integer
+        generatedCurve:
+          type: object
+          additionalProperties:
+            type: integer
+        curveStatus:
+          type: string
     Uuid:
       type: string
       format: uuid
@@ -3168,6 +4345,7 @@ components:
       - ADMIN
       - GERENTE
       - JEFE_TALLER
+      - DISENO
       description: 'Roles vigentes de BD (`usuario.rol`, V1): una fila por usuario y organizacion, es decir un solo rol por
         contexto.
 
@@ -6497,6 +7675,310 @@ components:
           maximum: 1000000
         unit_price:
           $ref: '#/components/schemas/NonNegativeMoney'
+    FabricRoll:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - fabric_type
+      - color
+      - dye_lot
+      - current_weight_kg
+      - reserved_weight_kg
+      - available_weight_kg
+      - created_at
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        roll_code:
+          type: string
+          nullable: true
+        fabric_type:
+          type: string
+        color:
+          type: string
+        gsm:
+          type: integer
+          nullable: true
+        dye_lot:
+          type: string
+        current_weight_kg:
+          type: number
+        reserved_weight_kg:
+          type: number
+        available_weight_kg:
+          type: number
+        location:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    CreateFabricRollRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - fabric_type
+      - color
+      - dye_lot
+      - weight_kg
+      properties:
+        roll_code:
+          type: string
+          nullable: true
+        fabric_type:
+          type: string
+        color:
+          type: string
+        gsm:
+          type: integer
+          nullable: true
+        dye_lot:
+          type: string
+        weight_kg:
+          type: number
+        location:
+          type: string
+          nullable: true
+    FabricSemaphoreProposal:
+      type: object
+      additionalProperties: false
+      required:
+      - order_id
+      - required_kg
+      - available_kg
+      - proposed_semaphore
+      - available_dye_lots
+      - mix_warning
+      - message
+      properties:
+        order_id:
+          $ref: '#/components/schemas/Uuid'
+        fabric_type:
+          type: string
+          nullable: true
+        color:
+          type: string
+          nullable: true
+        required_kg:
+          type: number
+        available_kg:
+          type: number
+        proposed_semaphore:
+          type: string
+        available_dye_lots:
+          type: array
+          items:
+            type: string
+        mix_warning:
+          type: boolean
+        message:
+          type: string
+    AssignFabricLotRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - fabric_roll_id
+      - assigned_kg
+      properties:
+        fabric_roll_id:
+          $ref: '#/components/schemas/Uuid'
+        assigned_kg:
+          type: number
+    OrderFabricLotsSummary:
+      type: object
+      additionalProperties: false
+      required:
+      - order_id
+      - assignments
+      - mix_warning
+      - distinct_dye_lots
+      - total_assigned_kg
+      properties:
+        order_id:
+          $ref: '#/components/schemas/Uuid'
+        assignments:
+          type: array
+          items:
+            type: object
+        mix_warning:
+          type: boolean
+        distinct_dye_lots:
+          type: array
+          items:
+            type: string
+        total_assigned_kg:
+          type: number
+    SupplyItem:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - code
+      - name
+      - category
+      - unit_of_measure
+      - current_stock
+      - minimum_stock
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        code:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        unit_of_measure:
+          type: string
+        current_stock:
+          type: number
+        minimum_stock:
+          type: number
+    CreateSupplyRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - code
+      - name
+      - category
+      - unit_of_measure
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        unit_of_measure:
+          type: string
+        initial_stock:
+          type: number
+          nullable: true
+        minimum_stock:
+          type: number
+          nullable: true
+    FabricRequisition:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - fabric_type
+      - color
+      - kg_requeridos
+      - porcentaje_merma
+      - fecha_requerida
+      - estado
+      - solicitado_por
+      - created_at
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        order_id:
+          $ref: '#/components/schemas/Uuid'
+          nullable: true
+        fabric_type:
+          type: string
+        color:
+          type: string
+        gsm:
+          type: integer
+          nullable: true
+        kg_requeridos:
+          type: number
+        porcentaje_merma:
+          type: number
+        fecha_requerida:
+          type: string
+          format: date
+        estado:
+          type: string
+        solicitado_por:
+          $ref: '#/components/schemas/Uuid'
+        aprobado_por:
+          $ref: '#/components/schemas/Uuid'
+          nullable: true
+        aprobado_en:
+          type: string
+          format: date-time
+          nullable: true
+        partida_ingresada:
+          type: string
+          nullable: true
+        kg_recibidos:
+          type: number
+          nullable: true
+        recibido_en:
+          type: string
+          format: date-time
+          nullable: true
+        notas:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    CreateRequisitionRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - fabric_type
+      - color
+      - required_kg
+      - required_date
+      properties:
+        order_id:
+          $ref: '#/components/schemas/Uuid'
+          nullable: true
+        fabric_type:
+          type: string
+        color:
+          type: string
+        gsm:
+          type: integer
+          nullable: true
+        required_kg:
+          type: number
+        scrap_percentage:
+          type: number
+          nullable: true
+        required_date:
+          type: string
+          format: date
+        notes:
+          type: string
+          nullable: true
+    ApproveRequisitionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        notes:
+          type: string
+          nullable: true
+    ReceiveRequisitionRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - dye_lot
+      - received_kg
+      properties:
+        dye_lot:
+          type: string
+        received_kg:
+          type: number
+        roll_code:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+
   examples:
     UserContextDemo:
       summary: Contexto ficticio.

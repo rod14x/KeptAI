@@ -1,3 +1,4 @@
+/** Versión: 1.1 | Fecha: 2026-10-19 | Autora: Isabelita */
 import type { TallerOrder } from "../api/dto";
 import type { Person } from "../api/model";
 import { endpoints } from "../api/contract/endpoints";
@@ -85,6 +86,7 @@ export interface ProductionTechSheet {
   instruccionesCostura: string[];
   completadaPor?: string | null;
   completadaEn?: string | null;
+  orderEstado?: string;
 }
 
 export function isStockBordado(m: ManufacturingModality): boolean {
@@ -199,6 +201,195 @@ const DEFAULT_INVENTORY: InventoryItem[] = [
 
 const STORAGE_INVENTORY_KEY = "keptai_manufacturing_inventory_v1";
 const STORAGE_SHEETS_KEY = "keptai_manufacturing_sheets_v1";
+const STORAGE_MOVEMENTS_KEY = "keptai_manufacturing_movements_v1";
+
+export interface InventoryMovement {
+  id: string;
+  itemId: string;
+  codigoItem: string;
+  nombreItem: string;
+  fecha: string;
+  usuario: string;
+  tipo: "ENTRADA" | "SALIDA" | "AJUSTE";
+  motivo: string;
+  talla: string;
+  cantidad: number;
+}
+
+export function loadWorkshopMovements(): InventoryMovement[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_MOVEMENTS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    console.error("Error loading inventory movements", e);
+  }
+  return [
+    {
+      id: "mov-01",
+      itemId: "inv-pb-01",
+      codigoItem: "PB-DRY-WHT",
+      nombreItem: "Camiseta Dry-Fit Poliéster Blanca (Sublimable)",
+      fecha: new Date(Date.now() - 86400000).toISOString(),
+      usuario: "administracion",
+      tipo: "ENTRADA",
+      motivo: "Recepción de confección de lote inicial",
+      talla: "S",
+      cantidad: 60,
+    },
+    {
+      id: "mov-02",
+      itemId: "inv-pb-01",
+      codigoItem: "PB-DRY-WHT",
+      nombreItem: "Camiseta Dry-Fit Poliéster Blanca (Sublimable)",
+      fecha: new Date(Date.now() - 86400000).toISOString(),
+      usuario: "administracion",
+      tipo: "ENTRADA",
+      motivo: "Recepción de confección de lote inicial",
+      talla: "M",
+      cantidad: 85,
+    },
+  ];
+}
+
+export function saveWorkshopMovements(movements: InventoryMovement[]): void {
+  try {
+    localStorage.setItem(STORAGE_MOVEMENTS_KEY, JSON.stringify(movements));
+  } catch (e) {
+    console.error("Error saving inventory movements", e);
+  }
+}
+
+export function recordStockMatrixMovement(params: {
+  itemId: string;
+  tipo: "ENTRADA" | "SALIDA" | "AJUSTE";
+  motivo: string;
+  matriz: Record<string, number>;
+  usuario: string;
+}): { ok: boolean; message: string; updatedItems: InventoryItem[] } {
+  const items = loadWorkshopInventory();
+  const itemIndex = items.findIndex((it) => it.id === params.itemId);
+  if (itemIndex === -1) {
+    return { ok: false, message: "Ítem no encontrado en almacén", updatedItems: items };
+  }
+
+  const target = items[itemIndex];
+  const currentDetails: Record<string, number> = { ...(target.detalleTallas ?? {}) };
+  const movements = loadWorkshopMovements();
+  let totalDelta = 0;
+
+  for (const [talla, qty] of Object.entries(params.matriz)) {
+    const numQty = Number(qty) || 0;
+    if (numQty <= 0) continue;
+
+    if (params.tipo === "ENTRADA") {
+      currentDetails[talla] = (currentDetails[talla] ?? 0) + numQty;
+      totalDelta += numQty;
+    } else if (params.tipo === "SALIDA") {
+      currentDetails[talla] = Math.max(0, (currentDetails[talla] ?? 0) - numQty);
+      totalDelta -= numQty;
+    } else if (params.tipo === "AJUSTE") {
+      const prev = currentDetails[talla] ?? 0;
+      currentDetails[talla] = numQty;
+      totalDelta += (numQty - prev);
+    }
+
+    movements.unshift({
+      id: "mov-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+      itemId: target.id,
+      codigoItem: target.codigo,
+      nombreItem: target.nombre,
+      fecha: new Date().toISOString(),
+      usuario: params.usuario,
+      tipo: params.tipo,
+      motivo: params.motivo || "Movimiento registrado por matriz de tallas",
+      talla,
+      cantidad: numQty,
+    });
+  }
+
+  const newStock = Object.values(currentDetails).reduce((s, q) => s + q, 0);
+  items[itemIndex] = {
+    ...target,
+    detalleTallas: currentDetails,
+    stockActual: target.tipo === "prenda_base" ? newStock : target.stockActual + totalDelta,
+  };
+
+  saveWorkshopInventory(items);
+  saveWorkshopMovements(movements);
+
+  return {
+    ok: true,
+    message: `Matriz registrada: ${params.tipo} en ${target.nombre} (${params.usuario})`,
+    updatedItems: items,
+  };
+}
+
+export function createNewProductWithVariants(params: {
+  codigo: string;
+  nombre: string;
+  tipo: "prenda_base" | "tela_rollo" | "avio";
+  categoria: "Deportivo" | "Corporativo" | "Insumo";
+  unidad: "uds" | "kg" | "conos" | "metros";
+  prenda: string;
+  tela: string;
+  color: string;
+  tallas: string[];
+  stockInicial: Record<string, number>;
+  stockMinimo: number;
+  usuario: string;
+}): { ok: boolean; message: string; updatedItems: InventoryItem[] } {
+  const items = loadWorkshopInventory();
+  if (items.some((it) => it.codigo.toLowerCase() === params.codigo.toLowerCase())) {
+    return { ok: false, message: `El código ${params.codigo} ya está registrado`, updatedItems: items };
+  }
+
+  const detalleTallas: Record<string, number> = {};
+  const movements = loadWorkshopMovements();
+  let totalStock = 0;
+
+  for (const t of params.tallas) {
+    const qty = Number(params.stockInicial[t]) || 0;
+    detalleTallas[t] = qty;
+    totalStock += qty;
+
+    if (qty > 0) {
+      movements.unshift({
+        id: "mov-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+        itemId: "inv-" + params.codigo.toLowerCase(),
+        codigoItem: params.codigo,
+        nombreItem: params.nombre,
+        fecha: new Date().toISOString(),
+        usuario: params.usuario,
+        tipo: "ENTRADA",
+        motivo: "Alta de producto y stock inicial por variante",
+        talla: t,
+        cantidad: qty,
+      });
+    }
+  }
+
+  const newItem: InventoryItem = {
+    id: "inv-" + Date.now(),
+    codigo: params.codigo.toUpperCase(),
+    nombre: params.nombre,
+    tipo: params.tipo,
+    categoria: params.categoria,
+    unidad: params.unidad,
+    stockActual: totalStock,
+    stockMinimo: params.stockMinimo,
+    detalleTallas,
+  };
+
+  items.unshift(newItem);
+  saveWorkshopInventory(items);
+  saveWorkshopMovements(movements);
+
+  return {
+    ok: true,
+    message: `Producto creado: ${newItem.codigo} con ${params.tallas.length} variantes de talla (${params.usuario})`,
+    updatedItems: items,
+  };
+}
 
 export function loadWorkshopInventory(): InventoryItem[] {
   try {

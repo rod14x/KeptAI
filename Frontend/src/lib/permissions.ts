@@ -1,8 +1,12 @@
+/**
+ * Corpotex KeptAI - Matriz de Permisos y Roles
+ * Versión: v1.0 | Fecha: 2026-10-19 | Autora: Isabelita
+ */
 import type { Role } from "../api/model";
 import { IS_MOCK } from "../config";
 
 // Matriz de permisos alineada con los "Roles propuestos" de Backend/docs/contrato-api.md.
-// Spring es quien autoriza (y RLS V4 aísla por organización); la UI solo oculta o explica.
+// Spring es quien autoriza (y RLS aísla por organización); la UI solo oculta o explica.
 
 export type Permission =
   | "ver_comercial"
@@ -17,6 +21,7 @@ export type Permission =
   | "ver_cobranza"
   | "gestionar_cobranza"
   | "registrar_despacho"
+  | "diseno_arte"
   | "ver_estado_cuenta"
   | "ver_resultado"
   | "exportar"
@@ -40,14 +45,17 @@ const MATRIX: Record<Role, Permission[]> = {
     "ver_cobranza",
     "gestionar_cobranza",
     "registrar_despacho",
+    "diseno_arte",
     "ver_estado_cuenta",
     "ver_auditoria",
     "cambiar_vista",
   ],
   // results/*, reports/orders.csv, payments (lectura), receivables, statement, audit.
   gerencia: ["ver_comercial", "ver_pagos", "ver_cobranza", "ver_estado_cuenta", "ver_resultado", "exportar", "ver_auditoria", "configurar", "cambiar_vista"],
-  // listOrders/getOrder y registerDispatch. Sin acceso financiero a pagos ni vouchers.
+  // listProductionOrders/getProductionOrder, validateFabric, advanceStation y registerDispatch. Sin acceso financiero a precios ni pagos.
   jefe_taller: ["registrar_despacho", "cambiar_vista"],
+  // B-06: Gestión de artes de personalización, diseño, fichas técnicas y aprobaciones
+  diseno: ["diseno_arte", "cambiar_vista"],
 };
 
 // Modo api: decisiones vigentes del backend. D-014: ADMIN autoriza el crédito comercial durante el MVP.
@@ -62,27 +70,35 @@ export function can(role: Role | undefined, permission: Permission) {
   return role ? (IS_MOCK ? MATRIX : API_MATRIX)[role].includes(permission) : false;
 }
 
-export const ROLES: Role[] = ["vendedor", "administracion", "gerencia", "jefe_taller"];
+export const ROLES: Role[] = ["vendedor", "administracion", "gerencia", "jefe_taller", "diseno"];
 
 export function rolesWith(p: Permission) {
   return ROLES.filter((r) => can(r, p)).map((r) => ROLE_LABEL[r]);
 }
 
 /** usuario.rol del contrato ↔ rol de la vista. */
-export const ROLE_FROM_API = { VENDEDOR: "vendedor", ADMIN: "administracion", GERENTE: "gerencia", JEFE_TALLER: "jefe_taller" } as const satisfies Record<string, Role>;
+export const ROLE_FROM_API = {
+  VENDEDOR: "vendedor",
+  ADMIN: "administracion",
+  GERENTE: "gerencia",
+  JEFE_TALLER: "jefe_taller",
+  DISENO: "diseno",
+} as const satisfies Record<string, Role>;
 
 export const ROLE_LABEL: Record<Role, string> = {
   vendedor: "Vendedor",
   administracion: "Administración",
   gerencia: "Gerencia",
   jefe_taller: "Jefe de taller",
+  diseno: "Diseño y Arte",
 };
 
 export const ROLE_SUMMARY: Record<Role, string> = {
   vendedor: "Negocia por WhatsApp, registra clientes y pedidos, llena la ficha técnica y confirma el borrador comercial. Administración autoriza el crédito comercial (D-014).",
   administracion: "Verifica pagos bancarios, autoriza el crédito comercial (D-014), aplica anticipos, revisa borradores, gestiona cobranza y concilia.",
   gerencia: "Consulta margen, caja y reportes, y exporta a contabilidad. No escribe datos de negocio (solo lectura).",
-  jefe_taller: "Ve las órdenes liberadas, valida disponibilidad de tela y registra avances y despachos físicos. Sin acceso a pagos.",
+  jefe_taller: "Ve las órdenes de producción liberadas (sin precios), valida disponibilidad de tela y registra avances y despachos físicos. Sin acceso a pagos.",
+  diseno: "Prepara y aprueba artes de personalización (sublimado, bordado, DTF, serigrafía), fichas técnicas y registra evidencia de aprobación.",
 };
 
 export const PERMISSION_LABEL: Record<Permission, string> = {
@@ -98,6 +114,7 @@ export const PERMISSION_LABEL: Record<Permission, string> = {
   ver_cobranza: "Ver cartera y alertas",
   gestionar_cobranza: "Gestionar alertas de cobranza",
   registrar_despacho: "Registrar despacho",
+  diseno_arte: "Gestionar fichas y artes de diseño",
   ver_estado_cuenta: "Ver estado de cuenta del cliente",
   ver_resultado: "Ver margen, caja y resultado",
   exportar: "Exportar CSV",
@@ -107,3 +124,14 @@ export const PERMISSION_LABEL: Record<Permission, string> = {
 };
 
 export const ALL_PERMISSIONS = Object.keys(PERMISSION_LABEL) as Permission[];
+
+/**
+ * B-07: Mapa unificado de inicio por rol (un solo mapa rol -> ruta de inicio).
+ */
+export const START_ROUTE_BY_ROLE: Record<Role, string> = {
+  vendedor: "/pedidos",
+  jefe_taller: "/taller",
+  administracion: "/",
+  gerencia: "/resultado",
+  diseno: "/taller",
+};

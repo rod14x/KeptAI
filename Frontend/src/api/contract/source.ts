@@ -1311,6 +1311,7 @@ export const apiSource: DataSource = {
       ],
       gerencia: [{ label: "Eventos revisados", value: audit?.items.length ?? 0 }],
       jefe_taller: [{ label: "Despachos registrados", value: count(/DESPACHO/i) }],
+      diseno: [{ label: "Artes aprobados", value: count(/ARTE|DISENO/i) }, { label: "Fichas revisadas", value: count(/FICHA/i) }],
     };
     return { activity: mine ? mine.slice(0, 30).map((e) => activity(e, me?.user_id ?? null, { ctx, payments })) : null, counts: counts[person.role], settings: null, ownOrders: [] };
   },
@@ -1497,3 +1498,4 @@ export const apiSource: DataSource = {
       }),
   },
 };
+

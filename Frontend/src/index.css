@@ -535,8 +535,20 @@
 }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
+  }
   :root[data-theme] { color-scheme: light; --color-app: #fff; --color-card: #fff; --color-panel: #fff; --color-ink: #0f2747; --color-muted: #43566a; --color-faint: #526477; --color-line: #c6cfd8; --color-line-soft: #e4e8ec; }
-  .app-sidebar, .app-topbar, .skip-link { display: none !important; }
-  .app-shell { display: block; }
+  .app-sidebar, .app-topbar, .skip-link, header, aside, nav, button, .print\:hidden { display: none !important; }
+  .app-shell { display: block !important; min-height: auto !important; }
+  body { background: #ffffff !important; }
+  #ficha-tecnica-a4-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
   main { padding: 0 !important; }
 }

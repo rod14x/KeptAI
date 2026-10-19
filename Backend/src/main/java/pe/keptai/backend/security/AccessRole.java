@@ -1,11 +1,15 @@
+/**
+ * AccessRole.java
+ * Versión: 2.0 | Fecha: 2026-10-19 | Autora: Isabelita
+ */
 package pe.keptai.backend.security;
 
 import java.util.EnumSet;
 import java.util.Set;
 
 /**
- * Actores de la base (V4/V7): cuatro roles de usuario y dos servicios. Los servicios no son
- * roles de usuario: se autentican con credencial técnica y nunca firman como personas.
+ * Actores de la base (V4/V7): roles de usuario y servicios.
+ * B-06: Incorporación de DISENO.
  */
 public enum AccessRole {
 
@@ -13,6 +17,7 @@ public enum AccessRole {
 	ADMIN(false),
 	GERENTE(false),
 	JEFE_TALLER(false),
+	DISENO(false),
 	INGESTA(true),
 	SCHEDULER(true);
 

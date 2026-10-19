@@ -1,3 +1,7 @@
+/**
+ * ManufacturingController.java
+ * Versión: 2.0 | Fecha: 2026-10-19 | Autora: Isabelita
+ */
 package pe.keptai.backend.web;
 
 import static pe.keptai.backend.panel.PanelRequests.uuid;
@@ -13,10 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 import pe.keptai.backend.contract.ManufacturingDtos.OrderStage;
 import pe.keptai.backend.contract.ManufacturingDtos.StationAdvanceRequest;
 import pe.keptai.backend.contract.ManufacturingDtos.StationAdvanceResponse;
+import pe.keptai.backend.contract.ProductionOrderDtos.ProductionOrder;
 import pe.keptai.backend.panel.ManufacturingService;
 import pe.keptai.backend.panel.PanelRequests;
 
-/** Endpoints de avance de estaciones de fabricación en Taller (Fase 4). */
+/** Endpoints de avance de estaciones de fabricación y órdenes de producción sin precios (Fase 4 & B-05). */
 @RestController
 public class ManufacturingController {
 
@@ -38,6 +43,18 @@ public class ManufacturingController {
 	@GetMapping("/api/v1/orders/{id}/stages")
 	public List<OrderStage> getStages(@PathVariable("id") String orderId) {
 		return manufacturingService.getOrderStages(uuid(orderId, "order_id"));
+	}
+
+	/** B-05: Orden de producción individual para taller (sin precios ni márgenes). */
+	@GetMapping("/api/v1/orders/{id}/production")
+	public ProductionOrder getProductionOrder(@PathVariable("id") String orderId) {
+		return manufacturingService.getProductionOrder(uuid(orderId, "order_id"));
+	}
+
+	/** B-05: Listado de órdenes de producción para taller (sin precios ni márgenes). */
+	@GetMapping("/api/v1/orders/production")
+	public List<ProductionOrder> listProductionOrders() {
+		return manufacturingService.listProductionOrders();
 	}
 
 }

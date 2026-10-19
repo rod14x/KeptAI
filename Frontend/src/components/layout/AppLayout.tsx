@@ -31,6 +31,7 @@ export function AppLayout() {
       administracion: ["pendientes", "pedidos", "orden", "conciliacion", "cobranza", "clientes", "cliente", "captura", "perfil"],
       gerencia: ["dashboard", "pedidos", "orden", "clientes", "cliente", "resultado", "perfil"],
       jefe_taller: ["taller", "perfil"],
+      diseno: ["taller", "pedidos", "orden", "perfil"],
     } as const;
     // La carga manual no está conectada en modo api: no se precarga.
     prefetch(byRole[person.role].filter((p) => IS_MOCK || p !== "captura"));

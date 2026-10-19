@@ -816,6 +816,7 @@ export const mockSource: DataSource = {
         ],
         gerencia: [{ label: "Cambios de supuestos", value: count(["configuracion"]) }],
         jefe_taller: [{ label: "Despachos registrados", value: count(["despacho"]) }],
+        diseno: [{ label: "Artes revisados", value: count(["produccion"]) }, { label: "Fichas técnicas", value: count(["orden_ingresada"]) }],
       }[person.role];
       return {
         activity: mine.slice(0, 30).map((a) => activityOf(s, a)),

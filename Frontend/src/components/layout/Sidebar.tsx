@@ -1,3 +1,13 @@
+/**
+ * Sidebar.tsx
+ * Versión: 2.0 | Fecha: 2026-10-19 | Autora: Isabelita
+ *
+ * Menú lateral unificado por rol:
+ * - Paso 0: Se quita /taller del menú de vendedora (la consulta de stock se realiza dentro del armado del pedido).
+ * - B-07: Vendedora inicia en /pedidos; Taller reservado a operaciones de planta y administración.
+ * - B-06: Incorporación del rol diseno.
+ */
+
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router";
 import { motion } from "motion/react";
@@ -26,15 +36,19 @@ const TALLER: NavItem = { to: "/taller", label: "Taller", icon: Factory, end: fa
 const CAPTURA: NavItem = { to: "/captura", label: "Carga manual", icon: UploadSimple, end: false, module: "captura" };
 
 /**
- * Menú unificado por rol (Fase 0):
- * - /taller visible para jefe_taller, administracion, vendedor, gerencia.
- * - /captura visible para administracion y vendedor.
+ * Menú unificado por rol (Paso 0 & B-07):
+ * - vendedor: [PENDIENTES, PEDIDOS, CLIENTES, CAPTURA] (sin /taller; stock consultado en pedido)
+ * - administracion: [PENDIENTES, PAGOS, COBRANZA, PEDIDOS, TALLER, CAPTURA]
+ * - gerencia: [INICIO, RESULTADO, PEDIDOS, CLIENTES, TALLER]
+ * - jefe_taller: [TALLER]
+ * - diseno: [TALLER]
  */
 export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
-  vendedor: [PENDIENTES, PEDIDOS, CLIENTES, TALLER, CAPTURA],
+  vendedor: [PENDIENTES, PEDIDOS, CLIENTES, CAPTURA],
   administracion: [PENDIENTES, PAGOS, COBRANZA, PEDIDOS, TALLER, CAPTURA],
   gerencia: [INICIO, RESULTADO, PEDIDOS, CLIENTES, TALLER],
   jefe_taller: [TALLER],
+  diseno: [TALLER],
 };
 
 const EXTRA_LABELS: Array<[string, string]> = [
