@@ -19,6 +19,7 @@ import {
   Truck,
   UploadSimple,
   WarningCircle,
+  NotePencil,
 } from "../components/ui/icons";
 import {
   capabilities,
@@ -43,13 +44,14 @@ import { Segmented } from "../components/ui/Segmented";
 import { DialogShell } from "../components/ui/Dialog";
 import { inputClass } from "../components/ui/Modal";
 import { cx, formatDate, formatDateTime, formatMoney } from "../lib/format";
-import { IS_MOCK } from "../config";
 import { MarginWaterfallCard } from "../components/organisms/MarginWaterfallCard";
 import {
   OrderLifecycleBar,
   OrderExecutiveStrip,
   buildOrderLifecycleSteps,
 } from "../components/organisms/OrderLifecycleBar";
+import { FichaTecnicaModal } from "../components/organisms/FichaTecnicaModal";
+import { getOrCreateTechSheet } from "../lib/tallerManufacturing";
 
 export function OrdenDetailPage() {
   const { ref = "" } = useParams();
@@ -75,12 +77,13 @@ export function OrdenDetailPage() {
         </EmptyState>
       </div>
     );
-  return <Detail d={data} />;
+  return <Detail d={data} reload={reload} />;
 }
 
-function Detail({ d }: { d: OrderDetailDTO }) {
+function Detail({ d, reload }: { d: OrderDetailDTO; reload: () => void }) {
   const o = d.order;
   const [params, setParams] = useSearchParams();
+  const [techSheetOpen, setTechSheetOpen] = useState(false);
   const tab = params.get("tab") === "pagos" ? "pagos" : params.get("tab") === "mensajes" ? "mensajes" : "pedido";
   const pending = o.estado === "pendiente_aprobacion";
 
@@ -111,7 +114,17 @@ function Detail({ d }: { d: OrderDetailDTO }) {
           <ArrowLeft size={16} weight="bold" /> Volver a Pedidos
         </MotionLink>
 
-        {d.card.demo && <DemoBadge />}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<NotePencil size={15} weight="bold" />}
+            onClick={() => setTechSheetOpen(true)}
+          >
+            Ficha Técnica
+          </Button>
+          {d.card.demo && <DemoBadge />}
+        </div>
       </div>
 
       {/* Cockpit Principal de la Orden (360° en 1 Vistazo) */}
@@ -275,6 +288,27 @@ function Detail({ d }: { d: OrderDetailDTO }) {
           <OrderHistoryCard d={d} />
         </div>
       )}
+
+      <FichaTecnicaModal
+        open={techSheetOpen}
+        sheet={getOrCreateTechSheet({
+          id: o.id,
+          ref: o.ref,
+          customer: d.customer.name,
+          brand: (d.card.brand as any) ?? "corpotex",
+          description: o.description ?? o.ref,
+          items: o.items,
+          modality: o.modality === "tercerizada" ? "tercerizada" : "propia",
+          issuedOn: o.issuedOn,
+          inicioProduccion: o.inicioProduccion ?? null,
+          entregaSolicitada: o.fechaEntregaSolicitada ?? null,
+          plazoDias: o.condicionPago?.plazoDias ?? null,
+          despacho: o.despacho ? { fecha: o.despacho.fecha, acta: o.despacho.acta, by: o.despacho.by } : null,
+          anticipoPendienteCents: d.card.anticipoPendienteCents,
+        })}
+        onClose={() => setTechSheetOpen(false)}
+        onUpdate={() => reload()}
+      />
     </Stagger>
   );
 }
@@ -297,9 +331,9 @@ function NextStep({
   let ctaHref: string | null = null;
 
   if (o.estado === "pendiente_aprobacion") {
-    responsibleRole = IS_MOCK ? "VENDEDOR" : "ADMINISTRACIÓN (D-014)";
-    actionText = "Revisar la hoja de resumen y confirmar la orden definiendo si va a crédito o con anticipo.";
-    ctaLabel = "Revisar y Decidir Crédito";
+    responsibleRole = "ADMINISTRACIÓN (D-014)";
+    actionText = "Administración autoriza el crédito comercial (D-014) o define anticipo para liberar la orden a taller.";
+    ctaLabel = "Autorizar Crédito (Admin)";
     ctaAction = () => onGoToTab("pedido");
   } else if (o.estado === "retenida") {
     responsibleRole = "ADMINISTRACIÓN / CAJA";
@@ -694,14 +728,14 @@ function ConditionCard({ d }: { d: OrderDetailDTO }) {
 
       {!canDecide ? (
         <p className="mt-4 flex items-start gap-2 rounded-xl bg-panel px-4 py-3 text-[13px] text-muted ring-1 ring-line">
-          <Info size={18} weight="bold" className="mt-px shrink-0" /> La confirma {rolesWith("aprobar_credito").join(" o ")} de la marca ({d.seller}).
+          <Info size={18} weight="bold" className="mt-px shrink-0" /> La autorización del crédito comercial (D-014) corresponde a {rolesWith("aprobar_credito").join(" o ")} de la marca ({d.seller}).
         </p>
       ) : (
         <div className="mt-5 flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-violet-tint/40 p-3 ring-1 ring-violet/20">
             <div>
-              <span className="block text-xs font-bold uppercase tracking-wider text-ink">Decisión del vendedor</span>
-              <span className="block text-xs text-muted">Confirma la orden o modifícala antes de producir.</span>
+              <span className="block text-xs font-bold uppercase tracking-wider text-ink">Autorización de crédito comercial (D-014)</span>
+              <span className="block text-xs text-muted">Administración define si va a crédito o con anticipo antes de producir.</span>
             </div>
             <div className="flex items-center gap-2">
               <Button size="md" icon={<Check size={18} weight="bold" />} onClick={() => confirm(false)}>

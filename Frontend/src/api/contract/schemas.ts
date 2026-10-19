@@ -166,6 +166,64 @@ export const Order = z
 export type OrderT = z.infer<typeof Order>;
 export const OrderPage = page(Order);
 
+/* ---------- Clientes y Contactos (Fase 1) ---------- */
+export const Customer = z
+  .object({
+    id: Uuid,
+    organizacion_id: Uuid.optional(),
+    tipo_persona: z.string().optional(),
+    razon_social: z.string(),
+    ruc_dni: z.string().nullable().optional(),
+    telefono_principal: z.string().nullable().optional(),
+    canal_origen: z.string().nullable().optional(),
+    limite_credito: NonNegativeMoney.nullable().optional(),
+    creado_en: IsoDateTime.optional(),
+  })
+  .passthrough();
+export type CustomerT = z.infer<typeof Customer>;
+export const CustomerPage = page(Customer);
+
+export const Contact = z
+  .object({
+    id: Uuid,
+    cliente_id: Uuid.optional(),
+    nombre: z.string(),
+    telefono: z.string(),
+    whatsapp_jid: z.string().nullable().optional(),
+    email: z.string().nullable().optional(),
+    es_principal: z.boolean().optional(),
+  })
+  .passthrough();
+export type ContactT = z.infer<typeof Contact>;
+
+/* ---------- Ficha Técnica Textil (Fase 3) ---------- */
+export const TechSheet = z
+  .object({
+    id: Uuid.optional(),
+    order_id: Uuid,
+    estado: z.string().optional(),
+    modalidad: z.string(),
+    semaforo_tela: z.string().optional(),
+    consumo_estimado_kg: z.number().optional(),
+    validacion_tela: z.string().optional(),
+    tela_validada_por: z.string().nullable().optional(),
+    tela_validada_at: IsoDateTime.nullable().optional(),
+    prenda_tipo: z.string().optional(),
+    tela_nombre: z.string().optional(),
+    gramaje: z.string().optional(),
+    color_principal: z.string().optional(),
+    color_contraste: z.string().nullable().optional(),
+    tipo_cuello: z.string().optional(),
+    curva_tallas: z.any().optional(),
+    tecnica_personalizacion: z.string().optional(),
+    ubicaciones_arte: z.any().optional(),
+    instrucciones_costura: z.any().optional(),
+    completada_por: z.string().nullable().optional(),
+    completada_en: IsoDateTime.nullable().optional(),
+  })
+  .passthrough();
+export type TechSheetT = z.infer<typeof TechSheet>;
+
 /* ---------- Pagos y conciliación ---------- */
 export const PaymentPhase = z.enum(["received", "bank_verified", "applied"]);
 export const ReconciliationStatus = z.enum(["pending", "applied", "partial", "duplicate", "orphan", "amount_mismatch"]);
@@ -296,7 +354,7 @@ export const CollectionAlert = z
 export type CollectionAlertT = z.infer<typeof CollectionAlert>;
 export const CollectionAlertPage = page(CollectionAlert);
 
-/* ---------- Crédito ---------- */
+/* ---------- Decisión de crédito ---------- */
 export const CreditAuthorization = z
   .object({
     status: z.enum(["not_required", "pending", "approved", "rejected"]),
@@ -477,6 +535,57 @@ export type RegisterVerificationRequest = { method: "simulated_demo" | "manual_c
 export type DispatchRequest = { dispatch_date: string; note?: string | null };
 export type ResolveAlertRequest = { note: string };
 
+export type CreateCustomerRequest = {
+  tipo_persona: string;
+  razon_social: string;
+  ruc_dni: string;
+  telefono_principal: string;
+  canal_origen: string;
+  limite_credito?: z.infer<typeof NonNegativeMoney>;
+};
+
+export type CreateContactRequest = {
+  nombre: string;
+  telefono: string;
+  whatsapp_jid?: string;
+  email?: string;
+  es_principal?: boolean;
+};
+
+export type CreateOrderRequest = {
+  customer_id: string;
+  description: string;
+  quantity: number;
+  total_amount: z.infer<typeof PositiveMoney>;
+  requested_delivery_date?: string | null;
+};
+
+export type SaveTechSheetRequest = {
+  modalidad: string;
+  semaforo_tela?: string;
+  consumo_estimado_kg?: number;
+  prenda_tipo?: string;
+  tela_nombre?: string;
+  gramaje?: string;
+  color_principal?: string;
+  color_contraste?: string | null;
+  tipo_cuello?: string;
+  curva_tallas?: any;
+  tecnica_personalizacion?: string;
+  ubicaciones_arte?: any;
+  instrucciones_costura?: any;
+};
+
+export type ValidateFabricRequest = {
+  validacion: "CONFIRMADA_TALLER" | "COMPRA_REQUERIDA" | "NO_APLICA";
+  nota?: string;
+};
+
+export type StationAdvanceRequest = {
+  station: string;
+  note?: string;
+};
+
 /** Esquema por nombre del componente OpenAPI, para validar ejemplos del YAML. */
 export const SCHEMAS_BY_NAME: Record<string, z.ZodTypeAny> = {
   UserContext,
@@ -489,6 +598,10 @@ export const SCHEMAS_BY_NAME: Record<string, z.ZodTypeAny> = {
   ConfirmDraftResponse,
   Order,
   OrderPage,
+  Customer,
+  CustomerPage,
+  Contact,
+  TechSheet,
   Payment,
   PaymentPage,
   ReconciliationResult,

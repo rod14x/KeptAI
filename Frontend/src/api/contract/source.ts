@@ -696,11 +696,11 @@ export const apiSource: DataSource = {
     markDuplicate: true,
     applyBySameVerifier: false,
     discardPayment: false,
-    manualOrderCapture: false,
+    manualOrderCapture: true,
     voucherNeedsFile: true,
     settings: false,
     orderItems: true,
-    customerDirectory: false,
+    customerDirectory: true,
     resetDemo: false,
     demoAccounts: false,
   },
@@ -1047,25 +1047,32 @@ export const apiSource: DataSource = {
 
   async getCustomers(scope) {
     const ctx = await context();
+    const remote = await soft(endpoints.listCustomers(), null);
     const ids = new Set<string>();
+    if (remote?.items) {
+      for (const item of remote.items) ids.add(item.id);
+    }
     for (const o of ctx.orders) if (o.customer) ids.add(o.customer.id);
     for (const r of ctx.receivables) ids.add(r.customer.id);
     const rows: CustomerRow[] = [];
     for (const id of ids) {
       const v = customerView(id, ctx);
-      if (!v || !fits(v.brand, scope)) continue;
+      const remoteItem = remote?.items.find((item) => item.id === id);
+      const name = v?.name ?? remoteItem?.razon_social ?? "Cliente";
+      const brand = v?.brand ?? null;
+      if (!fits(brand, scope)) continue;
       const snap = snapshotFor(id, ctx);
       const next = ctx.receivables
         .filter((r) => r.customer.id === id && r.due_date && r.balance.amount_cents > 0)
         .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""))[0];
       rows.push({
         id,
-        name: v.name,
-        brand: v.brand,
-        tipo: v.tipo,
+        name,
+        brand,
+        tipo: v?.tipo ?? (remoteItem?.tipo_persona === "COLEGIO" ? "colegio" : remoteItem?.tipo_persona === "EMPRESA" ? "empresa" : "persona"),
         seller: sellerOf(id, ctx),
-        since: v.since,
-        creditLimitCents: v.creditLimitCents,
+        since: v?.since ?? remoteItem?.creado_en ?? null,
+        creditLimitCents: v?.creditLimitCents ?? remoteItem?.limite_credito?.amount_cents ?? null,
         usedCents: snap.usedCents,
         overdueCents: snap.overdueCents,
         maxOverdueDays: snap.maxOverdueDays,
@@ -1074,6 +1081,9 @@ export const apiSource: DataSource = {
         lastPaymentAt: snap.lastPaymentAt,
         nextDue: next ? { id: next.order_id, ref: next.order_code, date: next.due_date!, overdue: next.due_date! < ctx.today } : null,
         pendingOrders: ctx.orders.filter((o) => o.customer?.id === id && (o.status === "pending_approval" || o.status === "draft")).length,
+        rucDni: v?.rucDni ?? remoteItem?.ruc_dni ?? null,
+        telefonoPrincipal: remoteItem?.telefono_principal ?? null,
+        canalOrigen: remoteItem?.canal_origen ?? null,
       });
     }
     return rows.sort((a, b) => b.overdueCents - a.overdueCents || b.usedCents - a.usedCents);
@@ -1338,7 +1348,42 @@ export const apiSource: DataSource = {
     editField: () => unavailable("Corregir un pago ya creado"),
     discard: () => unavailable("Descartar un pago"),
     retryMessage: () => unavailable("Reintentar un mensaje"),
-    captureOrder: () => unavailable("El alta manual de pedidos"),
+    captureOrder: (input) =>
+      run(async () => {
+        const order = await endpoints.createOrder({
+          customer_id: input.customerId,
+          description: input.description,
+          quantity: input.cantidad,
+          total_amount: { amount_cents: input.totalCents, currency: "PEN" },
+          requested_delivery_date: input.entrega || null,
+        });
+        return { ok: true, message: `Pedido ${order.display_code} registrado exitosamente.`, id: order.id };
+      }),
+
+    createCustomer: (input) =>
+      run(async () => {
+        const res = await endpoints.createCustomer({
+          tipo_persona: input.tipoPersona,
+          razon_social: input.razonSocial,
+          ruc_dni: input.rucDni,
+          telefono_principal: input.telefonoPrincipal,
+          canal_origen: input.canalOrigen,
+          limite_credito: input.limiteCreditoCents ? { amount_cents: input.limiteCreditoCents, currency: "PEN" } : undefined,
+        });
+        return { ok: true, message: `Cliente ${res.razon_social} creado exitosamente.`, id: res.id, customer: res };
+      }),
+
+    createContact: (customerId, input) =>
+      run(async () => {
+        await endpoints.createContact(customerId, {
+          nombre: input.nombre,
+          telefono: input.telefono,
+          whatsapp_jid: input.whatsappJid,
+          email: input.email,
+          es_principal: input.esPrincipal,
+        });
+        return { ok: true, message: `Contacto ${input.nombre} registrado exitosamente.` };
+      }),
     updateSettings: () => unavailable("Cambiar los supuestos"),
     setInternalCharge: () => unavailable("Cambiar el precio de transferencia"),
     reset: () => unavailable("Restablecer la demo"),

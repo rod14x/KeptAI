@@ -113,7 +113,7 @@ export function AppRoutes() {
                   <Route path="conciliacion" element={gate("conciliacion", ["verificar", "ver_pagos"], <ConciliacionPage />)} />
                   <Route path="conciliacion/:id" element={gate("conciliacion", ["verificar", "ver_pagos"], <ConciliacionPage />)} />
                   <Route path="cobranza" element={gate("cobranza", "ver_cobranza", <CobranzaPage />)} />
-                  <Route path="taller" element={gate("taller", ["registrar_despacho", "ver_resultado"], <TallerPage />)} />
+                  <Route path="taller" element={gate("taller", ["registrar_despacho", "ver_resultado", "ver_comercial"], <TallerPage />)} />
                   <Route path="captura" element={gate("captura", "captura", <CapturaPage />)} />
                   <Route path="resultado" element={gate("resultado", "ver_resultado", <ResultadoPage />)} />
                   <Route path="perfil" element={moduleOnly("perfil", <PerfilPage />)} />

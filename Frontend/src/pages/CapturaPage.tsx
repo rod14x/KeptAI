@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { motion } from "motion/react";
 import { useNavigate, useSearchParams } from "react-router";
-import { Image, Receipt, UploadSimple, NotePencil } from "../components/ui/icons";
+import { Image, Receipt, UploadSimple, NotePencil, UserPlus } from "../components/ui/icons";
+import { CustomerModal } from "../components/CustomerModal";
 import { capabilities, commands, getCaptureOptions } from "../api/client";
 import type { Brand } from "../api/model";
 import { useApi } from "../hooks/useApi";
@@ -205,10 +206,16 @@ function OrderForm() {
   const me = useMe();
   const toast = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const preselected = searchParams.get("clienteId") || "";
   const { brands } = useBrands();
   const customers = useApi(() => getCaptureOptions(brands[0]), [brands[0]]).data?.customers ?? [];
-  const [picked, setCustomerId] = useState("");
-  const customerId = picked || customers[0]?.id || "";
+  const [extraCustomers, setExtraCustomers] = useState<Array<{ id: string; name: string }>>([]);
+  const [picked, setCustomerId] = useState(preselected);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const allCustomers = [...extraCustomers, ...customers.filter((c) => !extraCustomers.some((x) => x.id === c.id))];
+  const customerId = picked || preselected || allCustomers[0]?.id || "";
   const [description, setDescription] = useState("");
   const [qty, setQty] = useState("");
   const [total, setTotal] = useState("");
@@ -234,15 +241,33 @@ function OrderForm() {
           <NotePencil size={20} className="text-violet" /> Pedido
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="o-customer" label="Cliente">
-            <select id="o-customer" value={customerId} onChange={(e) => setCustomerId(e.target.value)} className={inputClass}>
-              {customers.map((c) => (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <label htmlFor="o-customer" className="text-[13px] font-semibold text-ink">
+                Cliente
+              </label>
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="inline-flex items-center gap-1 text-xs font-bold text-brand-blue hover:underline"
+              >
+                <UserPlus size={13} weight="bold" /> + Crear nuevo cliente
+              </button>
+            </div>
+            <select
+              id="o-customer"
+              value={customerId}
+              onChange={(e) => setCustomerId(e.target.value)}
+              className={inputClass}
+            >
+              <option value="">Selecciona un cliente...</option>
+              {allCustomers.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
             </select>
-          </Field>
+          </div>
           <Field id="o-entrega" label="Entrega solicitada">
             <input id="o-entrega" type="date" value={entrega} onChange={(e) => setEntrega(e.target.value)} className={cx(inputClass, "tabular")} />
           </Field>
@@ -268,6 +293,15 @@ function OrderForm() {
           Crear borrador
         </Button>
       </form>
+      <CustomerModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onCreated={(newC) => {
+          setExtraCustomers((prev) => [newC, ...prev]);
+          setCustomerId(newC.id);
+        }}
+        existingCustomers={allCustomers as any}
+      />
     </Card>
   );
 }

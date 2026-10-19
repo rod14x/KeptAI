@@ -21,6 +21,16 @@ Los cuatro roles son los de `usuario.rol`; `service_n8n` es una credencial técn
 | `correctDraft` | PATCH | `/api/v1/drafts/{draft_id}` | `miguel` | MIG-06 | ADMIN | Implementado localmente; aceptación remota pendiente |
 | `confirmDraft` | POST | `/api/v1/drafts/{draft_id}/confirmation` | `miguel_adapter_andres_engine` | MIG-06 | ADMIN | Implementado localmente; aceptación remota pendiente |
 | `discardDraft` | POST | `/api/v1/drafts/{draft_id}/discard` | `miguel` | MIG-06 | ADMIN | Implementado localmente; aceptación remota pendiente |
+| `listCustomers` | GET | `/api/v1/customers` | `miguel` | Fase 1 | VENDEDOR, ADMIN, GERENTE | Implementado localmente |
+| `getCustomer` | GET | `/api/v1/customers/{customer_id}` | `miguel` | Fase 1 | VENDEDOR, ADMIN, GERENTE | Implementado localmente |
+| `createCustomer` | POST | `/api/v1/customers` | `miguel` | Fase 1 | VENDEDOR, ADMIN | Implementado localmente |
+| `createCustomerContact` | POST | `/api/v1/customers/{customer_id}/contacts` | `miguel` | Fase 1 | VENDEDOR, ADMIN | Implementado localmente |
+| `createOrder` | POST | `/api/v1/orders` | `miguel` | Fase 2 | VENDEDOR, ADMIN | Implementado localmente |
+| `getOrderTechSheet` | GET | `/api/v1/orders/{order_id}/tech-sheet` | `miguel` | Fase 3 | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | Implementado localmente |
+| `updateOrderTechSheet` | PUT | `/api/v1/orders/{order_id}/tech-sheet` | `miguel` | Fase 3 | VENDEDOR, ADMIN | Implementado localmente |
+| `validateFabric` | POST | `/api/v1/orders/{order_id}/tech-sheet/validate-fabric` | `miguel` | Fase 3 | ADMIN, JEFE_TALLER | Implementado localmente |
+| `advanceStation` | POST | `/api/v1/orders/{order_id}/station-advance` | `miguel` | Fase 4 | ADMIN, JEFE_TALLER | Implementado localmente |
+| `getOrderStages` | GET | `/api/v1/orders/{order_id}/stages` | `miguel` | Fase 4 | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | Implementado localmente |
 | `listOrders` | GET | `/api/v1/orders` | `miguel_adapter_andres_engine` | MIG-06 | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | Implementado localmente; aceptación remota pendiente |
 | `getOrder` | GET | `/api/v1/orders/{order_id}` | `miguel_adapter_andres_engine` | MIG-06 | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | Implementado localmente; aceptación remota pendiente |
 | `listPayments` | GET | `/api/v1/payments` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN, GERENTE | Implementado localmente; aceptación remota pendiente |

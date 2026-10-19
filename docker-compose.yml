@@ -5,12 +5,20 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        VITE_API_MODE: ${VITE_API_MODE:-mock}
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY:-}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
     pull_policy: build
     restart: unless-stopped
     ports:
       - "${PORT:-8086}:80"
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-dev}
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:-}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-}
       - VIRTUAL_HOST=${VIRTUAL_HOST:-}
       - VIRTUAL_PORT=80
       - LETSENCRYPT_HOST=${LETSENCRYPT_HOST:-}

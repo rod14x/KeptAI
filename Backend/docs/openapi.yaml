@@ -714,6 +714,47 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Pedidos
+      operationId: createOrder
+      summary: Crear un nuevo pedido comercial en BORRADOR.
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 2
+      x-keptai-proposed-roles:
+      - VENDEDOR
+      - ADMIN
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '200':
+          description: Pedido creado en estado BORRADOR con ficha técnica y hoja resumen.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/v1/orders/{order_id}:
     get:
       tags:
@@ -1112,6 +1153,158 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/v1/customers:
+    get:
+      tags:
+      - Clientes
+      operationId: listCustomers
+      summary: Listar clientes de la organización.
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 1
+      x-keptai-proposed-roles:
+      - VENDEDOR
+      - ADMIN
+      - GERENTE
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Cursor'
+      - name: query
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Lista paginada de clientes.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Clientes
+      operationId: createCustomer
+      summary: Crear un nuevo cliente en la organización.
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 1
+      x-keptai-proposed-roles:
+      - VENDEDOR
+      - ADMIN
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerRequest'
+      responses:
+        '200':
+          description: Cliente creado exitosamente.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/customers/{customer_id}:
+    get:
+      tags:
+      - Clientes
+      operationId: getCustomer
+      summary: Consultar un cliente y sus contactos asociados.
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 1
+      x-keptai-proposed-roles:
+      - VENDEDOR
+      - ADMIN
+      - GERENTE
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CustomerId'
+      responses:
+        '200':
+          description: Detalle del cliente.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/customers/{customer_id}/contacts:
+    post:
+      tags:
+      - Clientes
+      operationId: createCustomerContact
+      summary: Registrar un contacto asociado a un cliente.
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 1
+      x-keptai-proposed-roles:
+      - VENDEDOR
+      - ADMIN
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CustomerId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateContactRequest'
+      responses:
+        '200':
+          description: Contacto creado exitosamente.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/v1/customers/{customer_id}/statement:
     get:
       tags:
@@ -1561,6 +1754,199 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+  /api/v1/orders/{order_id}/tech-sheet:
+    get:
+      tags:
+      - Ficha Tecnica
+      operationId: getOrderTechSheet
+      summary: Consultar la ficha técnica de un pedido.
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 3
+      x-keptai-proposed-roles:
+      - VENDEDOR
+      - ADMIN
+      - GERENTE
+      - JEFE_TALLER
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Ficha técnica del pedido.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechSheet'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+      - Ficha Tecnica
+      operationId: updateOrderTechSheet
+      summary: Actualizar especificaciones morfológicas y curva de la ficha técnica.
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 3
+      x-keptai-proposed-roles:
+      - VENDEDOR
+      - ADMIN
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTechSheetRequest'
+      responses:
+        '200':
+          description: Ficha técnica actualizada.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechSheet'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/orders/{order_id}/tech-sheet/validate-fabric:
+    post:
+      tags:
+      - Taller
+      operationId: validateFabric
+      summary: Validación de tela base por Jefe de Taller (CONFIRMADA_TALLER / COMPRA_REQUERIDA).
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 3
+      x-keptai-proposed-roles:
+      - ADMIN
+      - JEFE_TALLER
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateFabricRequest'
+      responses:
+        '200':
+          description: Validación registrada en la ficha técnica.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechSheet'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/orders/{order_id}/station-advance:
+    post:
+      tags:
+      - Taller
+      operationId: advanceStation
+      summary: Registrar avance en estación de taller (CORTE, SUBLIMADO_BORDADO, CONFECCION, CALIDAD).
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 4
+      x-keptai-proposed-roles:
+      - ADMIN
+      - JEFE_TALLER
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StationAdvanceRequest'
+      responses:
+        '200':
+          description: Avance registrado en la estación y etapas actualizadas.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StationAdvanceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /api/v1/orders/{order_id}/stages:
+    get:
+      tags:
+      - Taller
+      operationId: getOrderStages
+      summary: Consultar las etapas y avance de taller de un pedido.
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 4
+      x-keptai-proposed-roles:
+      - VENDEDOR
+      - ADMIN
+      - GERENTE
+      - JEFE_TALLER
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Lista de etapas de manufactura del pedido.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderStage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/v1/ordenes/ingesta:
     post:
       tags:
@@ -2294,6 +2680,359 @@ components:
             unsupported:
               $ref: '#/components/examples/ErrorUnsupportedMedia'
   schemas:
+    CustomerPage:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - page
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Customer'
+        page:
+          $ref: '#/components/schemas/PageInfo'
+    Customer:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - name
+      - customer_type
+      - source_channel
+      - created_at
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+        customer_type:
+          type: string
+        tax_id:
+          type: string
+          nullable: true
+        primary_phone:
+          type: string
+          nullable: true
+        source_channel:
+          type: string
+        credit_limit:
+          $ref: '#/components/schemas/NonNegativeMoney'
+        created_at:
+          type: string
+          format: date-time
+        contacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Contact'
+          nullable: true
+    CreateCustomerRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - name
+      properties:
+        name:
+          type: string
+        customer_type:
+          type: string
+          nullable: true
+        tax_id:
+          type: string
+          nullable: true
+        primary_phone:
+          type: string
+          nullable: true
+        source_channel:
+          type: string
+          nullable: true
+    Contact:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - customer_id
+      - name
+      - active
+      - created_at
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        customer_id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+        whatsapp_jid:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+    CreateContactRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - name
+      properties:
+        name:
+          type: string
+        whatsapp_jid:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+    CreateOrderRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - customer_id
+      properties:
+        customer_id:
+          $ref: '#/components/schemas/Uuid'
+        requested_delivery_date:
+          type: string
+          format: date
+          nullable: true
+        brand:
+          type: string
+          nullable: true
+        source_channel:
+          type: string
+          nullable: true
+        modality:
+          type: string
+          nullable: true
+        payment_condition:
+          $ref: '#/components/schemas/PaymentCondition'
+        advance_required:
+          $ref: '#/components/schemas/NonNegativeMoney'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateOrderItemRequest'
+          nullable: true
+    CreateOrderItemRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - description
+      - quantity
+      - unit_price
+      properties:
+        description:
+          type: string
+        quantity:
+          type: integer
+        unit_price:
+          $ref: '#/components/schemas/NonNegativeMoney'
+    TechSheet:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - order_id
+      - status
+      - modality
+      - created_at
+      - updated_at
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        order_id:
+          $ref: '#/components/schemas/Uuid'
+        status:
+          type: string
+        modality:
+          type: string
+        fabric_semaphore:
+          type: string
+          nullable: true
+        estimated_consumption_kg:
+          type: number
+          nullable: true
+        fabric_validation:
+          type: string
+          nullable: true
+        fabric_validated_by:
+          $ref: '#/components/schemas/Uuid'
+        garment_type:
+          type: string
+          nullable: true
+        fabric_name:
+          type: string
+          nullable: true
+        weight:
+          type: string
+          nullable: true
+        primary_color:
+          type: string
+          nullable: true
+        contrast_color:
+          type: string
+          nullable: true
+        collar_type:
+          type: string
+          nullable: true
+        size_curve:
+          type: object
+          nullable: true
+        customization_technique:
+          type: string
+          nullable: true
+        art_placements:
+          type: object
+          nullable: true
+        sewing_instructions:
+          type: string
+          nullable: true
+        completed_by:
+          $ref: '#/components/schemas/Uuid'
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    UpdateTechSheetRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        modality:
+          type: string
+          nullable: true
+        fabric_semaphore:
+          type: string
+          nullable: true
+        estimated_consumption_kg:
+          type: number
+          nullable: true
+        garment_type:
+          type: string
+          nullable: true
+        fabric_name:
+          type: string
+          nullable: true
+        weight:
+          type: string
+          nullable: true
+        primary_color:
+          type: string
+          nullable: true
+        contrast_color:
+          type: string
+          nullable: true
+        collar_type:
+          type: string
+          nullable: true
+        size_curve:
+          type: object
+          nullable: true
+        customization_technique:
+          type: string
+          nullable: true
+        art_placements:
+          type: object
+          nullable: true
+        sewing_instructions:
+          type: string
+          nullable: true
+    ValidateFabricRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - decision
+      properties:
+        decision:
+          type: string
+        note:
+          type: string
+          nullable: true
+    StationAdvanceRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - stage
+      properties:
+        stage:
+          type: string
+        status:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        quantity_processed:
+          type: integer
+          nullable: true
+        scrap:
+          type: integer
+          nullable: true
+    StationAdvanceResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - order_id
+      - order_status
+      - stages
+      properties:
+        order_id:
+          $ref: '#/components/schemas/Uuid'
+        order_status:
+          type: string
+        stages:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderStage'
+    OrderStage:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - stage
+      - status
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        stage:
+          type: string
+        status:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        operator_id:
+          $ref: '#/components/schemas/Uuid'
+        quantity_processed:
+          type: integer
+          nullable: true
+        scrap:
+          type: integer
+          nullable: true
+        notes:
+          type: string
+          nullable: true
     Uuid:
       type: string
       format: uuid

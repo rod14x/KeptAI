@@ -32,6 +32,10 @@ Roles = `x-keptai-proposed-roles` del contrato. «Alcance SQL» resume lo que V4
 | createTextEvidence, startExtraction, getExtractionJob | /api/v1/evidences/text, …/extractions, /extraction-jobs | VENDEDOR, ADMIN | **Fuera del MVP (D-007):** captura/extracción persistente de texto o audio. No implementar ni contar como pendiente |
 | listDrafts, getDraft, correctDraft, discardDraft | /api/v1/drafts… | ADMIN | INGESTA solo crea/actualiza borradores; las ediciones humanas son del usuario |
 | confirmDraft | POST /api/v1/drafts/{id}/confirmation | ADMIN | `hoja_resumen.revisado_por` = usuario autenticado (trigger V7). No verifica fondos ni aprueba crédito |
+| listCustomers, getCustomer, createCustomer, createCustomerContact | /api/v1/customers... | VENDEDOR, ADMIN, GERENTE (lectura); VENDEDOR, ADMIN (alta) | Fase 1: Directorio y alta de clientes comerciales y contactos de WhatsApp |
+| createOrder | POST /api/v1/orders | VENDEDOR, ADMIN | Fase 2: Alta comercial de pedidos en BORRADOR con hoja_resumen y ficha_tecnica |
+| getOrderTechSheet, updateOrderTechSheet, validateFabric | /api/v1/orders/{id}/tech-sheet... | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER (lectura); VENDEDOR, ADMIN (edición); JEFE_TALLER, ADMIN (validación tela) | Fase 3: Ficha técnica persistente y validación de telas base |
+| advanceStation, getOrderStages | /api/v1/orders/{id}/station-advance, .../stages | ADMIN, JEFE_TALLER (avance); VENDEDOR, ADMIN, GERENTE, JEFE_TALLER (lectura) | Fase 4: Avance de manufactura en taller (CORTE, SUBLIMADO_BORDADO, CONFECCION, CALIDAD) |
 | listOrders, getOrder | GET /api/v1/orders… | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | JEFE_TALLER solo ve LIBERADA, EN_PRODUCCION, DESPACHADA, CERRADA (política `orden`); el resto ve todas |
 | listPayments, getPayment | GET /api/v1/payments… | ADMIN, GERENTE | Pagos recibidos ≠ verificados ≠ aplicados |
 | getReconciliationCandidates, registerPaymentVerification, applyPayment | /api/v1/payments/{id}/… | ADMIN | Solo ADMIN escribe `pago`/`aplicacion_pago`; `verificado_por`/`aplicado_por` = usuario autenticado. Decisión Miguel 11/10: verificar/aplicar exige dos ADMIN distintos (API) |

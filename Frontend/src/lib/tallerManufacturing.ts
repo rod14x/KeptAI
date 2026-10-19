@@ -1,4 +1,7 @@
-﻿import type { TallerOrder } from "../api/client";
+import type { TallerOrder } from "../api/dto";
+import type { Person } from "../api/model";
+import { endpoints } from "../api/contract/endpoints";
+import { IS_MOCK } from "../config";
 
 export type ManufacturingStation =
   | "corte"
@@ -9,8 +12,13 @@ export type ManufacturingStation =
   | "listo_despacho";
 
 export type ManufacturingModality =
-  | "stock_personalizado" // Prenda en stock en blanco + sublimado/bordado
-  | "confeccion_completa"; // Paquete completo: rollo tela -> corte -> armado
+  | "STOCK_BORDADO"
+  | "CONFECCION_ROLLO"
+  | "stock_personalizado"
+  | "confeccion_completa";
+
+export type SemaforoTela = "HABITUAL_VERDE" | "POR_CONFIRMAR_AMARILLO" | "ESPECIAL_ROJO";
+export type ValidacionTela = "NO_APLICA" | "CONFIRMADA_TALLER" | "COMPRA_REQUERIDA";
 
 export interface SizeBreakdown {
   talla: "XS" | "S" | "M" | "L" | "XL" | "XXL" | "Única";
@@ -30,14 +38,23 @@ export interface InventoryItem {
 }
 
 export interface ProductionTechSheet {
+  id?: string;
   orderId: string;
   orderRef: string;
   customer: string;
+  estado?: "BORRADOR" | "COMPLETA";
   modality: ManufacturingModality;
   currentStation: ManufacturingStation;
   stationUpdatedOn: string;
   stationHistory: Array<{ station: ManufacturingStation; timestamp: string; note: string }>;
-  
+
+  // Semáforo de telas y validación de taller (Fase 3)
+  semaforoTela?: SemaforoTela;
+  consumoEstimadoKg?: number;
+  validacionTela?: ValidacionTela;
+  telaValidadaPor?: string | null;
+  telaValidadaAt?: string | null;
+
   // Especificaciones técnicas
   prendaTipo: string;
   tela: string;
@@ -45,27 +62,42 @@ export interface ProductionTechSheet {
   colorPrincipal: string;
   colorContraste?: string;
   tipoCuello: string;
-  
+
   // Curva de tallas
   curvaTallas: SizeBreakdown[];
   totalUnidades: number;
-  
+
   // Personalización y arte
-  tecnicaPersonalizacion: "Sublimación Digital Full Print" | "Bordado Computarizado" | "Sublimación + Vinil Deportivo" | "Bordado 3D";
+  tecnicaPersonalizacion: string;
   arteUbicaciones: Array<{
     ubicacion: string;
     medidas: string;
     descripcion: string;
   }>;
   archivoArte: string;
-  
+
   // Insumos e inventario
   itemInventarioId?: string;
   stockDescontado: boolean;
   unidadesDescontadas?: number;
-  
+
   // Instrucciones de taller
   instruccionesCostura: string[];
+  completadaPor?: string | null;
+  completadaEn?: string | null;
+}
+
+export function isStockBordado(m: ManufacturingModality): boolean {
+  return m === "STOCK_BORDADO" || m === "stock_personalizado";
+}
+
+export function isConfeccionRollo(m: ManufacturingModality): boolean {
+  return m === "CONFECCION_ROLLO" || m === "confeccion_completa";
+}
+
+export function calculateEstimatedFabricKg(curvaTallas: SizeBreakdown[]): number {
+  const total = curvaTallas.reduce((sum, item) => sum + (Number(item.cantidad) || 0), 0);
+  return Number((total * 0.28).toFixed(2));
 }
 
 const DEFAULT_INVENTORY: InventoryItem[] = [
@@ -204,27 +236,33 @@ export function saveProductionSheets(sheets: Record<string, ProductionTechSheet>
   }
 }
 
-/** Genera una ficha técnica profesional por defecto si la orden no tiene una personalizada */
+/** Genera una ficha técnica profesional por defecto si la orden no tiene una persistida */
 export function getOrCreateTechSheet(order: TallerOrder): ProductionTechSheet {
   const sheets = loadProductionSheets();
   if (sheets[order.id]) {
     return sheets[order.id];
   }
 
-  const isDeportivo = order.brand === "unicrack" || order.description.toLowerCase().includes("camiset") || order.description.toLowerCase().includes("casac");
+  const isDeportivo =
+    order.brand === "unicrack" ||
+    order.description.toLowerCase().includes("camiset") ||
+    order.description.toLowerCase().includes("casac");
   const isChaleco = order.description.toLowerCase().includes("chaleco");
-  
+
   const totalQty = order.items.reduce((s, it) => s + it.cantidad, 0);
 
-  // Determinar modalidad inteligente por defecto
-  // Casacas o Polos bordados suelen salir de prendas base en stock; Camisetas de juego completas van desde corte
-  const modality: ManufacturingModality = isDeportivo && !order.description.toLowerCase().includes("casac")
-    ? "confeccion_completa"
-    : "stock_personalizado";
+  const modality: ManufacturingModality =
+    isDeportivo && !order.description.toLowerCase().includes("casac")
+      ? "CONFECCION_ROLLO"
+      : "STOCK_BORDADO";
 
   const matchingInvId = isDeportivo
-    ? (order.description.toLowerCase().includes("casac") ? "inv-pb-03" : "inv-pb-01")
-    : (isChaleco ? "inv-pb-04" : "inv-pb-02");
+    ? order.description.toLowerCase().includes("casac")
+      ? "inv-pb-03"
+      : "inv-pb-01"
+    : isChaleco
+    ? "inv-pb-04"
+    : "inv-pb-02";
 
   const curvaTallas: SizeBreakdown[] = isChaleco
     ? [{ talla: "Única", cantidad: totalQty }]
@@ -232,15 +270,31 @@ export function getOrCreateTechSheet(order: TallerOrder): ProductionTechSheet {
         { talla: "S", cantidad: Math.max(1, Math.floor(totalQty * 0.2)) },
         { talla: "M", cantidad: Math.max(1, Math.floor(totalQty * 0.45)) },
         { talla: "L", cantidad: Math.max(1, Math.floor(totalQty * 0.25)) },
-        { talla: "XL", cantidad: Math.max(1, totalQty - Math.floor(totalQty * 0.2) - Math.floor(totalQty * 0.45) - Math.floor(totalQty * 0.25)) },
+        {
+          talla: "XL",
+          cantidad: Math.max(
+            1,
+            totalQty -
+              Math.floor(totalQty * 0.2) -
+              Math.floor(totalQty * 0.45) -
+              Math.floor(totalQty * 0.25)
+          ),
+        },
       ];
 
-  const initialStation: ManufacturingStation = modality === "confeccion_completa" ? "corte" : (isDeportivo ? "sublimacion" : "bordado");
+  const initialStation: ManufacturingStation = isConfeccionRollo(modality)
+    ? "corte"
+    : isDeportivo
+    ? "sublimacion"
+    : "bordado";
+
+  const estimatedKg = calculateEstimatedFabricKg(curvaTallas);
 
   const sheet: ProductionTechSheet = {
     orderId: order.id,
     orderRef: order.ref,
     customer: order.customer ?? "Cliente Corpotex/Unicrack",
+    estado: "BORRADOR",
     modality,
     currentStation: initialStation,
     stationUpdatedOn: new Date().toISOString(),
@@ -251,8 +305,15 @@ export function getOrCreateTechSheet(order: TallerOrder): ProductionTechSheet {
         note: "Orden liberada por Gatekeeper financiero e ingresada a línea de taller",
       },
     ],
+    semaforoTela: isConfeccionRollo(modality) ? "HABITUAL_VERDE" : undefined,
+    consumoEstimadoKg: isConfeccionRollo(modality) ? estimatedKg : 0,
+    validacionTela: isConfeccionRollo(modality) ? "CONFIRMADA_TALLER" : "NO_APLICA",
     prendaTipo: order.items[0]?.descripcion ?? order.description,
-    tela: isDeportivo ? "Win Microfibra Dry-Fit 145g (100% Poliéster)" : (isChaleco ? "Drill Tecnología 100% Algodón con bandas 3M" : "Piqué 24/1 Peinado 210g"),
+    tela: isDeportivo
+      ? "Win Microfibra Dry-Fit 145g (100% Poliéster)"
+      : isChaleco
+      ? "Drill Tecnología 100% Algodón con bandas 3M"
+      : "Piqué 24/1 Peinado 210g",
     gramaje: isDeportivo ? "145 gr/m²" : "210 gr/m²",
     colorPrincipal: isDeportivo ? "Blanco Óptico / Degradado Corporativo" : "Verde Botella Institucional",
     colorContraste: isDeportivo ? "Azul Marino / Dorado" : "Cuello Rib Blanco",
@@ -260,7 +321,9 @@ export function getOrCreateTechSheet(order: TallerOrder): ProductionTechSheet {
     curvaTallas,
     totalUnidades: totalQty,
     tecnicaPersonalizacion: isDeportivo
-      ? (order.description.toLowerCase().includes("casac") ? "Bordado Computarizado" : "Sublimación Digital Full Print")
+      ? order.description.toLowerCase().includes("casac")
+        ? "Bordado Computarizado"
+        : "Sublimación Digital Full Print"
       : "Bordado Computarizado",
     arteUbicaciones: isDeportivo
       ? [
@@ -286,6 +349,169 @@ export function getOrCreateTechSheet(order: TallerOrder): ProductionTechSheet {
   sheets[order.id] = sheet;
   saveProductionSheets(sheets);
   return sheet;
+}
+
+/** Consulta GET /api/v1/orders/{id}/tech-sheet con fallback local */
+export async function fetchTechSheet(orderId: string, fallbackOrder?: TallerOrder): Promise<ProductionTechSheet> {
+  if (!IS_MOCK) {
+    try {
+      const res = await endpoints.getTechSheet(orderId);
+      if (res) {
+        return {
+          id: res.id,
+          orderId: res.order_id,
+          orderRef: fallbackOrder?.ref ?? orderId,
+          customer: fallbackOrder?.customer ?? "Cliente Corpotex",
+          estado: (res.estado as any) ?? "COMPLETA",
+          modality: (res.modalidad as any) ?? "CONFECCION_ROLLO",
+          currentStation: "corte",
+          stationUpdatedOn: new Date().toISOString(),
+          stationHistory: [],
+          semaforoTela: (res.semaforo_tela as any) ?? "HABITUAL_VERDE",
+          consumoEstimadoKg: res.consumo_estimado_kg ?? 0,
+          validacionTela: (res.validacion_tela as any) ?? "CONFIRMADA_TALLER",
+          telaValidadaPor: res.tela_validada_por ?? null,
+          prendaTipo: res.prenda_tipo ?? fallbackOrder?.description ?? "Prenda textil",
+          tela: res.tela_nombre ?? "Piqué 24/1",
+          gramaje: res.gramaje ?? "210g",
+          colorPrincipal: res.color_principal ?? "Azul",
+          colorContraste: res.color_contraste ?? undefined,
+          tipoCuello: res.tipo_cuello ?? "Cuello camisero",
+          curvaTallas: res.curva_tallas ?? fallbackOrder?.items?.map(it => ({ talla: "M" as const, cantidad: it.cantidad })) ?? [],
+          totalUnidades: fallbackOrder?.items?.reduce((s, it) => s + it.cantidad, 0) ?? 10,
+          tecnicaPersonalizacion: res.tecnica_personalizacion ?? "Bordado Computarizado",
+          arteUbicaciones: res.ubicaciones_arte ?? [],
+          archivoArte: "ARTE.pdf",
+          stockDescontado: false,
+          instruccionesCostura: res.instrucciones_costura ?? [],
+        };
+      }
+    } catch (e) {
+      // Fallback a localStorage
+    }
+  }
+
+  if (fallbackOrder) {
+    return getOrCreateTechSheet(fallbackOrder);
+  }
+
+  const sheets = loadProductionSheets();
+  return sheets[orderId] ?? ({} as ProductionTechSheet);
+}
+
+/** Guarda y sincroniza PUT /api/v1/orders/{id}/tech-sheet */
+export async function persistTechSheet(
+  sheet: ProductionTechSheet,
+  actor?: Person
+): Promise<{ ok: boolean; message: string; sheet: ProductionTechSheet }> {
+  const sheets = loadProductionSheets();
+
+  // Calcular kg reactivamente
+  const isRollo = isConfeccionRollo(sheet.modality);
+  const consumoEstimadoKg = isRollo ? calculateEstimatedFabricKg(sheet.curvaTallas) : 0;
+  const validacionTela: ValidacionTela = isRollo
+    ? (sheet.semaforoTela === "HABITUAL_VERDE" ? "CONFIRMADA_TALLER" : sheet.validacionTela ?? "COMPRA_REQUERIDA")
+    : "NO_APLICA";
+
+  const updated: ProductionTechSheet = {
+    ...sheet,
+    consumoEstimadoKg,
+    validacionTela,
+    estado: isRollo && sheet.semaforoTela !== "HABITUAL_VERDE" && validacionTela !== "CONFIRMADA_TALLER" ? "BORRADOR" : "COMPLETA",
+    completadaPor: actor?.name ?? sheet.completadaPor ?? "Vendedora",
+    completadaEn: new Date().toISOString(),
+  };
+
+  sheets[sheet.orderId] = updated;
+  saveProductionSheets(sheets);
+
+  if (!IS_MOCK) {
+    try {
+      await endpoints.saveTechSheet(sheet.orderId, {
+        modalidad: updated.modality,
+        semaforo_tela: updated.semaforoTela,
+        consumo_estimado_kg: updated.consumoEstimadoKg,
+        prenda_tipo: updated.prendaTipo,
+        tela_nombre: updated.tela,
+        gramaje: updated.gramaje,
+        color_principal: updated.colorPrincipal,
+        color_contraste: updated.colorContraste ?? null,
+        tipo_cuello: updated.tipoCuello,
+        curva_tallas: updated.curvaTallas,
+        tecnica_personalizacion: updated.tecnicaPersonalizacion,
+        ubicaciones_arte: updated.arteUbicaciones,
+        instrucciones_costura: updated.instruccionesCostura,
+      });
+    } catch (e) {
+      console.warn("Backend tech-sheet save fallback to local:", e);
+    }
+  }
+
+  return { ok: true, message: "Ficha técnica textil guardada exitosamente.", sheet: updated };
+}
+
+/** Validación de tela en almacén por Jefe de Taller (Fase 3) */
+export async function validateFabricStatus(
+  orderId: string,
+  validacion: "CONFIRMADA_TALLER" | "COMPRA_REQUERIDA",
+  nota?: string,
+  actor?: Person
+): Promise<{ ok: boolean; message: string; sheet?: ProductionTechSheet }> {
+  const sheets = loadProductionSheets();
+  const sheet = sheets[orderId];
+  if (!sheet) return { ok: false, message: "Ficha técnica no encontrada." };
+
+  sheet.validacionTela = validacion;
+  sheet.telaValidadaPor = actor?.name ?? "Jefe de Taller";
+  sheet.telaValidadaAt = new Date().toISOString();
+  if (validacion === "CONFIRMADA_TALLER") {
+    sheet.estado = "COMPLETA";
+  }
+
+  sheets[orderId] = sheet;
+  saveProductionSheets(sheets);
+
+  if (!IS_MOCK) {
+    try {
+      await endpoints.validateFabric(orderId, { validacion, nota });
+    } catch (e) {
+      console.warn("Backend validateFabric fallback to local:", e);
+    }
+  }
+
+  const msg =
+    validacion === "CONFIRMADA_TALLER"
+      ? "Disponibilidad de tela confirmada en almacén por Jefe de Taller. Ficha completa."
+      : "Requerimiento de compra de tela registrado. Notificado a Compras (+días adicionales).";
+
+  return { ok: true, message: msg, sheet };
+}
+
+/** Avance de estaciones en taller conectado a POST /api/v1/orders/{id}/station-advance (Fase 4) */
+export async function advanceOrderStation(
+  orderId: string,
+  newStation: ManufacturingStation,
+  note: string = "Avance de estación en línea de producción",
+  _actor?: Person
+): Promise<{ ok: boolean; message: string; sheet?: ProductionTechSheet }> {
+  const sheet = updateOrderStation(orderId, newStation, note);
+
+  if (!IS_MOCK) {
+    try {
+      await endpoints.advanceStation(orderId, {
+        station: newStation,
+        note,
+      });
+    } catch (e) {
+      console.warn("Backend station-advance fallback to local:", e);
+    }
+  }
+
+  return {
+    ok: true,
+    message: `Orden transferida a: ${STATION_METADATA[newStation].shortLabel}`,
+    sheet: sheet ?? undefined,
+  };
 }
 
 export function updateOrderStation(
@@ -319,9 +545,19 @@ export function updateOrderModality(
   if (!sheet) return null;
 
   sheet.modality = newModality;
-  if (newModality === "confeccion_completa" && sheet.currentStation === "sublimacion") {
-    sheet.currentStation = "corte";
+  if (isConfeccionRollo(newModality)) {
+    if (sheet.currentStation === "sublimacion" || sheet.currentStation === "bordado") {
+      sheet.currentStation = "corte";
+    }
+    sheet.consumoEstimadoKg = calculateEstimatedFabricKg(sheet.curvaTallas);
+    sheet.semaforoTela = sheet.semaforoTela ?? "HABITUAL_VERDE";
+    sheet.validacionTela = sheet.semaforoTela === "HABITUAL_VERDE" ? "CONFIRMADA_TALLER" : "COMPRA_REQUERIDA";
+  } else {
+    sheet.consumoEstimadoKg = 0;
+    sheet.validacionTela = "NO_APLICA";
+    sheet.estado = "COMPLETA";
   }
+
   sheets[orderId] = sheet;
   saveProductionSheets(sheets);
   return sheet;

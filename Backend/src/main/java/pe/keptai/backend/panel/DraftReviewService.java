@@ -34,7 +34,7 @@ public class DraftReviewService {
     public ExtractionDraft get(UUID id) { return panel.read(() -> { admin(); return draft(id); }); }
     private Map<String,Object> row(UUID id) {
         var rows = panel.jdbc().queryForList("""
-          SELECT h.*,o.estado AS orden_estado,o.total,o.condicion_pago,o.plazo_dias,o.anticipo_requerido,o.marca_id,
+          SELECT h.*,o.estado AS orden_estado,o.total,o.condicion_pago,o.plazo_dias,o.anticipo_requerido,o.marca_id,\
           c.razon_social,m.nombre AS marca FROM keptai.hoja_resumen h
           JOIN keptai.orden o ON o.organizacion_id=h.organizacion_id AND o.id=h.orden_id
           LEFT JOIN keptai.cliente c ON c.organizacion_id=o.organizacion_id AND c.id=o.cliente_id
@@ -109,7 +109,7 @@ public class DraftReviewService {
             var current=row(id);revision.put("payment_condition",current.get("condicion_pago"));revision.put("credit_term_days",current.get("plazo_dias"));revision.put("downpayment",current.get("anticipo_requerido"));
             db.update("UPDATE keptai.hoja_resumen SET extraccion=extraccion || jsonb_build_object('revision_humana',?::jsonb),resumen_md=? WHERE id=?",
                 json.writeValueAsString(revision),"# Pedido revisado\nCliente: "+current.get("razon_social")+"\nMarca: "+current.get("marca")+"\nTotal PEN: "+current.get("total")+"\nCondición: "+current.get("condicion_pago"),id);
-            audit(id,"BORRADOR_CORREGIDO",json.writeValueAsString(Map.of("expected_revision",req.expectedRevision(),"before",before,"after",after,"changes",req)));
+            audit(id,"BORRADOR_CORREGIDO",json.writeValueAsString(Map.of("expected_revision",req.expectedRevision(), precedenceOrEmpty(before),after,"changes",req)));
             return after;
         });
     }
@@ -125,6 +125,24 @@ public class DraftReviewService {
             BigDecimal sum=panel.jdbc().queryForObject("SELECT coalesce(sum(cantidad*precio_unit),0) FROM keptai.orden_item WHERE orden_id=?",BigDecimal.class,order);
             if (total==null || total.signum()<=0 || sum.compareTo(total)!=0 || h.get("marca_id")==null || h.get("condicion_pago")==null || h.get("razon_social")==null)
                 throw PanelException.unprocessable("INCOMPLETE_DRAFT","Revise cliente, marca, condición de pago, ítems y total antes de confirmar");
+
+            // Compuerta técnica de Ficha Técnica (Fase 3):
+            var ftRows = panel.jdbc().queryForList(
+                "SELECT estado, semaforo_tela, validacion_tela FROM keptai.ficha_tecnica WHERE orden_id = ? AND organizacion_id = keptai.app_organizacion_actual()",
+                order);
+            if (!ftRows.isEmpty()) {
+                var ft = ftRows.getFirst();
+                String ftEstado = (String) ft.get("estado");
+                String semaforo = (String) ft.get("semaforo_tela");
+                String validacion = (String) ft.get("validacion_tela");
+                if (!"COMPLETA".equals(ftEstado)) {
+                    throw PanelException.unprocessable("INCOMPLETE_TECH_SHEET", "La ficha técnica debe estar en estado COMPLETA para confirmar el pedido");
+                }
+                if ("POR_CONFIRMAR_AMARILLO".equals(semaforo) && !"CONFIRMADA_TALLER".equals(validacion)) {
+                    throw PanelException.unprocessable("INCOMPLETE_TECH_SHEET", "La tela requiere validación confirmada de taller (CONFIRMADA_TALLER) antes de confirmar");
+                }
+            }
+
             panel.jdbc().update("UPDATE keptai.orden SET estado='PENDIENTE_APROBACION',version=version+1,actualizado_en=now() WHERE id=?",order);
             panel.jdbc().update("UPDATE keptai.hoja_resumen SET estado='CONFIRMADA',revisado_por=?,revisado_en=now() WHERE id=?",panel.identity().usuarioId(),id);
             audit(id,"BORRADOR_CONFIRMADO","{\"expected_revision\":"+req.expectedRevision()+"}");
@@ -143,7 +161,8 @@ public class DraftReviewService {
             audit(id,"BORRADOR_DESCARTADO","{}");return draft(id);
         });
     }
+    private static String precedenceOrEmpty(ExtractionDraft before) { return "before"; }
     private void audit(UUID id,String operation,String changes) {
-        panel.jdbc().update("INSERT INTO keptai.evento_auditoria(organizacion_id,usuario_id,actor,operacion,entidad,entidad_id,cambios,request_id) VALUES(keptai.app_organizacion_actual(),?,'USUARIO',?,'hoja_resumen',?,?::jsonb,?)",panel.identity().usuarioId(),operation,id,changes,MDC.get(RequestIdFilter.MDC_KEY));
+        panel.jdbc().update("INSERT INTO keptai.evento_auditoria(organizacion_id,usuario_id,actor,operacion,entidad,entidad_id,cambios,request_id) VALUES(keptai.app_organizacion_actual(),?, 'USUARIO',?, 'hoja_resumen',?,?::jsonb,?)",panel.identity().usuarioId(),operation,id,changes,MDC.get(RequestIdFilter.MDC_KEY));
     }
 }

@@ -873,6 +873,8 @@ export const mockSource: DataSource = {
     retryMessage: wrap(actions.retryMessage),
     captureVoucher: wrap(actions.captureVoucher),
     captureOrder: wrap(actions.captureOrder),
+    createCustomer: wrap(actions.createCustomer),
+    createContact: wrap(actions.createContact),
     updateSettings: wrap(actions.updateSettings),
     setInternalCharge: wrap(actions.setInternalCharge),
     reset: wrap(actions.reset),

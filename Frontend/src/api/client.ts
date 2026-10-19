@@ -20,6 +20,8 @@ export const getEvidence: DataSource["getEvidence"] = (...a) => source.getEviden
 export const getCobranza: DataSource["getCobranza"] = (...a) => source.getCobranza(...a);
 export const getCustomers: DataSource["getCustomers"] = (...a) => source.getCustomers(...a);
 export const getCustomer: DataSource["getCustomer"] = (...a) => source.getCustomer(...a);
+export const createCustomer: DataSource["commands"]["createCustomer"] = (...a) => source.commands.createCustomer(...a);
+export const createContact: DataSource["commands"]["createContact"] = (...a) => source.commands.createContact(...a);
 export const getStatement: DataSource["getStatement"] = (...a) => source.getStatement(...a);
 export const getResults: DataSource["getResults"] = (...a) => source.getResults(...a);
 export const ordersCsv: DataSource["ordersCsv"] = (...a) => source.ordersCsv(...a);

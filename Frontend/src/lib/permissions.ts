@@ -50,11 +50,11 @@ const MATRIX: Record<Role, Permission[]> = {
   jefe_taller: ["registrar_despacho", "cambiar_vista"],
 };
 
-// Modo api: decisiones vigentes del backend. D-014: ADMIN autoriza el crédito durante el MVP y la cartera del vendedor
-// sigue sin definir (Spring responde 403 a sus lecturas del panel), así que el vendedor solo ve su sesión.
+// Modo api: decisiones vigentes del backend. D-014: ADMIN autoriza el crédito comercial durante el MVP.
+// El vendedor puede ver pedidos comerciales y registrar clientes y pedidos.
 const API_MATRIX: Record<Role, Permission[]> = {
   ...MATRIX,
-  vendedor: [],
+  vendedor: ["ver_comercial", "captura", "ver_estado_cuenta"],
   administracion: [...MATRIX.administracion, "aprobar_credito"],
 };
 
@@ -79,17 +79,17 @@ export const ROLE_LABEL: Record<Role, string> = {
 };
 
 export const ROLE_SUMMARY: Record<Role, string> = {
-  vendedor: "Negocia por WhatsApp, revisa la hoja de resumen, aprueba el crédito de sus clientes y confirma la orden.",
-  administracion: "Verifica los pagos en su banca, los aplica, revisa borradores, atiende la cobranza y registra despachos.",
-  gerencia: "Consulta margen, caja y reportes, y exporta a contabilidad. No escribe datos de negocio.",
-  jefe_taller: "Ve las órdenes liberadas y registra el despacho, que fija el vencimiento. Sin acceso a pagos.",
+  vendedor: "Negocia por WhatsApp, registra clientes y pedidos, llena la ficha técnica y confirma el borrador comercial. Administración autoriza el crédito comercial (D-014).",
+  administracion: "Verifica pagos bancarios, autoriza el crédito comercial (D-014), aplica anticipos, revisa borradores, gestiona cobranza y concilia.",
+  gerencia: "Consulta margen, caja y reportes, y exporta a contabilidad. No escribe datos de negocio (solo lectura).",
+  jefe_taller: "Ve las órdenes liberadas, valida disponibilidad de tela y registra avances y despachos físicos. Sin acceso a pagos.",
 };
 
 export const PERMISSION_LABEL: Record<Permission, string> = {
   ver_comercial: "Ver pedidos y clientes",
   confirmar_orden: "Confirmar borradores de orden",
-  aprobar_credito: "Decidir el crédito de sus clientes",
-  captura: "Subir comprobantes",
+  aprobar_credito: "Autorizar crédito comercial (D-014)",
+  captura: "Subir comprobantes y registrar pedidos",
   verificar: "Verificar pagos en el banco",
   aplicar: "Aplicar pagos a órdenes",
   editar_evidencia: "Corregir datos leídos por la IA",

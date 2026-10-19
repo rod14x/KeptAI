@@ -107,7 +107,15 @@ function Detail({ d }: { d: CustomerDetailDTO }) {
             </p>
           </div>
         </div>
-        {d.orders.some((o) => o.demo) && <DemoBadge />}
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to={`/captura?tipo=orden&clienteId=${c.id}`}
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-brand-blue px-3.5 py-2 text-xs font-bold text-inverse shadow-sm transition-all hover:bg-brand-navy"
+          >
+            + Nuevo pedido para este cliente
+          </Link>
+          {d.orders.some((o) => o.demo) && <DemoBadge />}
+        </div>
       </Card>
 
       {snap.aviso && (

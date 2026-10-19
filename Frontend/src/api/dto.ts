@@ -262,7 +262,31 @@ export type CobranzaDTO = { cutDate: string; receivables: ReceivableRow[]; alert
 
 /* ---------- Clientes ---------- */
 
+export type CustomerType = "PERSONA" | "EMPRESA" | "COLEGIO";
+export type CustomerOriginChannel = "TIENDA" | "WHATSAPP" | "REDES" | "MANUAL";
+
+export type CustomerInput = {
+  tipoPersona: CustomerType;
+  razonSocial: string;
+  rucDni: string;
+  telefonoPrincipal: string;
+  canalOrigen: CustomerOriginChannel;
+  limiteCreditoCents?: number;
+  brand?: Brand;
+};
+
+export type ContactInput = {
+  nombre: string;
+  telefono: string;
+  whatsappJid?: string;
+  email?: string;
+  esPrincipal?: boolean;
+};
+
 export type CustomerRow = {
+  rucDni?: string | null;
+  telefonoPrincipal?: string | null;
+  canalOrigen?: string | null;
   id: string;
   name: string;
   brand: Brand | null;
@@ -440,6 +464,8 @@ export type DataSource = {
     retryMessage(id: string, actor: Person): Promise<ActionResult>;
     captureVoucher(input: VoucherInput, actor: Person): Promise<ActionResult>;
     captureOrder(input: OrderInput, actor: Person): Promise<ActionResult>;
+    createCustomer(input: CustomerInput, actor: Person): Promise<ActionResult & { id?: string; customer?: any }>;
+    createContact(customerId: string, input: ContactInput, actor: Person): Promise<ActionResult>;
     updateSettings(patch: Partial<Pick<Settings, "factorCobro" | "plazoDefecto">>, actor: Person): Promise<ActionResult>;
     setInternalCharge(orderId: string, cents: number, actor: Person): Promise<ActionResult>;
     reset(): Promise<ActionResult>;
