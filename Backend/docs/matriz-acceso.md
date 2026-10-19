@@ -1,6 +1,6 @@
 # Matriz de acceso por endpoint (MIG-03-D2)
 
-Versión: 3.0 | Fecha: 2026-10-19 | Autora: Isabelita
+Versión: 3.1 | Fecha: 2026-10-19 | Autora: Isabelita
 
 Esta matriz resume la política de autorización implementada en `pe.keptai.backend.security.AccessPolicy` y declarada en `openapi.yaml`.
 
@@ -13,7 +13,7 @@ Roles = `x-keptai-proposed-roles` del contrato. «Alcance SQL» resume lo que V4
 | createTextEvidence, startExtraction, getExtractionJob | /api/v1/evidences/text, …/extractions, /extraction-jobs | VENDEDOR, ADMIN | **Fuera del MVP (D-007):** captura/extracción persistente de texto o audio. No implementar ni contar como pendiente |
 | listDrafts, getDraft, correctDraft, discardDraft | /api/v1/drafts… | ADMIN | INGESTA solo crea/actualiza borradores; las ediciones humanas son del usuario |
 | confirmDraft | POST /api/v1/drafts/{id}/confirmation | ADMIN | `hoja_resumen.revisado_por` = usuario autenticado (trigger V7). No verifica fondos ni aprueba crédito |
-| listCustomers, getCustomer, createCustomer, createCustomerContact | /api/v1/customers... | VENDEDOR, ADMIN, GERENTE (lectura); VENDEDOR, ADMIN (alta) | Fase 1: Directorio y alta de clientes comerciales y contactos de WhatsApp |
+| listCustomers, getCustomer, createCustomer, updateCustomer, reassignCustomerPortfolio, mergeCustomers, getCustomerHistory, createCustomerContact | /api/v1/customers... | VENDEDOR, ADMIN, GERENTE (lectura/historial); VENDEDOR, ADMIN (alta/edición); ADMIN (cartera y fusión) | Fase 1 & Fase 4 (B-01, B-02): Directorio, edición con RUC/DNI verificado, segregación de cartera, fusión e historial |
 | createOrder | POST /api/v1/orders | VENDEDOR, ADMIN | Fase 2: Alta comercial de pedidos en BORRADOR con hoja_resumen y ficha_tecnica |
 | listProductionOrders, getProductionOrder | GET /api/v1/orders/production, /orders/{id}/production | JEFE_TALLER, ADMIN, GERENTE, DISENO | B-05: Órdenes de producción para taller y planta, sin precios, costos, márgenes ni pagos |
 | listArts, createArt, approveArt | /api/v1/orders/{id}/arts... | DISENO, VENDEDOR, ADMIN, JEFE_TALLER, GERENTE (lectura); DISENO, ADMIN (alta); DISENO, ADMIN, VENDEDOR (aprobación) | B-06: Gestión de artes con versiones e inmutabilidad de la versión aprobada |
@@ -41,3 +41,20 @@ Roles = `x-keptai-proposed-roles` del contrato. «Alcance SQL» resume lo que V4
 | n8nConfirmOrder | POST /api/v1/ordenes/confirmar | INGESTA | **Cerrada (MIG-06):** confirmación sin acuerdo; un servicio no firma como vendedor |
 | n8nReceiveVoucher | POST /api/v1/pagos/voucher | INGESTA | Ingesta de voucher n8n; escribe `pago` y `comprobante` |
 | n8nReportMessageStatus | POST /api/v1/mensajes/{id}/estado | SCHEDULER | **Cerrada (D3):** callback saliente de n8n; credencial técnica dedicada pendiente |
+
+
+## 4. Rutas de n8n (`X-Api-Key`) → servicio → alcance
+
+| Operación | Ruta | Servicio requerido | Estado actual (MIG-04/05) | Qué permite V7 y qué no |
+|---|---|---|---|---|
+| n8nIngestOrder (WF1) | POST /api/v1/ordenes/ingesta | INGESTA | **Implementada**: 201 con orden y hoja `BORRADOR` desde datos estructurados, idempotente (409 si cambia el contenido); cliente = el del **contacto registrado** por `chatId` (422 si no existe); sin marca ni vendedor asignados | Crea orden, ítems, hoja de resumen **solo en BORRADOR**, canal y auditoría; no toca crédito, caja, obligaciones ni aplicaciones |
+| n8nReceiveVoucher (WF2) | POST /api/v1/pagos/voucher | INGESTA | **Implementada**: 201 con pago `RECIBIDO` y comprobante privado (`imagen_base64`); Storage real comprobado con archivo temporal; flujo completo pendiente | `pago` solo fase RECIBIDO, sin `verificado_*`, nunca APLICADO; comprobante sin fondos verificados |
+
+## 6.5 MIG-03-D3 — contrato de credenciales y conexión con n8n (alcance local)
+- **Contrato de credenciales:** una clave aleatoria por **organización + instancia + alcance** (`UNIQUE(organizacion_id, instancia, alcance)`), SHA-256 en `integracion_servicio.clave_hash`; organización, instancia y alcance salen de PostgreSQL. Alta, listado, revocación y rotación con `Backend/scripts/servicio-local.sh` (vista previa por defecto, `--apply` explícito, sin sobrescrituras ni secretos impresos): [provision-servicios-local.md](provision-servicios-local.md).
+- **Ingesta y voucher:** la instancia del JSON debe ser la registrada para la clave (403 si no); el JSON nunca elige organización, instancia, propietario ni ruta de Storage; ni `chatId`, `vendedorJid` ni `clienteJid`/`pushName` se resuelven contra usuarios o clientes.
+- **Cuatro autenticaciones separadas** (Evolution→WF0, WF0→WF1/WF2, `X-Api-Key` n8n→Spring, `X-Api-Secret` Spring→WF3): detalle en [integracion-n8n-isabella.md](integracion-n8n-isabella.md).
+- **Comprobación:** `Backend/scripts/verificar-n8n-local.sh` (PostgreSQL desechable, Spring propio, datos ficticios, 20/20) y `N8nIngestaServiceKeyIntegrationTests` (5). No acreditan n8n real, persistencia ni Storage. Confirmación por `vendedorJid` y callback SCHEDULER siguen cerrados.
+
+## 6.6 MIG-04/05 — ingesta y voucher de n8n (alcance de estas dos rutas)
+Implementadas con `TenantTransaction` (contexto de servicio INGESTA, login runtime sin BYPASSRLS), sin ampliar permisos ni RLS: orden/hoja/ítems/canal/auditoría/idempotencia son escrituras que V4/V7 ya permiten a INGESTA, y el pago `RECIBIDO` y el comprobante también (`p_ingesta_pago_limite`). Cuerpo HTTP acotado antes de leerlo (`keptai.n8n.ingesta.max-body-bytes`; voucher derivado de `keptai.n8n.voucher.max-file-bytes`, 10 485 760 bytes = 10 MiB como el bucket). La clave secreta de Storage solo la usa el backend, después de autenticar al servicio y de construir la ruta con la organización de la credencial. Las pruebas de negocio usan Storage simulado; adicionalmente Codex comprobó subida, lectura y eliminación de un PNG temporal en Supabase real. No acredita el flujo completo de negocio ni lectura por panel. No cierra MIG-04 (lectura/URLs firmadas del panel), MIG-05/06/07 completos ni VAL-03.

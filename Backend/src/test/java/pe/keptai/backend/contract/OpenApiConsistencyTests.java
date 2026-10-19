@@ -160,6 +160,7 @@ class OpenApiConsistencyTests {
 				"ExtractedString", "ExtractedInteger", "ExtractedMoney", "ExtractedDateTime", "EvidencePage", "ExtractionDraftPage",
 				"OrderPage", "PaymentPage", "ReceivablePage", "CollectionAlertPage", "AuditEventPage",
 				"Customer", "CreateCustomerRequest", "Contact", "CreateContactRequest", "CustomerPage",
+				"UpdateCustomerRequest", "ReassignPortfolioRequest", "MergeCustomerRequest", "CustomerHistoryEntry",
 				"TechSheet", "UpdateTechSheetRequest", "ValidateFabricRequest",
 				"OrderStage", "StationAdvanceRequest", "StationAdvanceResponse", "EvidenceDownloadLink", "UserContext",
 				"ProductionCustomerRef", "ProductionOrderItem", "ProductionOrder",

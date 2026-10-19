@@ -689,6 +689,13 @@ export const mockSource: DataSource = {
       return { cutDate: s.cutDate, customer: view(c), seller: personName(s, c.sellerId), snapshot: snapshot(s, c), orders: orders.map((o) => orderRow(s, o)), payments, decisions, messages, timeline };
     }),
 
+
+  getCustomerHistory: (customerId) =>
+    respond((s) => {
+      const hist = (s as any).customerHistory ?? [];
+      return hist.filter((h: any) => h.clienteId === customerId);
+    }),
+
   getStatement: (customerId) =>
     respond<StatementDTO | null>((s) => {
       const c = s.customers.find((x) => x.id === customerId);
@@ -876,6 +883,9 @@ export const mockSource: DataSource = {
     captureOrder: wrap(actions.captureOrder),
     createCustomer: wrap(actions.createCustomer),
     createContact: wrap(actions.createContact),
+    updateCustomer: wrap(actions.updateCustomer),
+    reassignPortfolio: wrap(actions.reassignPortfolio),
+    mergeCustomers: wrap(actions.mergeCustomers),
     updateSettings: wrap(actions.updateSettings),
     setInternalCharge: wrap(actions.setInternalCharge),
     reset: wrap(actions.reset),

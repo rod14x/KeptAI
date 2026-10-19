@@ -196,6 +196,21 @@ export const Contact = z
   .passthrough();
 export type ContactT = z.infer<typeof Contact>;
 
+export const CustomerHistoryEntry = z
+  .object({
+    id: Uuid.optional(),
+    campo: z.string(),
+    valor_anterior: z.string().nullable().optional(),
+    valor_nuevo: z.string().nullable().optional(),
+    motivo: z.string().nullable().optional(),
+    modificado_por: z.string().nullable().optional(),
+    creado_en: IsoDateTime.optional(),
+  })
+  .passthrough();
+export type CustomerHistoryEntryT = z.infer<typeof CustomerHistoryEntry>;
+export const CustomerHistoryList = z.array(CustomerHistoryEntry);
+
+
 /* ---------- Ficha Técnica Textil (Fase 3) ---------- */
 export const TechSheet = z
   .object({
@@ -542,6 +557,27 @@ export type CreateCustomerRequest = {
   telefono_principal: string;
   canal_origen: string;
   limite_credito?: z.infer<typeof NonNegativeMoney>;
+};
+
+
+export type UpdateCustomerRequest = {
+  razon_social?: string;
+  ruc_dni?: string;
+  telefono_principal?: string;
+  email_contacto?: string;
+  direccion?: string;
+  limite_credito_cents?: number;
+  motivo?: string;
+};
+
+export type ReassignPortfolioRequest = {
+  nuevo_vendedor_id: string;
+  motivo?: string;
+};
+
+export type MergeCustomerRequest = {
+  target_customer_id: string;
+  motivo?: string;
 };
 
 export type CreateContactRequest = {

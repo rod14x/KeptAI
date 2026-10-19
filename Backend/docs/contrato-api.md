@@ -24,6 +24,10 @@ Los roles son los de `usuario.rol`; `service_n8n` es una credencial técnica, no
 | `listCustomers` | GET | `/api/v1/customers` | `miguel` | Fase 1 | VENDEDOR, ADMIN, GERENTE | Implementado localmente |
 | `getCustomer` | GET | `/api/v1/customers/{customer_id}` | `miguel` | Fase 1 | VENDEDOR, ADMIN, GERENTE | Implementado localmente |
 | `createCustomer` | POST | `/api/v1/customers` | `miguel` | Fase 1 | VENDEDOR, ADMIN | Implementado localmente |
+| `updateCustomer` | PUT | `/api/v1/customers/{customer_id}` | `miguel` | Fase 4 | VENDEDOR, ADMIN | Implementado localmente |
+| `reassignCustomerPortfolio` | POST | `/api/v1/customers/{customer_id}/reassign-portfolio` | `miguel` | Fase 4 | ADMIN | Implementado localmente |
+| `mergeCustomers` | POST | `/api/v1/customers/{customer_id}/merge` | `miguel` | Fase 4 | ADMIN | Implementado localmente |
+| `getCustomerHistory` | GET | `/api/v1/customers/{customer_id}/history` | `miguel` | Fase 4 | VENDEDOR, ADMIN, GERENTE | Implementado localmente |
 | `createCustomerContact` | POST | `/api/v1/customers/{customer_id}/contacts` | `miguel` | Fase 1 | VENDEDOR, ADMIN | Implementado localmente |
 | `createOrder` | POST | `/api/v1/orders` | `miguel` | Fase 2 | VENDEDOR, ADMIN | Implementado localmente |
 | `listProductionOrders` | GET | `/api/v1/orders/production` | `miguel` | B-05 | JEFE_TALLER, ADMIN, GERENTE, DISENO | Implementado localmente |

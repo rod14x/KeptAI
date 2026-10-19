@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+﻿import { useState, useEffect, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { Link, useParams } from "react-router";
 import {
@@ -17,8 +17,20 @@ import {
   WarningCircle,
   XCircle,
   IdentificationCard,
+  NotePencil,
+  UsersThree,
+  EnvelopeSimple,
+  ClockCounterClockwise,
 } from "../components/ui/icons";
-import { getCustomer, type CustomerDetailDTO, type TimelineItem } from "../api/client";
+import {
+  getCustomer,
+  getCustomerHistory,
+  getCustomers,
+  type CustomerDetailDTO,
+  type TimelineItem,
+  type CustomerHistoryDTO,
+  type CustomerRow,
+} from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { useMe } from "../context/AuthContext";
 import { can } from "../lib/permissions";
@@ -28,7 +40,13 @@ import { Meter } from "../components/ui/Meter";
 import { Card, DemoBadge, EmptyState, ErrorState, Money, Skeleton } from "../components/ui/States";
 import { Chip, CreditChip, FinanceChip, OrderStateChip, type Tone } from "../components/ui/Chip";
 import { Avatar } from "../components/ui/Avatar";
+import { Button } from "../components/ui/Button";
 import { cx, formatDate, formatDateTime, formatMoney } from "../lib/format";
+import {
+  EditCustomerModal,
+  ReassignPortfolioModal,
+  MergeCustomerModal,
+} from "../components/CustomerActionModals";
 
 const TIPO_LABEL = { colegio: "Colegio", empresa: "Empresa", persona: "Persona" } as const;
 
@@ -57,18 +75,58 @@ export function ClienteDetailPage() {
         </EmptyState>
       </div>
     );
-  return <Detail d={data} />;
+  return <Detail d={data} onReload={reload} />;
 }
 
-function Detail({ d }: { d: CustomerDetailDTO }) {
+function Detail({ d, onReload }: { d: CustomerDetailDTO; onReload: () => void }) {
   const c = d.customer;
   const snap = d.snapshot;
+  const me = useMe();
   const [tab, setTab] = useState("pedidos");
+
+  const [openEdit, setOpenEdit] = useState(false);
+  const [openReassign, setOpenReassign] = useState(false);
+  const [openMerge, setOpenMerge] = useState(false);
+
+  const [allCustomers, setAllCustomers] = useState<CustomerRow[]>([]);
+  const isAdminOrGerente = me.role === "administracion" || me.role === "gerencia";
+
+  useEffect(() => {
+    if (isAdminOrGerente) {
+      getCustomers("consolidado").then(setAllCustomers).catch(() => {});
+    }
+  }, [isAdminOrGerente]);
+
+  // Lista de vendedores para reasignación de cartera
+  const sellersList = [
+    { id: "usr_vendedor_01", name: "Rosa Flores (Ventas Corpotex)" },
+    { id: "usr_vendedor_02", name: "Carlos Ramos (Ventas Unicrack)" },
+    { id: "usr_admin_01", name: "Ana Torres (Administración)" },
+  ];
+
   return (
     <Stagger className="mx-auto flex max-w-[1320px] flex-col gap-6">
-      <MotionLink to="/clientes" variants={itemVariants} {...press} className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink">
+      <MotionLink
+        to="/clientes"
+        variants={itemVariants}
+        {...press}
+        className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-muted transition-colors hover:bg-line-soft hover:text-ink"
+      >
         <ArrowLeft size={16} weight="bold" /> Clientes
       </MotionLink>
+
+      {/* Banner si el cliente fue fusionado o está inactivo */}
+      {c.activo === false && (
+        <div className="rounded-xl border border-bad/30 bg-bad-tint p-4 text-sm text-bad">
+          <p className="font-bold flex items-center gap-2">
+            <WarningCircle size={18} weight="bold" /> Cliente inactivo por fusión de duplicados
+          </p>
+          <p className="mt-1 text-ink-soft">
+            Este registro fue fusionado{c.fusionadoConId ? ` con el cliente ${c.fusionadoConId}` : ""}. Todas sus
+            operaciones comerciales pasaron al registro unificado.
+          </p>
+        </div>
+      )}
 
       <Card className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center">
         <div className="flex min-w-0 flex-1 items-center gap-4">
@@ -83,20 +141,36 @@ function Detail({ d }: { d: CustomerDetailDTO }) {
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-title font-extrabold">{c.name}</h1>
               <CreditChip status={snap.status} />
+              {c.assignedSellerName && (
+                <span className="rounded-md bg-panel px-2 py-0.5 text-xs font-semibold text-brand-blue ring-1 ring-brand-blue/30">
+                  Cartera: {c.assignedSellerName}
+                </span>
+              )}
             </div>
             <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted">
-              {(c.brand || c.tipo) && <span>{[c.brand && (c.brand === "corpotex" ? "Corpotex" : "Unicrack"), c.tipo && TIPO_LABEL[c.tipo]].filter(Boolean).join(" · ")}</span>}
+              {(c.brand || c.tipo) && (
+                <span>
+                  {[c.brand && (c.brand === "corpotex" ? "Corpotex" : "Unicrack"), c.tipo && TIPO_LABEL[c.tipo]]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              )}
               <span className="inline-flex items-center gap-1">
                 <IdentificationCard size={14} /> RUC/DNI {c.rucDni ?? "por confirmar"}
               </span>
               {d.seller && (
-                <span className="inline-flex items-center gap-1">
-                  <Avatar name={d.seller} size="sm" /> {d.seller}
+                <span className="inline-flex items-center gap-1" title="Vendedor de la última orden">
+                  <Avatar name={d.seller} size="sm" /> Pedidos: {d.seller}
                 </span>
               )}
               {c.contactoWhatsapp && (
                 <span className="inline-flex items-center gap-1">
                   <Phone size={14} /> {c.contactoWhatsapp}
+                </span>
+              )}
+              {c.emailContacto && (
+                <span className="inline-flex items-center gap-1">
+                  <EnvelopeSimple size={14} /> {c.emailContacto}
                 </span>
               )}
               {c.since && (
@@ -105,14 +179,48 @@ function Detail({ d }: { d: CustomerDetailDTO }) {
                 </span>
               )}
             </p>
+            {c.direccion && (
+              <p className="mt-1 text-xs text-muted truncate">📍 {c.direccion}</p>
+            )}
           </div>
         </div>
+
+        {/* Acciones principales del cliente */}
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setOpenEdit(true)}
+            icon={<NotePencil size={15} weight="bold" />}
+          >
+            {me.role === "vendedor" ? "Editar contacto" : "Editar cliente"}
+          </Button>
+
+          {isAdminOrGerente && (
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setOpenReassign(true)}
+                icon={<UsersThree size={15} weight="bold" />}
+              >
+                Reasignar cartera
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setOpenMerge(true)}
+              >
+                Fusionar
+              </Button>
+            </>
+          )}
+
           <Link
             to={`/captura?tipo=orden&clienteId=${c.id}`}
             className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-brand-blue px-3.5 py-2 text-xs font-bold text-inverse shadow-sm transition-all hover:bg-brand-navy"
           >
-            + Nuevo pedido para este cliente
+            + Nuevo pedido
           </Link>
           {d.orders.some((o) => o.demo) && <DemoBadge />}
         </div>
@@ -153,18 +261,125 @@ function Detail({ d }: { d: CustomerDetailDTO }) {
         />
       </motion.section>
 
-      <Segmented kind="tab" label="Detalle del cliente" value={tab} onChange={setTab} options={[{ value: "pedidos", label: "Pedidos" }, { value: "pagos", label: "Pagos" }, { value: "historial", label: "Historial" }]} />
+      <Segmented
+        kind="tab"
+        label="Detalle del cliente"
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "pedidos", label: "Pedidos" },
+          { value: "pagos", label: "Pagos" },
+          { value: "historial", label: "Historial de Pedidos" },
+          { value: "auditoria", label: "Auditoría de Datos (B-01)" },
+        ]}
+      />
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-6">
           {tab === "pedidos" && <OrdersCard d={d} />}
           {tab === "pagos" && <PaymentsCard d={d} />}
-          {tab === "historial" && <><TimelineCard items={d.timeline} cutDate={d.cutDate} /><DecisionsCard d={d} /></>}
+          {tab === "historial" && (
+            <>
+              <TimelineCard items={d.timeline} cutDate={d.cutDate} />
+              <DecisionsCard d={d} />
+            </>
+          )}
+          {tab === "auditoria" && <CustomerHistoryCard customerId={c.id} />}
         </div>
         <div className="flex min-w-0 flex-col gap-6">
           <StatementCard d={d} />
         </div>
       </div>
+
+      {/* Modales de acción por rol */}
+      <EditCustomerModal
+        open={openEdit}
+        onClose={() => setOpenEdit(false)}
+        customer={c}
+        onUpdated={onReload}
+      />
+
+      <ReassignPortfolioModal
+        open={openReassign}
+        onClose={() => setOpenReassign(false)}
+        customer={c}
+        onUpdated={onReload}
+        sellers={sellersList}
+      />
+
+      <MergeCustomerModal
+        open={openMerge}
+        onClose={() => setOpenMerge(false)}
+        customer={c}
+        onUpdated={onReload}
+        allCustomers={allCustomers.map((x) => ({ id: x.id, name: x.name, rucDni: x.rucDni }))}
+      />
     </Stagger>
+  );
+}
+
+function CustomerHistoryCard({ customerId }: { customerId: string }) {
+  const [history, setHistory] = useState<CustomerHistoryDTO[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    getCustomerHistory(customerId)
+      .then((data) => setHistory(data))
+      .catch(() => setHistory([]))
+      .finally(() => setLoading(false));
+  }, [customerId]);
+
+  return (
+    <Card className="p-5 sm:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="flex items-center gap-2 text-section font-bold">
+            <ClockCounterClockwise size={20} className="text-faint" /> Auditoría y cambios de datos maestros
+          </h2>
+          <p className="mt-0.5 text-[13px] text-muted">
+            Trazabilidad inmutable de ediciones de datos de contacto, RUC/DNI, cartera y razón social (B-01 / B-02).
+          </p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="mt-4 flex flex-col gap-2">
+          <Skeleton className="h-10 rounded-lg" />
+          <Skeleton className="h-10 rounded-lg" />
+        </div>
+      ) : history.length === 0 ? (
+        <div className="mt-4">
+          <EmptyState title="Sin modificaciones registradas" />
+        </div>
+      ) : (
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-line text-muted">
+                <th className="pb-2 font-semibold">Fecha / Hora</th>
+                <th className="pb-2 font-semibold">Campo</th>
+                <th className="pb-2 font-semibold">Valor anterior</th>
+                <th className="pb-2 font-semibold">Valor nuevo</th>
+                <th className="pb-2 font-semibold">Motivo</th>
+                <th className="pb-2 font-semibold">Modificado por</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line-soft">
+              {history.map((h, i) => (
+                <tr key={h.id ?? i} className="hover:bg-panel/50">
+                  <td className="py-2.5 font-medium tabular text-muted">{h.creadoEn ? formatDateTime(h.creadoEn) : "-"}</td>
+                  <td className="py-2.5 font-bold text-ink">{h.campo}</td>
+                  <td className="py-2.5 text-muted">{h.valorAnterior ?? "(vacío)"}</td>
+                  <td className="py-2.5 font-semibold text-ok">{h.valorNuevo ?? "(vacío)"}</td>
+                  <td className="py-2.5 text-ink-soft">{h.motivo ?? "-"}</td>
+                  <td className="py-2.5 text-muted">{h.modificadoPor ?? "Sistema"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -437,4 +652,3 @@ function TimelineCard({ items, cutDate }: { items: TimelineItem[]; cutDate: stri
     </Card>
   );
 }
-

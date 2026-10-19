@@ -1,7 +1,3 @@
-/**
- * AccessPolicy.java
- * Versión: 3.1 | Fecha: 2026-10-19 | Autora: Isabelita
- */
 package pe.keptai.backend.security;
 
 import static pe.keptai.backend.security.AccessRole.ADMIN;
@@ -19,8 +15,11 @@ import org.springframework.http.HttpMethod;
 
 /**
  * Autorización por método HTTP y ruta exacta (MIG-03-D2): una regla por cada operación entrante de
- * {@code openapi.yaml}. Toda ruta, método o variante no listada queda denegada por defecto.
- * Versión: 3.1 | Fecha: 2026-10-19 | Autora: Isabelita
+ * {@code openapi.yaml}. Abrir una ruta es solo el permiso de rol o alcance; <b>no implementa la funcionalidad</b>
+ * (sin controlador responde 404). Toda ruta, método o variante no listada queda denegada por defecto.
+ * Los roles del panel proceden de la membresía en PostgreSQL; los alcances de servicio, de la fila de
+ * {@code integracion_servicio}. Las reglas cerradas conservan el motivo hasta que se decida la regla pendiente.
+ * Una prueba compara esta tabla con el contrato y la matriz de acceso.
  */
 public final class AccessPolicy {
 
@@ -82,6 +81,10 @@ public final class AccessPolicy {
 		panel("listCustomers", HttpMethod.GET, "/api/v1/customers", VENDEDOR, ADMIN, GERENTE),
 		panel("getCustomer", HttpMethod.GET, "/api/v1/customers/{customer_id}", VENDEDOR, ADMIN, GERENTE),
 		panel("createCustomer", HttpMethod.POST, "/api/v1/customers", VENDEDOR, ADMIN),
+		panel("updateCustomer", HttpMethod.PUT, "/api/v1/customers/{customer_id}", VENDEDOR, ADMIN),
+		panel("reassignCustomerPortfolio", HttpMethod.POST, "/api/v1/customers/{customer_id}/reassign-portfolio", ADMIN),
+		panel("mergeCustomers", HttpMethod.POST, "/api/v1/customers/{customer_id}/merge", ADMIN),
+		panel("getCustomerHistory", HttpMethod.GET, "/api/v1/customers/{customer_id}/history", VENDEDOR, ADMIN, GERENTE),
 		panel("createCustomerContact", HttpMethod.POST, "/api/v1/customers/{customer_id}/contacts", VENDEDOR, ADMIN),
 		panel("getOrderTechSheet", HttpMethod.GET, "/api/v1/orders/{order_id}/tech-sheet", VENDEDOR, ADMIN, GERENTE, JEFE_TALLER, DISENO),
 		panel("updateOrderTechSheet", HttpMethod.PUT, "/api/v1/orders/{order_id}/tech-sheet", VENDEDOR, ADMIN),

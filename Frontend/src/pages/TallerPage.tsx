@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
 import { motion } from "motion/react";
 import {
   CheckCircle,
@@ -54,6 +55,35 @@ export function TallerPage() {
   const [openDispatch, setOpenDispatch] = useState(false);
   const [inspectingSheet, setInspectingSheet] = useState<ProductionTechSheet | null>(null);
   const [, setRefreshKey] = useState(0);
+
+  // B-09: Suscripción Realtime a cambios en órdenes o etapas de manufactura
+  useEffect(() => {
+    let sub: any = null;
+    let mounted = true;
+    supabase()
+      .then((client) => {
+        if (!mounted) return;
+        sub = client
+          .channel("taller-ordenes-realtime")
+          .on("postgres_changes", { event: "*", schema: "keptai", table: "orden" }, () => {
+            reload();
+          })
+          .on("postgres_changes", { event: "*", schema: "keptai", table: "orden_etapa" }, () => {
+            reload();
+          })
+          .subscribe();
+      })
+      .catch(() => {
+        // En modo mock o sin Supabase configurado, opera normalmente
+      });
+
+    return () => {
+      mounted = false;
+      if (sub) {
+        supabase().then((client) => client.removeChannel(sub)).catch(() => {});
+      }
+    };
+  }, [reload]);
 
   const handleStationUpdate = async (orderId: string, orderRef: string, newStation: ManufacturingStation) => {
     const res = await advanceOrderStation(orderId, newStation, `Cambio de estación desde planta`, me);

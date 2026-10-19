@@ -41,6 +41,10 @@ export const endpoints = {
   listCustomers: (q?: Paging) => getJson(S.CustomerPage, "/api/v1/customers", pg(q)),
   createCustomer: (body: S.CreateCustomerRequest) => sendJson(S.Customer, "POST", "/api/v1/customers", body),
   createContact: (customerId: string, body: S.CreateContactRequest) => sendJson(S.Contact, "POST", `/api/v1/customers/${customerId}/contacts`, body),
+  updateCustomer: (id: string, body: S.UpdateCustomerRequest) => sendJson(S.Customer, "PUT", `/api/v1/customers/${id}`, body),
+  reassignPortfolio: (id: string, body: S.ReassignPortfolioRequest) => sendJson(S.Customer, "POST", `/api/v1/customers/${id}/reassign-portfolio`, body),
+  mergeCustomers: (id: string, body: S.MergeCustomerRequest) => sendJson(S.Customer, "POST", `/api/v1/customers/${id}/merge`, body),
+  getCustomerHistory: (id: string) => getJson(S.CustomerHistoryList, `/api/v1/customers/${id}/history`),
 
   /* Órdenes */
   listOrders: (q?: Paging & { customer_id?: string; status?: z.infer<typeof S.OrderStatus>; receivable_status?: z.infer<typeof S.ReceivableStatus> }) =>

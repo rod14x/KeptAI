@@ -406,4 +406,108 @@ class UserFlowsAcceptanceTests {
 		assertThat(summary.totalAssignedKg()).isEqualTo(new BigDecimal("25.000"));
 	}
 
+
+	@Test
+	void b01_validacionDniYRucSunatModulo11() {
+		// DNI 8 dígitos: válido
+		CustomerService.validateTaxId("72345678");
+
+		// RUC 11 dígitos válido con algoritmo oficial (20123456786)
+		CustomerService.validateTaxId("20123456786");
+
+		// RUC con dígito verificador incorrecto: debe fallar
+		assertThatThrownBy(() -> CustomerService.validateTaxId("20123456789"))
+				.isInstanceOf(PanelException.class)
+				.hasMessageContaining("no coincide con el cálculo SUNAT");
+
+		// Longitud inválida
+		assertThatThrownBy(() -> CustomerService.validateTaxId("12345"))
+				.isInstanceOf(PanelException.class)
+				.hasMessageContaining("DNI válido de 8 dígitos o un RUC válido de 11 dígitos");
+
+		// Prefijo no tributario
+		assertThatThrownBy(() -> CustomerService.validateTaxId("30123456781"))
+				.isInstanceOf(PanelException.class)
+				.hasMessageContaining("debe iniciar con 10, 15, 17 o 20");
+	}
+
+	@Test
+	void b01_vendedorNoPuedeEditarRucNiRazonSocial() {
+		PanelContext mockPanel = mock(PanelContext.class);
+		JdbcTemplate mockJdbc = mock(JdbcTemplate.class);
+		TenantIdentity mockIdentity = mock(TenantIdentity.class);
+
+		UUID clientId = UUID.randomUUID();
+		UUID sellerId = UUID.randomUUID();
+
+		when(mockPanel.jdbc()).thenReturn(mockJdbc);
+		when(mockPanel.identity()).thenReturn(mockIdentity);
+		when(mockIdentity.usuarioId()).thenReturn(sellerId);
+		when(mockPanel.write(any())).thenAnswer(inv -> ((java.util.function.Supplier<?>) inv.getArgument(0)).get());
+
+		CustomerService service = new CustomerService(mockPanel);
+
+		when(mockJdbc.queryForList(anyString(), eq(clientId))).thenReturn(List.of(
+				Map.of(
+						"id", clientId,
+						"razon_social", "Colegio San Martín SAC",
+						"tipo", "COLEGIO",
+						"ruc_dni", "20123456786",
+						"telefono_principal", "987654321",
+						"vendedor_asignado_id", sellerId,
+						"activo", true
+				)
+		));
+
+		// Simular consulta de rol de actor que devuelve VENDEDOR
+		when(mockJdbc.queryForObject("SELECT keptai_private.actor_actual()", String.class)).thenReturn("VENDEDOR");
+
+		// Vendedor intentando cambiar RUC
+		var req = new pe.keptai.backend.contract.CustomerDtos.UpdateCustomerRequest(null, null, "20555555551", null, null, null, null, "Cambio RUC");
+		assertThatThrownBy(() -> service.updateCustomer(clientId, req))
+				.isInstanceOf(PanelException.class)
+				.hasMessageContaining("El vendedor solo puede editar datos de contacto");
+	}
+
+	@Test
+	void b01_adminBloqueadoSiClienteTieneComprobantes() {
+		PanelContext mockPanel = mock(PanelContext.class);
+		JdbcTemplate mockJdbc = mock(JdbcTemplate.class);
+		TenantIdentity mockIdentity = mock(TenantIdentity.class);
+
+		UUID clientId = UUID.randomUUID();
+		UUID adminId = UUID.randomUUID();
+
+		when(mockPanel.jdbc()).thenReturn(mockJdbc);
+		when(mockPanel.identity()).thenReturn(mockIdentity);
+		when(mockIdentity.usuarioId()).thenReturn(adminId);
+		when(mockPanel.write(any())).thenAnswer(inv -> ((java.util.function.Supplier<?>) inv.getArgument(0)).get());
+
+		CustomerService service = new CustomerService(mockPanel);
+
+		when(mockJdbc.queryForList(org.mockito.ArgumentMatchers.contains("FROM keptai.cliente c"), eq(clientId))).thenReturn(List.of(
+				Map.of(
+						"id", clientId,
+						"razon_social", "Textilcorp SAC",
+						"tipo", "EMPRESA",
+						"ruc_dni", "20123456786",
+						"telefono_principal", "987654321",
+						"activo", true
+				)
+		));
+
+		when(mockJdbc.queryForObject("SELECT keptai_private.actor_actual()", String.class)).thenReturn("ADMIN");
+
+		// Simular que el cliente ya tiene órdenes en producción o pagos registrados
+		when(mockJdbc.queryForList(org.mockito.ArgumentMatchers.contains("SELECT 1 FROM keptai.pago"), eq(clientId), eq(clientId))).thenReturn(List.of(
+				Map.of("?column?", 1)
+		));
+
+		// Intento de modificar Razón Social
+		var req = new pe.keptai.backend.contract.CustomerDtos.UpdateCustomerRequest("Nuevo Nombre SA", null, null, null, null, null, null, "Reestructuración");
+		assertThatThrownBy(() -> service.updateCustomer(clientId, req))
+				.isInstanceOf(PanelException.class)
+				.hasMessageContaining("RUC_HAS_INVOICES_MERGE_REQUIRED");
+	}
+
 }

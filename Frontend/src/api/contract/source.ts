@@ -1093,6 +1093,19 @@ export const apiSource: DataSource = {
     const ctx = await context();
     const view = customerView(id, ctx);
     if (!view) return null;
+    const remote = await soft(endpoints.listCustomers(), null);
+    const remoteItem = remote?.items?.find((x) => x.id === id);
+    if (remoteItem) {
+      if (remoteItem.razon_social) view.name = remoteItem.razon_social;
+      if (remoteItem.ruc_dni) view.rucDni = remoteItem.ruc_dni;
+      if (remoteItem.telefono_principal) view.contactoWhatsapp = remoteItem.telefono_principal;
+      view.assignedSellerId = (remoteItem as any).assigned_seller_id ?? null;
+      view.assignedSellerName = (remoteItem as any).assigned_seller_name ?? null;
+      view.emailContacto = (remoteItem as any).email_contacto ?? null;
+      view.direccion = (remoteItem as any).direccion ?? null;
+      view.activo = (remoteItem as any).activo ?? true;
+      view.fusionadoConId = (remoteItem as any).fusionado_con_id ?? null;
+    }
     const moroso = overdueCustomers(ctx);
     const orders = ordersOf(id, ctx);
     const [credits, notifications] = await Promise.all([
@@ -1173,6 +1186,20 @@ export const apiSource: DataSource = {
       messages,
       timeline,
     };
+  },
+
+
+  async getCustomerHistory(customerId) {
+    const list = await soft(endpoints.getCustomerHistory(customerId), []);
+    return (list ?? []).map((h) => ({
+      id: h.id,
+      campo: h.campo,
+      valorAnterior: h.valor_anterior ?? null,
+      valorNuevo: h.valor_nuevo ?? null,
+      motivo: h.motivo ?? null,
+      modificadoPor: h.modificado_por ?? null,
+      creadoEn: h.creado_en ?? "",
+    }));
   },
 
   async getStatement(customerId) {
@@ -1384,6 +1411,37 @@ export const apiSource: DataSource = {
           es_principal: input.esPrincipal,
         });
         return { ok: true, message: `Contacto ${input.nombre} registrado exitosamente.` };
+      }),
+    updateCustomer: (id, input) =>
+      run(async () => {
+        const res = await endpoints.updateCustomer(id, {
+          razon_social: input.razonSocial,
+          ruc_dni: input.rucDni,
+          telefono_principal: input.telefonoPrincipal,
+          email_contacto: input.emailContacto,
+          direccion: input.direccion,
+          limite_credito_cents: input.limiteCreditoCents,
+          motivo: input.motivo,
+        });
+        return { ok: true, message: `Cliente ${res.razon_social} actualizado exitosamente.` };
+      }),
+
+    reassignPortfolio: (id, nuevoVendedorId, motivo) =>
+      run(async () => {
+        const res = await endpoints.reassignPortfolio(id, {
+          nuevo_vendedor_id: nuevoVendedorId,
+          motivo,
+        });
+        return { ok: true, message: `Cartera del cliente ${res.razon_social} reasignada exitosamente.` };
+      }),
+
+    mergeCustomers: (id, targetCustomerId, motivo) =>
+      run(async () => {
+        const res = await endpoints.mergeCustomers(id, {
+          target_customer_id: targetCustomerId,
+          motivo,
+        });
+        return { ok: true, message: `Cliente fusionado exitosamente con ${res.razon_social}.` };
       }),
     updateSettings: () => unavailable("Cambiar los supuestos"),
     setInternalCharge: () => unavailable("Cambiar el precio de transferencia"),

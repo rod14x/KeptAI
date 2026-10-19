@@ -159,7 +159,13 @@ export type CustomerView = {
   tipo: Customer["tipo"] | null;
   rucDni: string | null;
   sellerId: string | null;
+  assignedSellerId?: string | null;
+  assignedSellerName?: string | null;
   contactoWhatsapp: string | null;
+  emailContacto?: string | null;
+  direccion?: string | null;
+  activo?: boolean;
+  fusionadoConId?: string | null;
   since: string | null;
   creditLimitCents: number | null;
 };
@@ -264,6 +270,27 @@ export type CobranzaDTO = { cutDate: string; receivables: ReceivableRow[]; alert
 
 export type CustomerType = "PERSONA" | "EMPRESA" | "COLEGIO";
 export type CustomerOriginChannel = "TIENDA" | "WHATSAPP" | "REDES" | "MANUAL";
+
+
+export type CustomerHistoryDTO = {
+  id?: string;
+  campo: string;
+  valorAnterior: string | null;
+  valorNuevo: string | null;
+  motivo: string | null;
+  modificadoPor: string | null;
+  creadoEn: string;
+};
+
+export type UpdateCustomerInput = {
+  razonSocial?: string;
+  rucDni?: string;
+  telefonoPrincipal?: string;
+  emailContacto?: string;
+  direccion?: string;
+  limiteCreditoCents?: number;
+  motivo?: string;
+};
 
 export type CustomerInput = {
   tipoPersona: CustomerType;
@@ -444,6 +471,7 @@ export type DataSource = {
   getCobranza(scope: Scope): Promise<CobranzaDTO>;
   getCustomers(scope: Scope): Promise<CustomerRow[]>;
   getCustomer(id: string): Promise<CustomerDetailDTO | null>;
+  getCustomerHistory(customerId: string): Promise<CustomerHistoryDTO[]>;
   getStatement(customerId: string): Promise<StatementDTO | null>;
   getResults(scope: Scope): Promise<ResultsDTO>;
   ordersCsv(scope: Scope): Promise<string>;
@@ -466,6 +494,9 @@ export type DataSource = {
     captureOrder(input: OrderInput, actor: Person): Promise<ActionResult>;
     createCustomer(input: CustomerInput, actor: Person): Promise<ActionResult & { id?: string; customer?: any }>;
     createContact(customerId: string, input: ContactInput, actor: Person): Promise<ActionResult>;
+    updateCustomer(id: string, input: UpdateCustomerInput, actor: Person): Promise<ActionResult>;
+    reassignPortfolio(id: string, nuevoVendedorId: string, motivo: string | undefined, actor: Person): Promise<ActionResult>;
+    mergeCustomers(id: string, targetCustomerId: string, motivo: string | undefined, actor: Person): Promise<ActionResult>;
     updateSettings(patch: Partial<Pick<Settings, "factorCobro" | "plazoDefecto">>, actor: Person): Promise<ActionResult>;
     setInternalCharge(orderId: string, cents: number, actor: Person): Promise<ActionResult>;
     reset(): Promise<ActionResult>;

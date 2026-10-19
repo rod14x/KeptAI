@@ -1261,6 +1261,160 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+      - Clientes
+      operationId: updateCustomer
+      summary: Actualizar datos del cliente (vendedor solo contacto; admin RUC/razón social y cartera).
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 4
+      x-keptai-proposed-roles:
+      - VENDEDOR
+      - ADMIN
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CustomerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomerRequest'
+      responses:
+        '200':
+          description: Cliente actualizado.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/customers/{customer_id}/reassign-portfolio:
+    post:
+      tags:
+      - Clientes
+      operationId: reassignCustomerPortfolio
+      summary: Reasignar cartera del cliente a otro vendedor.
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 4
+      x-keptai-proposed-roles:
+      - ADMIN
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CustomerId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReassignPortfolioRequest'
+      responses:
+        '200':
+          description: Cartera de cliente reasignada.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/customers/{customer_id}/merge:
+    post:
+      tags:
+      - Clientes
+      operationId: mergeCustomers
+      summary: Fusionar cliente duplicado en el cliente principal.
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 4
+      x-keptai-proposed-roles:
+      - ADMIN
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CustomerId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MergeCustomerRequest'
+      responses:
+        '200':
+          description: Cliente duplicado fusionado exitosamente.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/customers/{customer_id}/history:
+    get:
+      tags:
+      - Clientes
+      operationId: getCustomerHistory
+      summary: Consultar historial de modificaciones del cliente.
+      x-keptai-owner: miguel
+      x-keptai-status: implemented_local
+      x-keptai-task: Fase 4
+      x-keptai-proposed-roles:
+      - VENDEDOR
+      - ADMIN
+      - GERENTE
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CustomerId'
+      responses:
+        '200':
+          description: Historial de cambios del cliente.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomerHistoryEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/v1/customers/{customer_id}/contacts:
     post:
       tags:
@@ -7978,6 +8132,81 @@ components:
         notes:
           type: string
           nullable: true
+
+    UpdateCustomerRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        customer_type:
+          type: string
+        tax_id:
+          type: string
+        primary_phone:
+          type: string
+        email_contact:
+          type: string
+        address:
+          type: string
+        assigned_seller_id:
+          $ref: '#/components/schemas/Uuid'
+        reason:
+          type: string
+    ReassignPortfolioRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - assigned_seller_id
+      properties:
+        assigned_seller_id:
+          $ref: '#/components/schemas/Uuid'
+        reason:
+          type: string
+    MergeCustomerRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - duplicate_customer_id
+      - reason
+      properties:
+        duplicate_customer_id:
+          $ref: '#/components/schemas/Uuid'
+        reason:
+          type: string
+    CustomerHistoryEntry:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - customer_id
+      - modified_by
+      - field
+      - created_at
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        customer_id:
+          $ref: '#/components/schemas/Uuid'
+        modified_by:
+          $ref: '#/components/schemas/Uuid'
+        modified_by_name:
+          type: string
+          nullable: true
+        field:
+          type: string
+        previous_value:
+          type: string
+          nullable: true
+        new_value:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
 
   examples:
     UserContextDemo:

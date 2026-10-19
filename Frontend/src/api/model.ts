@@ -45,8 +45,14 @@ export const CustomerSchema = z.object({
   /** RUC o DNI: no se inventa; null = por confirmar. */
   rucDni: z.string().nullable(),
   sellerId: z.string(),
+  assignedSellerId: z.string().nullable().optional(),
+  assignedSellerName: z.string().nullable().optional(),
   /** Metadato de canal_whatsapp, enmascarado. */
   contactoWhatsapp: z.string(),
+  emailContacto: z.string().nullable().optional(),
+  direccion: z.string().nullable().optional(),
+  activo: z.boolean().optional(),
+  fusionadoConId: z.string().nullable().optional(),
   since: isoDate,
   creditLimitCents: cents,
 });

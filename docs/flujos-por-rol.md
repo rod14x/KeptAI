@@ -479,3 +479,39 @@ A continuación se registra el inventario exhaustivo de brechas y oportunidades 
     - *Problema:* Cuando el Jefe de Taller marca `COMPRA_REQUERIDA`, se coloca una nota en la ficha técnica pero no se crea una solicitud formal de requisición para el área de compras.
     - *Impacto:* El Jefe de Taller debe avisar verbalmente o por WhatsApp al encargado de compras de tela en Gamarra.
     - *Propuesta técnica:* Crear entidad `orden_compra_materia_prima` automática al confirmar `COMPRA_REQUERIDA`, prellenada con los kilogramos calculados por el estimador reactivo.
+
+---
+
+## 7. Estado de Resolución de Brechas (Fases 1 a 5 Completadas)
+
+Todas las brechas identificadas en el ciclo inicial han sido resueltas e implementadas de punta a punta con criterio textil:
+
+| Brecha | Nombre / Alcance | Estado | Evidencia de Código y Migración |
+|---|---|---|---|
+| **B-01** | **Edición de Clientes y Fusión** | **[RESUELTA]** | `CustomerService.java:updateCustomer`, `mergeCustomers`, `V22__cliente_cartera_segregacion.sql`, `CustomerActionModals.tsx` |
+| **B-02** | **Segregación de Cartera** | **[RESUELTA]** | `cliente.vendedor_asignado_id` separado de `orden.vendedor_id`, `CustomerService.java:reassignPortfolio` |
+| **B-03** | **Curva de Tallas Cerrada y Nómina** | **[RESUELTA]** | `OrderCreationService.java:confirmOrder` valida curva obligatoria, `POST /api/v1/orders/{id}/personnel` (CSV/Excel) |
+| **B-04** | **Reserva de Stock Atómica** | **[RESUELTA]** | Reserva condicional atómica en confirmación, liberación en anulación (`V19__diseno_artes.sql`) |
+| **B-05** | **Orden de Producción sin Precios** | **[RESUELTA]** | `GET /api/v1/orders/production` y `GET /orders/{id}/production` con DTO sin datos comerciales |
+| **B-06** | **Diseño y Artes (Rol DISENO)** | **[RESUELTA]** | `ArtService.java`, `V19__diseno_artes.sql`, aprobación inmutable, rol `DISENO` en `AccessRole.java` |
+| **B-07** | **Inicio por Rol Unificado** | **[RESUELTA]** | `START_ROUTE_BY_ROLE`: vendedor aterriza directamente en `/pedidos` (`App.tsx`, `navigation.ts`) |
+| **B-08** | **Mermas, Segundas y Factor Corte** | **[RESUELTA]** | `ManufacturingService.java:advanceStation` con balance de masa estricto y cálculo de factor real kg |
+| **B-09** | **Realtime en Taller** | **[RESUELTA]** | Suscripción de Supabase Realtime a tablas `orden` y `orden_etapa` en `TallerPage.tsx` |
+| **B-10** | **Requisición de Compra de Tela** | **[RESUELTA]** | `FabricInventoryService.java:createRequisition` con merma técnica configurable y recepción con partida |
+| **Tela** | **Inventario Rollos y Partidas** | **[RESUELTA]** | `V21__inventario_tela_requisiciones.sql`, `FabricInventoryService.java`, alerta de mezcla de partidas |
+
+---
+
+## 8. Paso 0 — Verificación Técnica Corregida
+
+1. **Bloqueo de Ficha Técnica:**
+   - La regla oficial bloquea la modificación de la ficha en estados `DESPACHADA`, `CERRADA` y `ENTREGADO`.
+   - Implementado en `TechSheetService.java` y garantizado por constraint en `keptai.ficha_tecnica`.
+2. **Navegación de Vendedora:**
+   - Se removió `/taller` del menú lateral y permisos de la vendedora.
+   - La consulta de stock por talla fue trasladada directamente a su flujo natural de captura comercial en `/captura`.
+3. **Modalidad de Verificación de Recorridos:**
+   - **Recorridos 1.1 a 1.6 (Vendedora):** Ejecutados y validados con suite automatizada (`UserFlowsAcceptanceTests`) y verificación manual en UI.
+   - **Recorridos 2.1 a 2.6 (Jefe de Taller):** Ejecutados con avances de estación, balance de masa y semáforo textil.
+   - **Recorridos 3.1 a 3.4 (Administración):** Ejecutados con alta de matriz de variantes, kárdex inmutable y auditoría de cambios.
+   - **Recorridos 4.1 a 4.3 (Gerencia):** Ejecutados en solo lectura con tablero de márgenes y flujo proyectado.
