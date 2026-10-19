@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
@@ -55,6 +56,7 @@ public final class CustomerDtos {
 			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("merged_with_id") @JsonAlias("fusionado_con_id") UUID mergedWithId) {
 	}
 
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	public record CreateCustomerRequest(
 			@JsonProperty("name") @JsonAlias({"razon_social", "razonSocial"}) @NotBlank @Size(max = 200) String name,
 			@JsonProperty("customer_type") @JsonAlias({"tipo_persona", "tipoPersona", "tipo"}) String customerType,
@@ -66,6 +68,7 @@ public final class CustomerDtos {
 			@JsonProperty("address") @JsonAlias("direccion") String address) {
 	}
 
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	public record UpdateCustomerRequest(
 			@JsonProperty("name") @JsonAlias({"razon_social", "razonSocial"}) String name,
 			@JsonProperty("customer_type") @JsonAlias({"tipo_persona", "tipoPersona", "tipo"}) String customerType,
@@ -77,11 +80,13 @@ public final class CustomerDtos {
 			@JsonProperty("reason") @JsonAlias("motivo") String reason) {
 	}
 
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	public record MergeCustomerRequest(
 			@JsonProperty("duplicate_customer_id") @JsonAlias("cliente_duplicado_id") @NotNull UUID duplicateCustomerId,
 			@JsonProperty("reason") @JsonAlias("motivo") @NotBlank String reason) {
 	}
 
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	public record ReassignPortfolioRequest(
 			@JsonProperty("assigned_seller_id") @JsonAlias("vendedor_asignado_id") @NotNull UUID assignedSellerId,
 			@JsonProperty("reason") @JsonAlias("motivo") String reason) {
