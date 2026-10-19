@@ -188,7 +188,7 @@ class N8nIngestaVoucherPersistenceTests {
 		storage.reset();
 		try (Connection c = owner(); Statement s = c.createStatement()) {
 			s.execute("DELETE FROM keptai.evento_auditoria; DELETE FROM keptai.comprobante; DELETE FROM keptai.pago; DELETE FROM keptai.orden_item;"
-					+ " DELETE FROM keptai.hoja_resumen; DELETE FROM keptai.orden; DELETE FROM keptai.canal_whatsapp; DELETE FROM keptai.solicitud_idempotente");
+					+ " DELETE FROM keptai.hoja_resumen; DELETE FROM keptai.ficha_tecnica; DELETE FROM keptai.orden_etapa; DELETE FROM keptai.orden; DELETE FROM keptai.canal_whatsapp; DELETE FROM keptai.solicitud_idempotente");
 		}
 	}
 
