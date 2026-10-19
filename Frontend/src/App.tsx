@@ -1,3 +1,10 @@
+/**
+ * App.tsx
+ * Versión: 2.0 | Fecha: 2026-10-19 | Autora: Isabelita
+ *
+ * Enrutamiento principal con B-07 (Inicio unificado por rol con START_ROUTE_BY_ROLE).
+ */
+
 import { lazy, Suspense, type ReactNode } from "react";
 import { BrowserRouter, Link, Navigate, Outlet, Route, Routes, useLocation } from "react-router";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -11,6 +18,7 @@ import { InicioPage } from "./pages/InicioPage";
 import { ModuloNoDisponiblePage } from "./pages/ModuloNoDisponiblePage";
 import { IS_MOCK } from "./config";
 import { isModuleAvailable, type ModuleKey } from "./lib/availability";
+import { can, START_ROUTE_BY_ROLE, type Permission } from "./lib/permissions";
 
 // Cada pantalla se descarga al abrirla: el primer render no paga Recharts ni páginas que el rol no usa.
 const page = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, name: K) => lazy(() => load().then((m) => ({ default: m[name] })));
@@ -27,6 +35,7 @@ const OrdenDetailPage = page(() => import("./pages/OrdenDetailPage"), "OrdenDeta
 const TallerPage = page(() => import("./pages/TallerPage"), "TallerPage");
 const CobranzaPage = page(() => import("./pages/CobranzaPage"), "CobranzaPage");
 const CapturaPage = page(() => import("./pages/CapturaPage"), "CapturaPage");
+const FichaTecnicaPrint = page(() => import("./pages/FichaTecnicaPrint"), "FichaTecnicaPrint");
 
 function PageFallback() {
   return (
@@ -36,7 +45,6 @@ function PageFallback() {
     </div>
   );
 }
-import { can, type Permission } from "./lib/permissions";
 
 function RequireSession() {
   const { person, ready, signedOut } = useAuth();
@@ -48,8 +56,8 @@ function RequireSession() {
 
 function RequirePermission({ permission, children }: { permission: Permission | Permission[]; children: ReactNode }) {
   const { person } = useAuth();
-  const list = Array.isArray(permission) ? permission : [permission];
-  if (!list.some((p) => can(person?.role, p))) {
+  const allowed = Array.isArray(permission) ? permission.some((p) => can(person?.role, p)) : can(person?.role, permission);
+  if (!allowed) {
     return (
       <div className="mx-auto max-w-md py-16">
         <EmptyState title="Tu rol no tiene acceso a esta sección">
@@ -65,15 +73,20 @@ function RequirePermission({ permission, children }: { permission: Permission | 
 }
 
 /**
- * Inicio por rol: quien opera ve sus pendientes; gerencia, que solo mira, ve los números;
- * el Jefe de taller no ve la parte comercial y entra directo al taller.
+ * B-07 Inicio por rol: un solo mapa rol -> ruta de inicio.
+ * - vendedor -> /pedidos
+ * - jefe_taller -> /taller
+ * - administracion -> /
+ * - gerencia -> /resultado
+ * - diseno -> /taller
  */
 function Home() {
   const { person } = useAuth();
-  if (person?.role === "jefe_taller") return <Navigate to="/taller" replace />;
-  // D-014: en modo api la cartera del vendedor aún no está definida; solo ve su sesión.
-  if (!IS_MOCK && person?.role === "vendedor") return <Navigate to="/sesion" replace />;
-  if (person?.role === "gerencia") return <DashboardPage />;
+  if (!person) return null;
+  const target = START_ROUTE_BY_ROLE[person.role] ?? "/";
+  if (target !== "/") {
+    return <Navigate to={target} replace />;
+  }
   return <PendientesPage />;
 }
 
@@ -107,13 +120,14 @@ export function AppRoutes() {
                   <Route path="resumen" element={gate("resumen", "ver_comercial", <DashboardPage />)} />
                   <Route path="pedidos" element={gate("pedidos", "ver_comercial", <PedidosPage />)} />
                   <Route path="pedidos/:ref" element={gate("pedidos", "ver_comercial", <OrdenDetailPage />)} />
+                  <Route path="pedidos/:ref/ficha-print" element={<FichaTecnicaPrint />} />
                   <Route path="clientes" element={gate("clientes", "ver_comercial", <ClientesPage />)} />
                   <Route path="clientes/:id" element={gate("clientes", "ver_comercial", <ClienteDetailPage />)} />
                   <Route path="clientes/:id/estado-cuenta" element={gate("clientes", "ver_estado_cuenta", <EstadoCuentaPage />)} />
                   <Route path="conciliacion" element={gate("conciliacion", ["verificar", "ver_pagos"], <ConciliacionPage />)} />
                   <Route path="conciliacion/:id" element={gate("conciliacion", ["verificar", "ver_pagos"], <ConciliacionPage />)} />
                   <Route path="cobranza" element={gate("cobranza", "ver_cobranza", <CobranzaPage />)} />
-                  <Route path="taller" element={gate("taller", ["registrar_despacho", "ver_resultado"], <TallerPage />)} />
+                  <Route path="taller" element={gate("taller", ["registrar_despacho", "ver_resultado", "diseno_arte"], <TallerPage />)} />
                   <Route path="captura" element={gate("captura", "captura", <CapturaPage />)} />
                   <Route path="resultado" element={gate("resultado", "ver_resultado", <ResultadoPage />)} />
                   <Route path="perfil" element={moduleOnly("perfil", <PerfilPage />)} />

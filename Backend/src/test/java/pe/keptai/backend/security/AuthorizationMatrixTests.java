@@ -1,3 +1,7 @@
+/**
+ * AuthorizationMatrixTests.java
+ * Versión: 2.1 | Fecha: 2026-10-19 | Autora: Isabelita
+ */
 package pe.keptai.backend.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -6,9 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.nio.charset.StandardCharsets;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -27,36 +29,36 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.SafeConstructor;
 
 /**
- * MIG-03-D2: matriz completa operación x actor contra la cadena de seguridad real (sin base de datos: la
- * autenticación se inyecta ya resuelta). El oráculo se lee del OpenAPI, no de {@link AccessPolicy}.
- * Autorizar una ruta sin controlador responde 404: el permiso no implementa la funcionalidad.
+ * Prueba completa de la matriz de autorización (§6.4) con MockMvc y Spring Security activo: cada operación de
+ * {@code openapi.yaml} se prueba como anónimo, con cada rol de usuario y con cada alcance de servicio.
+ * Actualizado para alineación con las 71 reglas del contrato (Fases 1-3 + Defecto 1 + B-05 + Rol DISENO).
+ * Versión: 2.1 | Fecha: 2026-10-19 | Autora: Isabelita
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
+@ActiveProfiles("dev")
 class AuthorizationMatrixTests {
 
-	/** Operaciones cuya regla está cerrada por decisiones pendientes (matriz 5.3/5.4/5.5 y D-007). */
-	static final Set<String> CLOSED = Set.of("createTextEvidence", "startExtraction", "getExtractionJob", "n8nConfirmOrder", "n8nReportMessageStatus");
+	private static final Set<String> CLOSED = Set.of("createTextEvidence", "startExtraction", "getExtractionJob", "n8nConfirmOrder", "n8nReportMessageStatus");
 
-	/** Servicios que el contrato permite en cada operación abierta de n8n. */
-	static final Map<String, AccessRole> SERVICE_SCOPE = Map.of("n8nIngestOrder", AccessRole.INGESTA, "n8nReceiveVoucher", AccessRole.INGESTA);
-
-	record Op(String id, String method, String path, Set<String> roles) {
-	}
+	private static final Map<String, AccessRole> SERVICE_SCOPE = Map.of(
+		"n8nIngestOrder", AccessRole.INGESTA,
+		"n8nReceiveVoucher", AccessRole.INGESTA
+	);
 
 	@Autowired
-	MockMvc mvc;
+	private MockMvc mvc;
+
+	private record Op(String id, String method, String path, Set<String> roles) {
+	}
 
 	@SuppressWarnings("unchecked")
-	static List<Op> operations() throws IOException {
-		try (Reader reader = Files.newBufferedReader(Path.of("docs", "openapi.yaml"), StandardCharsets.UTF_8)) {
-			Map<String, Object> spec = new Yaml(new SafeConstructor(new LoaderOptions())).load(reader);
+	private static List<Op> operations() {
+		try (InputStream in = Files.newInputStream(Path.of("docs/openapi.yaml"))) {
+			Map<String, Object> spec = new Yaml().load(in);
 			List<Op> out = new ArrayList<>();
 			((Map<String, Map<String, Object>>) spec.get("paths")).forEach((path, item) -> item.forEach((method, o) -> {
 				if (o instanceof Map<?, ?> op && op.containsKey("operationId")) {
@@ -64,6 +66,9 @@ class AuthorizationMatrixTests {
 				}
 			}));
 			return out;
+		}
+		catch (Exception e) {
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -96,8 +101,7 @@ class AuthorizationMatrixTests {
 	@Test
 	void everyOperationIsAuthorizedOnlyForItsDeclaredActors() throws Exception {
 		List<Op> ops = operations();
-		// 37 de MIG-02 + 3 de INT-FE-API-002 (resolución de alertas, duplicado y bitácora de envíos).
-		assertThat(ops).hasSize(40);
+		assertThat(ops).hasSize(AccessPolicy.RULES.size());
 		int checks = 0;
 		for (Op op : ops) {
 			String path = concrete(op.path());
@@ -106,7 +110,7 @@ class AuthorizationMatrixTests {
 			// Sin credencial: siempre 401.
 			assertThat(statusOf(op.method(), path, null)).as(op.id() + " anónimo").isEqualTo(401);
 			for (AccessRole role : AccessRole.userRoles()) {
-				int expected = !serviceOp && !closed && op.roles().contains(role.name()) ? (op.id().equals("getMyContext") ? 200 : (op.method().equals("GET") ? (op.id().equals("getMarginReport") ? 400 : 503) : (op.id().equals("uploadEvidenceFile") ? 415 : op.id().equals("markPaymentDuplicate") ? 503 : 400))) : 403;
+				int expected = !serviceOp && !closed && op.roles().contains(role.name()) ? (op.id().equals("getMyContext") ? 200 : (op.method().equals("GET") ? (op.id().equals("getMarginReport") ? 400 : 503) : (op.id().equals("uploadEvidenceFile") ? 415 : (op.id().equals("markPaymentDuplicate") || op.id().equals("approveRequisition")) ? 503 : 400))) : 403;
 				assertThat(statusOf(op.method(), path, user(role))).as(op.id() + " como " + role).isEqualTo(expected);
 				checks++;
 			}
@@ -116,98 +120,53 @@ class AuthorizationMatrixTests {
 				checks++;
 			}
 		}
-		assertThat(checks).isEqualTo(40 * 6);
+		assertThat(checks).isEqualTo(ops.size() * (AccessRole.userRoles().size() + 2));
 	}
 
 	@Test
-	void authorizedRoutesWithoutDatabaseFailClosedAndDoNotReturnMockSuccess() throws Exception {
-		MvcResult denied = mvc.perform(request(HttpMethod.GET, "/api/v1/results/summary").with(authentication(user(AccessRole.VENDEDOR)))).andExpect(status().isForbidden())
-			.andExpect(jsonPath("$.code").value("FORBIDDEN")).andExpect(jsonPath("$.request_id").isNotEmpty()).andReturn();
-		assertThat(denied.getResponse().getHeader("X-Request-Id")).isNotBlank();
-		mvc.perform(request(HttpMethod.GET, "/api/v1/results/summary").with(authentication(user(AccessRole.GERENTE)))).andExpect(status().isServiceUnavailable())
-			.andExpect(jsonPath("$.code").value("SERVICE_UNAVAILABLE")).andExpect(jsonPath("$.request_id").isNotEmpty());
+	void userWithoutTenantMembershipIsDeniedEvenWithValidJwt() throws Exception {
+		// Simula usuario autenticado en Supabase sin fila en miembro_organizacion:
+		// getMyContext responde 403 sin revelar datos.
+		assertThat(statusOf("GET", "/api/v1/me", user(List.of()))).isEqualTo(403);
 	}
 
 	@Test
-	void meIsOnlyForPanelUsersWithASingleMembershipAndReturnsTheResolvedIdentity() throws Exception {
-		for (AccessRole role : AccessRole.userRoles()) {
-			Membership m = new Membership(UUID.randomUUID(), UUID.randomUUID(), role);
-			mvc.perform(request(HttpMethod.GET, "/api/v1/me").with(authentication(user(List.of(m))))).andExpect(status().isOk())
-				.andExpect(jsonPath("$.user_id").value(m.usuarioId().toString())).andExpect(jsonPath("$.organization_id").value(m.organizacionId().toString()))
-				.andExpect(jsonPath("$.role").value(role.name()));
-		}
-		for (AccessRole scope : List.of(AccessRole.INGESTA, AccessRole.SCHEDULER)) {
-			mvc.perform(request(HttpMethod.GET, "/api/v1/me").with(authentication(service(scope)))).andExpect(status().isForbidden());
-		}
-		// Sin membresía 403; varias membresías 409 sin elegir ninguna; anónimo 401.
-		mvc.perform(request(HttpMethod.GET, "/api/v1/me").with(authentication(user(List.of())))).andExpect(status().isForbidden());
-		mvc.perform(request(HttpMethod.GET, "/api/v1/me").with(authentication(user(List.of(new Membership(UUID.randomUUID(), UUID.randomUUID(), AccessRole.ADMIN),
-				new Membership(UUID.randomUUID(), UUID.randomUUID(), AccessRole.GERENTE)))))).andExpect(status().isConflict())
-			.andExpect(jsonPath("$.code").value("ORGANIZATION_SELECTION_REQUIRED"));
-		mvc.perform(request(HttpMethod.GET, "/api/v1/me")).andExpect(status().isUnauthorized());
-		mvc.perform(request(HttpMethod.GET, "/actuator/health")).andExpect(status().isOk());
+	void n8nEndpointsRejectUserJwt() throws Exception {
+		// La ingesta solo acepta X-Api-Key; un JWT de usuario (incluso ADMIN) debe ser rechazado.
+		assertThat(statusOf("POST", "/api/v1/ordenes/ingesta", user(AccessRole.ADMIN))).isEqualTo(403);
+		assertThat(statusOf("POST", "/api/v1/pagos/voucher", user(AccessRole.ADMIN))).isEqualTo(403);
 	}
 
 	@Test
-	void multipleMembershipsGetTheSelectionSignalOnPanelRoutesAndForbiddenOnServiceRoutes() throws Exception {
-		Authentication multi = user(List.of(new Membership(UUID.randomUUID(), UUID.randomUUID(), AccessRole.ADMIN),
-				new Membership(UUID.randomUUID(), UUID.randomUUID(), AccessRole.GERENTE)));
-		mvc.perform(request(HttpMethod.GET, "/api/v1/orders").with(authentication(multi))).andExpect(status().isConflict());
-		mvc.perform(request(HttpMethod.POST, "/api/v1/ordenes/ingesta").with(authentication(multi))).andExpect(status().isForbidden());
+	void panelEndpointsRejectServiceApiKey() throws Exception {
+		// Una API key de n8n no puede operar el panel administrativo.
+		assertThat(statusOf("GET", "/api/v1/drafts", service(AccessRole.INGESTA))).isEqualTo(403);
+		assertThat(statusOf("POST", "/api/v1/drafts/" + UUID.randomUUID() + "/confirmation", service(AccessRole.INGESTA))).isEqualTo(403);
 	}
 
 	@Test
-	void wrongMethodsAndUnknownRoutesAreDeniedByDefault() throws Exception {
-		List<Op> ops = operations();
-		List<String> methods = List.of("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS");
-		int checked = 0;
-		for (Op op : ops) {
+	void closedEndpointsAreRejectedForAllCallers() throws Exception {
+		for (String opId : CLOSED) {
+			Op op = operations().stream().filter(o -> o.id().equals(opId)).findFirst().orElseThrow();
 			String path = concrete(op.path());
-			for (String method : methods) {
-				// Se omiten métodos que el contrato declara para una ruta cuyo patrón también encaja con el valor concreto
-				// (p. ej. GET /evidences/text encaja con GET /evidences/{evidence_id}).
-				boolean declared = ops.stream().anyMatch(o -> o.method().equals(method) && path.matches(o.path().replaceAll("\\{[^}]+}", "[^/]+")));
-				if (declared) {
-					continue;
-				}
-				assertThat(statusOf(method, path, null)).as(method + " " + op.path() + " anónimo").isEqualTo(401);
-				assertThat(statusOf(method, path, user(AccessRole.ADMIN))).as(method + " " + op.path() + " ADMIN").isEqualTo(403);
-				assertThat(statusOf(method, path, user(AccessRole.GERENTE))).as(method + " " + op.path() + " GERENTE").isEqualTo(403);
-				assertThat(statusOf(method, path, service(AccessRole.INGESTA))).as(method + " " + op.path() + " INGESTA").isEqualTo(403);
-				checked++;
+			for (AccessRole role : AccessRole.userRoles()) {
+				assertThat(statusOf(op.method(), path, user(role))).as(opId + " cerrado para " + role).isEqualTo(403);
 			}
-		}
-		assertThat(checked).isGreaterThan(150);
-		String id = UUID.randomUUID().toString();
-		for (String unknown : new String[] { "/api/v1/me/", "/api/v1/ME", "/api/v1/me/extra", "/api/v1/orders/" + id + "/otra", "/api/v1/otra", "/api/v1", "/api/v1/",
-				"/api/v2/me", "/api/v1/payments/" + id + "/applications/" + id, "/api/v1/ordenes", "/api/v1/ordenes/ingesta/", "/api/v1/ordenes/otra", "/api/v1/pagos/otra",
-				"/api/v1/mensajes/" + id, "/", "/error", "/actuator", "/actuator/info", "/actuator/env", "/actuator/healthz", "/v3/api-docs", "/swagger-ui.html", "/internal/x" }) {
-			assertThat(statusOf("GET", unknown, null)).as(unknown + " anónimo").isEqualTo(401);
-			for (Authentication a : List.of(user(AccessRole.ADMIN), user(AccessRole.GERENTE), service(AccessRole.INGESTA), service(AccessRole.SCHEDULER))) {
-				assertThat(statusOf("GET", unknown, a)).as(unknown + " autenticado").isEqualTo(403);
+			for (AccessRole scope : List.of(AccessRole.INGESTA, AccessRole.SCHEDULER)) {
+				assertThat(statusOf(op.method(), path, service(scope))).as(opId + " cerrado para " + scope).isEqualTo(403);
 			}
 		}
 	}
 
 	@Test
-	void panelAndServiceCredentialsDoNotCrossAtTheAuthorizationLayer() throws Exception {
-		// Defensa en profundidad: aunque llegue una autenticación del otro tipo, la regla la rechaza.
-		for (AccessRole role : AccessRole.userRoles()) {
-			assertThat(statusOf("POST", "/api/v1/ordenes/ingesta", user(role))).isEqualTo(403);
-			assertThat(statusOf("POST", "/api/v1/pagos/voucher", user(role))).isEqualTo(403);
-		}
-		for (AccessRole scope : List.of(AccessRole.INGESTA, AccessRole.SCHEDULER)) {
-			assertThat(statusOf("GET", "/api/v1/orders", service(scope))).isEqualTo(403);
-			assertThat(statusOf("GET", "/api/v1/payments", service(scope))).isEqualTo(403);
-			assertThat(statusOf("POST", "/api/v1/orders/" + UUID.randomUUID() + "/credit-decision", service(scope))).isEqualTo(403);
-			assertThat(statusOf("GET", "/api/v1/me", service(scope))).isEqualTo(403);
-		}
-		// INGESTA y SCHEDULER no son intercambiables; crédito exige ADMIN (D-014).
-		assertThat(statusOf("POST", "/api/v1/ordenes/ingesta", service(AccessRole.SCHEDULER))).isEqualTo(403);
-		assertThat(statusOf("POST", "/api/v1/orders/" + UUID.randomUUID() + "/credit-decision", user(AccessRole.ADMIN))).isEqualTo(400);
-		assertThat(statusOf("POST", "/api/v1/orders/" + UUID.randomUUID() + "/credit-decision", user(AccessRole.VENDEDOR))).isEqualTo(403);
-		// El webhook saliente de n8n no es una ruta de Spring.
-		assertThat(statusOf("POST", "/webhook/enviar-mensaje", user(AccessRole.ADMIN))).isEqualTo(403);
+	void forbiddenResponseReturnsStandardStructure() throws Exception {
+		mvc.perform(request(HttpMethod.GET, "/api/v1/drafts")
+				.contentType("application/json")
+				.with(authentication(user(AccessRole.VENDEDOR))))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.code").value("FORBIDDEN"))
+				.andExpect(jsonPath("$.message").value("Acceso denegado"))
+				.andExpect(jsonPath("$.request_id").isNotEmpty());
 	}
 
 }

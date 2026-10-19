@@ -110,7 +110,7 @@ class SecurityPropertiesTests {
 	@Test
 	void rolesMatchSqlActorsAndSeparateServicesFromUsers() {
 		assertThat(AccessRole.userRoles()).containsExactlyInAnyOrder(
-				AccessRole.VENDEDOR, AccessRole.ADMIN, AccessRole.GERENTE, AccessRole.JEFE_TALLER);
+				AccessRole.VENDEDOR, AccessRole.ADMIN, AccessRole.GERENTE, AccessRole.JEFE_TALLER, AccessRole.DISENO);
 		assertThat(AccessRole.INGESTA.isService()).isTrue();
 		assertThat(AccessRole.SCHEDULER.isService()).isTrue();
 	}

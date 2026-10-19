@@ -3,6 +3,9 @@ package pe.keptai.backend.contract;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
+ * Corpotex KeptAI - Enumeraciones del contrato
+ * Versión: v1.0 | Fecha: 2026-10-19 | Autora: Isabelita
+ *
  * Enumeraciones del contrato PROPUESTO (MIG-02). Cada constante fija su valor JSON de forma explicita con
  * {@code @JsonProperty}: el nombre Java no es el contrato. Valores iguales a los de {@code Backend/docs/openapi.yaml}
  * (una prueba compara ambos). Los estados son propuestas pendientes de acuerdo con Andres (PROP-DB-001).
@@ -24,7 +27,8 @@ public final class ContractEnums {
 		@JsonProperty("VENDEDOR") VENDEDOR,
 		@JsonProperty("ADMIN") ADMIN,
 		@JsonProperty("GERENTE") GERENTE,
-		@JsonProperty("JEFE_TALLER") JEFE_TALLER
+		@JsonProperty("JEFE_TALLER") JEFE_TALLER,
+		@JsonProperty("DISENO") DISENO
 	}
 
 	public enum EvidenceKind {

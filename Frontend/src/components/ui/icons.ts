@@ -82,3 +82,5 @@ export { Wallet } from "@phosphor-icons/react/dist/csr/Wallet";
 export { WarningCircle } from "@phosphor-icons/react/dist/csr/WarningCircle";
 export { X } from "@phosphor-icons/react/dist/csr/X";
 export { XCircle } from "@phosphor-icons/react/dist/csr/XCircle";
+export { Plus } from "@phosphor-icons/react/dist/csr/Plus";
+export { UserPlus } from "@phosphor-icons/react/dist/csr/UserPlus";

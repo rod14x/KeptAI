@@ -1,7 +1,12 @@
+/**
+ * Corpotex KeptAI - Página de Captura (Vouchers y Pedidos)
+ * Versión: v1.0 | Fecha: 2026-10-19 | Autora: Isabelita
+ */
 import { useState, type FormEvent } from "react";
 import { motion } from "motion/react";
 import { useNavigate, useSearchParams } from "react-router";
-import { Image, Receipt, UploadSimple, NotePencil } from "../components/ui/icons";
+import { Image, Receipt, UploadSimple, NotePencil, UserPlus, TShirt } from "../components/ui/icons";
+import { CustomerModal } from "../components/CustomerModal";
 import { capabilities, commands, getCaptureOptions } from "../api/client";
 import type { Brand } from "../api/model";
 import { useApi } from "../hooks/useApi";
@@ -13,7 +18,8 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { Segmented } from "../components/ui/Segmented";
 import { Card, DemoBadge } from "../components/ui/States";
 import { Button } from "../components/ui/Button";
-import { inputClass } from "../components/ui/Modal";
+import { Modal, inputClass } from "../components/ui/Modal";
+import { loadWorkshopInventory } from "../lib/tallerManufacturing";
 import { cx } from "../lib/format";
 
 // Respaldo de la entrada por WhatsApp (D-005): la extracción automática corre en n8n.
@@ -57,14 +63,8 @@ export function CapturaPage() {
       </motion.div>
       )}
       <Stagger key={tab}>{tab === "comprobante" ? <VoucherForm /> : <OrderForm />}</Stagger>
-      <details className="quiet-disclosure"><summary>Sobre el registro manual</summary><p className="mt-2 text-[13px] leading-relaxed text-muted">{capabilities.voucherNeedsFile ? "Sube la imagen del comprobante. La extracción propone datos que debes revisar antes de confirmar el pago." : "En esta demostración escribes los datos manualmente; no se ejecuta extracción de IA."} Un comprobante recibido no confirma el ingreso en banca.</p></details>
     </Stagger>
   );
-}
-
-function useBrands(): { brands: Brand[]; locked: boolean } {
-  const me = useMe();
-  return me.role === "vendedor" && me.brand ? { brands: [me.brand], locked: true } : { brands: ["corpotex", "unicrack"], locked: false };
 }
 
 function VoucherForm() {
@@ -110,21 +110,24 @@ function VoucherForm() {
       return;
     }
     toast(true, r.message);
-    // En la API el resultado es una evidencia en extracción, todavía no un pago: se vuelve a la cola.
-    navigate(needsFile ? "/conciliacion" : `/conciliacion/${r.id ?? ""}`);
+    navigate(`/conciliacion/${r.id ?? ""}`);
   };
 
   return (
     <Card className="p-5 sm:p-7">
       <form onSubmit={submit} noValidate className="flex flex-col gap-5">
         <h2 className="flex items-center gap-2 text-section font-bold">
-          <Receipt size={20} className="text-violet" /> Comprobante de pago
+          <Receipt size={20} className="text-violet" /> Comprobante
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          {!needsFile && (
-          <>
-          <Field id="v-brand" label="Marca">
-            <select id="v-brand" value={brand} disabled={locked} onChange={(e) => setBrand(e.target.value as Brand)} className={inputClass}>
+          <Field id="v-brand" label="Marca comercial">
+            <select
+              id="v-brand"
+              disabled={locked}
+              value={brand}
+              onChange={(e) => setBrand(e.target.value as Brand)}
+              className={cx(inputClass, locked && "cursor-not-allowed bg-panel opacity-80")}
+            >
               {brands.map((b) => (
                 <option key={b} value={b}>
                   {b === "corpotex" ? "Corpotex" : "Unicrack"}
@@ -132,37 +135,43 @@ function VoucherForm() {
               ))}
             </select>
           </Field>
-          <Field id="v-order" label="Orden (opcional)" hint="Si no la conoces, Administración la vincula en conciliación.">
-            <select id="v-order" value={orderId} onChange={(e) => setOrderId(e.target.value)} className={inputClass}>
-              <option value="">Sin orden por ahora</option>
-              {orders.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
+          <Field id="v-channel" label="Canal de pago">
+            <select id="v-channel" value={channel} onChange={(e) => setChannel(e.target.value)} className={inputClass}>
+              {CHANNELS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
                 </option>
               ))}
             </select>
           </Field>
-          <Field id="v-amount" label="Monto (S/)">
+          <Field id="v-amount" label="Monto pagado (S/)">
             <input id="v-amount" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" className={cx(inputClass, "tabular")} />
           </Field>
-          <Field id="v-ref" label="N.° de operación">
-            <input id="v-ref" value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Ej. 00927714" className={cx(inputClass, "tabular")} />
-          </Field>
-          <Field id="v-payer" label="Remitente">
-            <input id="v-payer" value={payer} onChange={(e) => setPayer(e.target.value)} placeholder="Nombre que figura en el voucher" className={inputClass} />
-          </Field>
-          <Field id="v-channel" label="Banco o billetera">
-            <select id="v-channel" value={channel} onChange={(e) => setChannel(e.target.value)} className={inputClass}>
-              {CHANNELS.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </Field>
-          <Field id="v-paid" label="Fecha y hora del pago">
-            <input id="v-paid" type="datetime-local" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} className={cx(inputClass, "tabular")} />
-          </Field>
-          </>
+          {capabilities.voucherNeedsFile ? null : (
+            <>
+              <Field id="v-ref" label="Nº de operación">
+                <input id="v-ref" value={ref} onChange={(e) => setRef(e.target.value)} placeholder="123456" className={cx(inputClass, "tabular")} />
+              </Field>
+              <Field id="v-payer" label="Titular / pagador">
+                <input id="v-payer" value={payer} onChange={(e) => setPayer(e.target.value)} placeholder="Nombre en el voucher" className={inputClass} />
+              </Field>
+              <Field id="v-paid" label="Fecha y hora del pago">
+                <input id="v-paid" type="datetime-local" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} className={cx(inputClass, "tabular")} />
+              </Field>
+            </>
           )}
+          <div className="sm:col-span-2">
+            <Field id="v-order" label="Pedido vinculado (opcional)" hint="Si no lo sabes, la IA buscará coincidencias en Conciliación.">
+              <select id="v-order" value={orderId} onChange={(e) => setOrderId(e.target.value)} className={inputClass}>
+                <option value="">(Sin asignar — conciliar después)</option>
+                {orders.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
           <Field
             id="v-file"
             label={needsFile ? "Imagen del voucher" : "Imagen del voucher (opcional)"}
@@ -188,6 +197,11 @@ function VoucherForm() {
           </Field>
         </div>
         {preview && <img src={preview} alt="Vista previa del voucher" className="max-h-64 w-fit rounded-2xl object-contain ring-1 ring-line" />}
+        <p className="text-xs text-muted">
+          {needsFile
+            ? "Al guardar se envía a la cola de extracción del backend. La IA propone los datos que revisarás en Conciliación."
+            : "En la demostración los datos se guardan directamente como comprobante pendiente de verificación bancaria."}
+        </p>
         {err && (
           <p role="alert" className="rounded-xl bg-bad-tint px-3.5 py-2.5 text-[13px] font-medium text-bad">
             {err}
@@ -201,14 +215,64 @@ function VoucherForm() {
   );
 }
 
+function StockConsultationModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const items = loadWorkshopInventory();
+  return (
+    <Modal open={open} onClose={onClose} title="Consulta de Existencias por Talla en Almacén">
+      <div className="flex flex-col gap-4">
+        <p className="text-xs text-muted">
+          Verifica las existencias reales por talla antes de definir plazos de entrega o acordar confección desde rollo.
+        </p>
+        <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1">
+          {items.map((it) => (
+            <div key={it.id} className="rounded-xl border border-line p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-ink">{it.nombre}</h4>
+                  <p className="text-[11px] text-muted">{it.categoria} · {it.tipo} ({it.codigo})</p>
+                </div>
+                <span className="rounded-md bg-panel px-2 py-0.5 text-xs font-bold text-violet-ink">
+                  Total: {it.stockActual} {it.unidad}
+                </span>
+              </div>
+              {it.detalleTallas && (
+                <div className="mt-2.5 grid grid-cols-4 sm:grid-cols-6 gap-1.5 text-center">
+                  {Object.entries(it.detalleTallas).map(([talla, cant]) => (
+                    <div key={talla} className="rounded-lg bg-panel p-1.5 border border-line-soft">
+                      <span className="block text-[10px] font-bold text-muted">{talla}</span>
+                      <span className={cx("block text-xs font-black tabular", cant > 0 ? "text-ok" : "text-faint")}>
+                        {cant}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end pt-2">
+          <Button variant="secondary" onClick={onClose}>Cerrar consulta</Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 function OrderForm() {
   const me = useMe();
   const toast = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const preselected = searchParams.get("clienteId") || "";
   const { brands } = useBrands();
   const customers = useApi(() => getCaptureOptions(brands[0]), [brands[0]]).data?.customers ?? [];
-  const [picked, setCustomerId] = useState("");
-  const customerId = picked || customers[0]?.id || "";
+  const [extraCustomers, setExtraCustomers] = useState<Array<{ id: string; name: string }>>([]);
+  const [picked, setCustomerId] = useState(preselected);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [stockModalOpen, setStockModalOpen] = useState(false);
+
+  const allCustomers = [...extraCustomers, ...customers.filter((c) => !extraCustomers.some((x) => x.id === c.id))];
+  const customerId = picked || preselected || allCustomers[0]?.id || "";
   const [description, setDescription] = useState("");
   const [qty, setQty] = useState("");
   const [total, setTotal] = useState("");
@@ -230,19 +294,46 @@ function OrderForm() {
   return (
     <Card className="p-5 sm:p-7">
       <form onSubmit={submit} noValidate className="flex flex-col gap-5">
-        <h2 className="flex items-center gap-2 text-section font-bold">
-          <NotePencil size={20} className="text-violet" /> Pedido
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-section font-bold">
+            <NotePencil size={20} className="text-violet" /> Pedido
+          </h2>
+          <button
+            type="button"
+            onClick={() => setStockModalOpen(true)}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-blue hover:underline bg-blue-tint/20 px-2.5 py-1 rounded-lg"
+          >
+            <TShirt size={14} weight="bold" /> Consultar stock por talla
+          </button>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="o-customer" label="Cliente">
-            <select id="o-customer" value={customerId} onChange={(e) => setCustomerId(e.target.value)} className={inputClass}>
-              {customers.map((c) => (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <label htmlFor="o-customer" className="text-[13px] font-semibold text-ink">
+                Cliente
+              </label>
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="inline-flex items-center gap-1 text-xs font-bold text-brand-blue hover:underline"
+              >
+                <UserPlus size={13} weight="bold" /> + Crear nuevo cliente
+              </button>
+            </div>
+            <select
+              id="o-customer"
+              value={customerId}
+              onChange={(e) => setCustomerId(e.target.value)}
+              className={inputClass}
+            >
+              <option value="">Selecciona un cliente...</option>
+              {allCustomers.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
             </select>
-          </Field>
+          </div>
           <Field id="o-entrega" label="Entrega solicitada">
             <input id="o-entrega" type="date" value={entrega} onChange={(e) => setEntrega(e.target.value)} className={cx(inputClass, "tabular")} />
           </Field>
@@ -268,6 +359,25 @@ function OrderForm() {
           Crear borrador
         </Button>
       </form>
+      <CustomerModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onCreated={(newC) => {
+          setExtraCustomers((prev) => [newC, ...prev]);
+          setCustomerId(newC.id);
+        }}
+        existingCustomers={allCustomers as any}
+      />
+      <StockConsultationModal
+        open={stockModalOpen}
+        onClose={() => setStockModalOpen(false)}
+      />
     </Card>
   );
+}
+
+function useBrands() {
+  const me = useMe();
+  const brands: Brand[] = me.brand ? [me.brand] : ["corpotex", "unicrack"];
+  return { brands, locked: Boolean(me.brand) };
 }

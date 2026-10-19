@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
 import { motion } from "motion/react";
 import {
   CheckCircle,
@@ -31,9 +32,9 @@ import { Modal, inputClass } from "../components/ui/Modal";
 import { cx, formatDate, formatMoney } from "../lib/format";
 import { addDays, daysBetween } from "../lib/dates";
 import {
+  advanceOrderStation,
   getOrCreateTechSheet,
   STATION_METADATA,
-  updateOrderStation,
   type ManufacturingStation,
   type ProductionTechSheet,
 } from "../lib/tallerManufacturing";
@@ -46,6 +47,7 @@ import { FichaTecnicaModal, TallerInventoryView } from "../components/organisms"
 
 export function TallerPage() {
   const { scope } = useScope();
+  const me = useMe();
   const toast = useToast();
   const { data, loading, error, reload } = useApi(() => getTaller(scope), [scope]);
   const [tab, setTab] = useState<"produccion" | "inventario">("produccion");
@@ -54,11 +56,43 @@ export function TallerPage() {
   const [inspectingSheet, setInspectingSheet] = useState<ProductionTechSheet | null>(null);
   const [, setRefreshKey] = useState(0);
 
-  const handleStationUpdate = (orderId: string, orderRef: string, newStation: ManufacturingStation) => {
-    const updated = updateOrderStation(orderId, newStation, `Cambio de estación desde planta`);
-    if (updated) {
+  // B-09: Suscripción Realtime a cambios en órdenes o etapas de manufactura
+  useEffect(() => {
+    let sub: any = null;
+    let mounted = true;
+    supabase()
+      .then((client) => {
+        if (!mounted) return;
+        sub = client
+          .channel("taller-ordenes-realtime")
+          .on("postgres_changes", { event: "*", schema: "keptai", table: "orden" }, () => {
+            reload();
+          })
+          .on("postgres_changes", { event: "*", schema: "keptai", table: "orden_etapa" }, () => {
+            reload();
+          })
+          .subscribe();
+      })
+      .catch(() => {
+        // En modo mock o sin Supabase configurado, opera normalmente
+      });
+
+    return () => {
+      mounted = false;
+      if (sub) {
+        supabase().then((client) => client.removeChannel(sub)).catch(() => {});
+      }
+    };
+  }, [reload]);
+
+  const handleStationUpdate = async (orderId: string, orderRef: string, newStation: ManufacturingStation) => {
+    const res = await advanceOrderStation(orderId, newStation, `Cambio de estación desde planta`, me);
+    if (res.ok) {
       setRefreshKey((k) => k + 1);
       toast(true, `${orderRef} transferido a: ${STATION_METADATA[newStation].shortLabel}`);
+      reload();
+    } else {
+      toast(false, res.message);
     }
   };
 
@@ -289,7 +323,9 @@ function TallerRow({
   const me = useMe();
   const daysLeft = o.entregaSolicitada ? daysBetween(cutDate, o.entregaSolicitada) : null;
   const sheet = getOrCreateTechSheet(o);
-  const currentMeta = STATION_METADATA[sheet.currentStation];
+  const currentMeta = STATION_METADATA[sheet.currentStation] ?? STATION_METADATA.corte;
+  const isReadOnly = me.role === "gerencia";
+  const canMoveStation = !isReadOnly && (can(me.role, "registrar_despacho") || me.role === "administracion" || me.role === "jefe_taller");
 
   return (
     <div className="py-5">
@@ -408,12 +444,14 @@ function TallerRow({
               <button
                 key={st.id}
                 type="button"
-                onClick={() => onStationChange(st.id)}
+                disabled={!canMoveStation}
+                onClick={() => canMoveStation && onStationChange(st.id)}
                 className={cx(
                   "flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-bold transition-all",
                   sheet.currentStation === st.id
                     ? "bg-brand-blue text-white shadow-xs"
-                    : "bg-card text-muted hover:text-ink hover:bg-white"
+                    : "bg-card text-muted hover:text-ink hover:bg-white",
+                  !canMoveStation && "cursor-not-allowed opacity-50 hover:bg-card hover:text-muted"
                 )}
               >
                 {st.icon}

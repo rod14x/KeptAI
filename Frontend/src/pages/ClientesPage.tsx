@@ -4,14 +4,17 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { Segmented } from "../components/ui/Segmented";
 import { Meter } from "../components/ui/Meter";
 import { useMemo, useState } from "react";
-import { CaretRight, HandCoins, Kanban, List, MagnifyingGlass, WarningCircle } from "../components/ui/icons";
+import { Link } from "react-router";
+import { CaretRight, Kanban, List, MagnifyingGlass, Plus, WarningCircle } from "../components/ui/icons";
+import { Button } from "../components/ui/Button";
+import { CustomerModal } from "../components/CustomerModal";
 import { getCustomers, getOrders, type CustomerRow, type OrderRow } from "../api/client";
 import type { CreditStatus } from "../api/model";
 import { useApi } from "../hooks/useApi";
 import { SCOPE_LABEL, useScope } from "../context/ScopeContext";
 import { Card, DemoBadge, EmptyState, ErrorState, Money, Skeleton } from "../components/ui/States";
 import { IS_MOCK } from "../config";
-import { Chip, CreditChip } from "../components/ui/Chip";
+import { CreditChip } from "../components/ui/Chip";
 import { Avatar } from "../components/ui/Avatar";
 import { cx, formatDate, formatMoney } from "../lib/format";
 import { checkDeliveryOverdue, type DeliveryAlert } from "../lib/orderAlerts";
@@ -47,6 +50,7 @@ export function ClientesPage() {
   const [view, setView] = useState<ViewMode>("kanban");
   const [filter, setFilter] = useState<Filter>("todos");
   const [q, setQ] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
 
   const customers = data?.customers ?? [];
   const orders = data?.orders ?? [];
@@ -91,6 +95,14 @@ export function ClientesPage() {
         subtitle={<>Tablero Kanban de clientes, crédito y alerta de fechas de entrega. Vista {SCOPE_LABEL[scope]}.</>}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              icon={<Plus size={15} weight="bold" />}
+              onClick={() => setCreateOpen(true)}
+            >
+              + Nuevo cliente
+            </Button>
             <Segmented
               label="Modo de vista"
               value={view}
@@ -226,6 +238,12 @@ export function ClientesPage() {
           </Card>
         </Stagger>
       )}
+      <CustomerModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => reload()}
+        existingCustomers={customers}
+      />
     </Stagger>
   );
 }
@@ -316,8 +334,15 @@ function KanbanCustomerCard({ r, alert }: { r: CustomerRow; alert?: DeliveryAler
         )}
 
         <div className="flex items-center justify-between border-t border-line/60 pt-2 text-[11px] text-muted">
-          <span>{r.pendingOrders > 0 ? `${r.pendingOrders} por confirmar` : "Sin pedidos pendientes"}</span>
-          <CaretRight size={14} className="text-faint" />
+          <span>{r.pendingOrders > 0 ? `${r.pendingOrders} por confirmar` : "Sin pedidos"}</span>
+          <Link
+            to={`/captura?tipo=orden&clienteId=${r.id}`}
+            title="Nuevo pedido para este cliente"
+            className="font-bold text-brand-blue hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            + Nuevo pedido
+          </Link>
         </div>
       </MotionLink>
     </motion.div>
@@ -400,11 +425,13 @@ function CustomerRowView({ r, alert }: { r: CustomerRow; alert?: DeliveryAlert &
 
         <span className="col-span-2 flex flex-wrap items-center gap-1.5 xl:col-span-1 xl:flex-col xl:items-start">
           <CreditChip status={r.status} />
-          {r.pendingOrders > 0 && (
-            <Chip tone="violet" icon={<HandCoins size={14} weight="bold" />}>
-              {r.pendingOrders} por confirmar
-            </Chip>
-          )}
+          <Link
+            to={`/captura?tipo=orden&clienteId=${r.id}`}
+            className="text-xs font-bold text-brand-blue hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            + Nuevo pedido
+          </Link>
         </span>
         <CaretRight size={16} weight="bold" className="hidden text-faint xl:block" />
       </MotionLink>

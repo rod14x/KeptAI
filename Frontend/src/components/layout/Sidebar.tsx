@@ -1,8 +1,18 @@
+/**
+ * Sidebar.tsx
+ * Versión: 2.0 | Fecha: 2026-10-19 | Autora: Isabelita
+ *
+ * Menú lateral unificado por rol:
+ * - Paso 0: Se quita /taller del menú de vendedora (la consulta de stock se realiza dentro del armado del pedido).
+ * - B-07: Vendedora inicia en /pedidos; Taller reservado a operaciones de planta y administración.
+ * - B-06: Incorporación del rol diseno.
+ */
+
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router";
 import { motion } from "motion/react";
 import { spring } from "../motion/primitives";
-import { ArrowCounterClockwise, Bell, ChartPieSlice, Kanban, Receipt, SquaresFour, Tray, UsersThree } from "../ui/icons";
+import { ArrowCounterClockwise, Bell, ChartPieSlice, Factory, Kanban, Receipt, SquaresFour, Tray, UploadSimple, UsersThree } from "../ui/icons";
 import type { Role } from "../../api/model";
 import { Logo } from "./Logo";
 import { useAuth } from "../../context/AuthContext";
@@ -13,7 +23,7 @@ import { cx } from "../../lib/format";
 import { ROLE_LABEL } from "../../lib/permissions";
 import { IS_MOCK } from "../../config";
 
-type NavItem = { to: string; label: string; icon: typeof SquaresFour; end: boolean; module: import("../../lib/availability").ModuleKey };
+export type NavItem = { to: string; label: string; icon: typeof SquaresFour; end: boolean; module: import("../../lib/availability").ModuleKey };
 
 const PENDIENTES: NavItem = { to: "/", label: "Pendientes", icon: Tray, end: true, module: "inicio" };
 const INICIO: NavItem = { to: "/", label: "Inicio", icon: SquaresFour, end: true, module: "inicio" };
@@ -22,23 +32,29 @@ const CLIENTES: NavItem = { to: "/clientes", label: "Clientes", icon: UsersThree
 const PAGOS: NavItem = { to: "/conciliacion", label: "Pagos", icon: Receipt, end: false, module: "conciliacion" };
 const COBRANZA: NavItem = { to: "/cobranza", label: "Cobranza", icon: Bell, end: false, module: "cobranza" };
 const RESULTADO: NavItem = { to: "/resultado", label: "Resultado", icon: ChartPieSlice, end: false, module: "resultado" };
+const TALLER: NavItem = { to: "/taller", label: "Taller", icon: Factory, end: false, module: "taller" };
+const CAPTURA: NavItem = { to: "/captura", label: "Carga manual", icon: UploadSimple, end: false, module: "captura" };
 
 /**
- * Menú corto por rol (ley de Hick): solo lo que cada rol usa a diario, máximo cuatro opciones.
- * Las demás rutas siguen existiendo y se abren desde Pendientes o desde un botón dentro de la pantalla.
- * El Jefe de taller tiene una sola pantalla: sin menú.
+ * Menú unificado por rol (Paso 0 & B-07):
+ * - vendedor: [PENDIENTES, PEDIDOS, CLIENTES, CAPTURA] (sin /taller; stock consultado en pedido)
+ * - administracion: [PENDIENTES, PAGOS, COBRANZA, PEDIDOS, TALLER, CAPTURA]
+ * - gerencia: [INICIO, RESULTADO, PEDIDOS, CLIENTES, TALLER]
+ * - jefe_taller: [TALLER]
+ * - diseno: [TALLER]
  */
 export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
-  vendedor: [PENDIENTES, PEDIDOS, CLIENTES],
-  administracion: [PENDIENTES, PAGOS, COBRANZA, PEDIDOS],
-  gerencia: [INICIO, RESULTADO, PEDIDOS, CLIENTES],
-  jefe_taller: [],
+  vendedor: [PENDIENTES, PEDIDOS, CLIENTES, CAPTURA],
+  administracion: [PENDIENTES, PAGOS, COBRANZA, PEDIDOS, TALLER, CAPTURA],
+  gerencia: [INICIO, RESULTADO, PEDIDOS, CLIENTES, TALLER],
+  jefe_taller: [TALLER],
+  diseno: [TALLER],
 };
 
 const EXTRA_LABELS: Array<[string, string]> = [
   ["/perfil", "Perfil"],
   ["/taller", "Taller"],
-  ["/captura", "Subir comprobante"],
+  ["/captura", "Carga manual"],
   ["/resumen", "Resumen"],
   ["/conciliacion", "Pagos"],
   ["/cobranza", "Cobranza"],
@@ -57,16 +73,15 @@ export function sectionLabel(pathname: string, role: Role | undefined) {
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { person } = useAuth();
   const toast = useToast();
-  // D-014: en modo api el vendedor no tiene módulos de cartera todavía.
-  const items = person && (IS_MOCK || person.role !== "vendedor") ? NAV_BY_ROLE[person.role] : [];
+  const items = person ? NAV_BY_ROLE[person.role] : [];
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
-  // Bugfix: Ajuste de threshold y rootMargin del IntersectionObserver para evitar
+  // Ajuste de threshold y rootMargin del IntersectionObserver para evitar
   // que "Pedidos" o cualquier otra sección dispare un estado activo falso al hacer scroll vertical.
   useEffect(() => {
     if (typeof window === "undefined" || !("IntersectionObserver" in window)) return;
 
-    const sectionIds = ["pedidos", "clientes", "conciliacion", "cobranza", "resultado"];
+    const sectionIds = ["pedidos", "clientes", "conciliacion", "cobranza", "resultado", "taller"];
     const elements = sectionIds
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => Boolean(el));
@@ -79,7 +94,6 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          // Exige 60% de presencia en la ventana de lectura efectiva para evitar falsos positivos
           if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
             setActiveSection(entry.target.id);
           }

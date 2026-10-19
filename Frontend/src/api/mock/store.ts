@@ -1,4 +1,5 @@
-import { PLAZO_MAX, PLAZO_MIN, type AuditEvent, type Evidence, type FieldKey, type Order, type OutgoingMessage, type Person, type Settings } from "../model";
+import { PLAZO_MAX, PLAZO_MIN, type AuditEvent, type Brand, type Customer, type Evidence, type FieldKey, type Order, type OutgoingMessage, type Person, type Settings } from "../model";
+import type { CustomerInput, ContactInput } from "../dto";
 import { DemoStateSchema, type DemoState } from "./state";
 import { createSeed } from "./seed";
 import { bump } from "../events";
@@ -447,6 +448,129 @@ export const actions = {
     };
     commit({ ...state, orders: [...state.orders, o], audit: [...state.audit, event("orden_ingresada", actor.name, "Orden cargada a mano", { brand: c.brand, orderId: id, customerId: c.id, amountCents: o.saleCents })] });
     return { ok: true, message: `${id} creada como borrador. El vendedor la confirma y define la condición de pago.`, id };
+  },
+
+  createCustomer(
+    input: CustomerInput,
+    actor: Person,
+  ): ActionResult & { id?: string; customer?: any } {
+    const brand: Brand = input.brand ?? (actor.brand ?? "corpotex");
+    const id = nextId("CUS-", state.customers.map((c) => c.id));
+    const tipo = input.tipoPersona === "COLEGIO" ? "colegio" : input.tipoPersona === "EMPRESA" ? "empresa" : "persona";
+    const newCust: Customer = {
+      id,
+      name: input.razonSocial.trim(),
+      brand,
+      tipo,
+      rucDni: input.rucDni.trim() || null,
+      sellerId: actor.id,
+      contactoWhatsapp: input.telefonoPrincipal.trim(),
+      since: state.cutDate,
+      creditLimitCents: input.limiteCreditoCents ?? 0,
+    };
+    commit({
+      ...state,
+      customers: [...state.customers, newCust],
+      audit: [
+        ...state.audit,
+        event("configuracion", actor.name, `Alta de cliente ${newCust.name} (${input.tipoPersona}) con RUC/DNI ${input.rucDni}`, { customerId: id }),
+      ],
+    });
+    return { ok: true, message: `Cliente ${newCust.name} creado exitosamente.`, id, customer: newCust };
+  },
+
+  createContact(
+    customerId: string,
+    input: ContactInput,
+    _actor: Person,
+  ): ActionResult {
+    const c = state.customers.find((x) => x.id === customerId);
+    if (!c) return fail("Cliente no encontrado.");
+    return { ok: true, message: `Contacto ${input.nombre} registrado exitosamente para ${c.name}.` };
+  },
+
+  updateCustomer(id: string, input: any, actor: Person): ActionResult {
+    const c = state.customers.find((x) => x.id === id);
+    if (!c) return fail("Cliente no encontrado.");
+
+    if (actor.role === "vendedor") {
+      if (input.razonSocial && input.razonSocial !== c.name) return fail("Solo Administración puede modificar la Razón Social.");
+      if (input.rucDni && input.rucDni !== c.rucDni) return fail("Solo Administración puede modificar el RUC o DNI.");
+      if (input.limiteCreditoCents !== undefined && input.limiteCreditoCents !== c.creditLimitCents) return fail("Solo Administración puede modificar el límite de crédito.");
+    }
+
+    const hasInvoices = state.orders.some((o) => o.customerId === id);
+    if (hasInvoices && input.rucDni && input.rucDni !== c.rucDni) {
+      return fail("RUC_HAS_INVOICES_MERGE_REQUIRED: El cliente ya tiene órdenes/comprobantes. No se puede modificar su RUC. Debe solicitar una fusión de duplicados.");
+    }
+
+    const updated: any = {
+      ...c,
+      name: input.razonSocial ?? c.name,
+      rucDni: input.rucDni !== undefined ? input.rucDni : c.rucDni,
+      contactoWhatsapp: input.telefonoPrincipal ?? c.contactoWhatsapp,
+      emailContacto: input.emailContacto ?? (c as any).emailContacto,
+      direccion: input.direccion ?? (c as any).direccion,
+      creditLimitCents: input.limiteCreditoCents ?? c.creditLimitCents,
+    };
+
+    commit({
+      ...state,
+      customers: state.customers.map((x) => (x.id === id ? updated : x)),
+      audit: [
+        ...state.audit,
+        event("configuracion", actor.name, `Actualización de cliente ${c.name}: ${input.motivo || "edición de datos"}`, { customerId: id }),
+      ],
+    });
+    return done(`Cliente ${updated.name} actualizado exitosamente.`);
+  },
+
+  reassignPortfolio(id: string, nuevoVendedorId: string, motivo: string | undefined, actor: Person): ActionResult {
+    if (actor.role !== "administracion" && actor.role !== "gerencia") {
+      return fail("Solo Administración o Gerencia puede reasignar cartera de clientes.");
+    }
+    const c = state.customers.find((x) => x.id === id);
+    if (!c) return fail("Cliente no encontrado.");
+    const seller = state.people.find((p) => p.id === nuevoVendedorId);
+    const sellerName = seller?.name ?? nuevoVendedorId;
+
+    const updated: any = {
+      ...c,
+      sellerId: nuevoVendedorId,
+      assignedSellerId: nuevoVendedorId,
+      assignedSellerName: sellerName,
+    };
+    commit({
+      ...state,
+      customers: state.customers.map((x) => (x.id === id ? updated : x)),
+      audit: [
+        ...state.audit,
+        event("configuracion", actor.name, `Reasignación de cartera de ${c.name} a ${sellerName}: ${motivo || "sin motivo"}`, { customerId: id }),
+      ],
+    });
+    return done(`Cartera de ${c.name} reasignada a ${sellerName}.`);
+  },
+
+  mergeCustomers(id: string, targetCustomerId: string, motivo: string | undefined, actor: Person): ActionResult {
+    if (actor.role !== "administracion" && actor.role !== "gerencia") {
+      return fail("Solo Administración puede fusionar duplicados.");
+    }
+    const source = state.customers.find((x) => x.id === id);
+    const target = state.customers.find((x) => x.id === targetCustomerId);
+    if (!source || !target) return fail("Cliente origen o destino no encontrado.");
+
+    const updatedOrders = state.orders.map((o) => (o.customerId === id ? { ...o, customerId: targetCustomerId } : o));
+    const updatedSource: any = { ...source, activo: false, fusionadoConId: targetCustomerId };
+    commit({
+      ...state,
+      orders: updatedOrders,
+      customers: state.customers.map((x) => (x.id === id ? updatedSource : x)),
+      audit: [
+        ...state.audit,
+        event("configuracion", actor.name, `Fusión de cliente ${source.name} en ${target.name}: ${motivo || "duplicado"}`, { customerId: id }),
+      ],
+    });
+    return done(`Cliente ${source.name} fusionado con ${target.name}.`);
   },
 
   /* ---------- Configuración ---------- */

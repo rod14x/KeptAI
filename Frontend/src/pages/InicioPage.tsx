@@ -2,16 +2,16 @@ import { Link } from "react-router";
 import { Button } from "../components/ui/Button";
 import { useAuth } from "../context/AuthContext";
 import { ROLE_LABEL } from "../lib/permissions";
-import { NAV } from "../components/layout/nav";
+import { NAV_BY_ROLE } from "../components/layout/Sidebar";
 import { isModuleAvailable, MODULE_LABEL } from "../lib/availability";
 
 // "Mi sesión" del modo api (/sesion; antes inicio de AUTH-FE-03). Usa SOLO la identidad que el backend resolvió en
 // GET /api/v1/me (user_id, organization_id, role) y el correo de la sesión de Supabase Auth, y la disponibilidad de
-// cada módulo. No consulta datos de negocio.
+// cada módulo según la fuente única de navegación por rol.
 export function InicioPage() {
   const { identity, person } = useAuth();
   if (!identity || !person) return null;
-  const modules = NAV.filter((n) => n.module !== "inicio" && n.show?.(person.role) !== false);
+  const modules = (NAV_BY_ROLE[person.role] ?? []).filter((n) => n.module !== "inicio");
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6" data-testid="inicio-identidad">
@@ -20,7 +20,7 @@ export function InicioPage() {
         <p className="mt-1 text-[15px] text-muted">Tu identidad la resuelve el servidor con tu sesión de Supabase Auth (GET /api/v1/me).</p>
         {person.role === "vendedor" && (
           <p className="mt-3 rounded-xl bg-panel px-4 py-3 text-[13px] text-ink-soft ring-1 ring-line">
-            La cartera del vendedor está pendiente de definir (D-014): en esta etapa Administración revisa los pedidos y decide el crédito.
+            La cartera del vendedor está pendiente de definir (D-014): en esta etapa Administración autoriza el crédito comercial.
           </p>
         )}
       </header>

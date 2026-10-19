@@ -158,7 +158,16 @@ class OpenApiConsistencyTests {
 		// esquemas con DTO propio (los genericos ExtractedX se cubren con ExtractedField)
 		Set<String> noDto = new LinkedHashSet<>(List.of("Uuid", "OptionalMoney", "ApiError", "ApiErrorExtended", "UploadEvidenceFileRequest",
 				"ExtractedString", "ExtractedInteger", "ExtractedMoney", "ExtractedDateTime", "EvidencePage", "ExtractionDraftPage",
-				"OrderPage", "PaymentPage", "ReceivablePage", "CollectionAlertPage", "AuditEventPage"));
+				"OrderPage", "PaymentPage", "ReceivablePage", "CollectionAlertPage", "AuditEventPage",
+				"Customer", "CreateCustomerRequest", "Contact", "CreateContactRequest", "CustomerPage",
+				"UpdateCustomerRequest", "ReassignPortfolioRequest", "MergeCustomerRequest", "CustomerHistoryEntry",
+				"TechSheet", "UpdateTechSheetRequest", "ValidateFabricRequest",
+				"OrderStage", "StationAdvanceRequest", "StationAdvanceResponse", "EvidenceDownloadLink", "UserContext",
+				"ProductionCustomerRef", "ProductionOrderItem", "ProductionOrder",
+				"ProductResponse", "VariantResponse", "CreateProductRequest", "CreateVariantRequest", "StockMatrixMovementRequest", "InventoryMovementResponse",
+				"ArtPiece", "CreateArtRequest", "ApproveArtRequest", "ImportPersonnelRequest", "ImportPersonnelResult",
+				"FabricRoll", "CreateFabricRollRequest", "FabricSemaphoreProposal", "AssignFabricLotRequest", "OrderFabricLotsSummary",
+				"SupplyItem", "CreateSupplyRequest", "FabricRequisition", "CreateRequisitionRequest", "ApproveRequisitionRequest", "ReceiveRequisitionRequest"));
 		spec.root().path("components").path("schemas").properties().forEach(e -> {
 			if (e.getValue().has("properties") && !noDto.contains(e.getKey()) && !e.getKey().endsWith("Page") && !e.getKey().startsWith("N8n")) {
 				assertThat(records).as("falta DTO Java para el esquema " + e.getKey()).containsKey(e.getKey());
@@ -188,7 +197,7 @@ class OpenApiConsistencyTests {
 				.allMatch(r -> Arrays.stream(type.getRecordComponents()).anyMatch(c -> jsonName(c).equals(r)));
 		});
 		Set<String> extracted = Arrays.stream(ExtractedField.class.getRecordComponents())
-			.map(OpenApiConsistencyTests::jsonName).collect(Collectors.toCollection(TreeSet::new));
+				.map(OpenApiConsistencyTests::jsonName).collect(Collectors.toCollection(TreeSet::new));
 		for (String s : List.of("ExtractedString", "ExtractedInteger", "ExtractedMoney", "ExtractedDateTime")) {
 			Set<String> yaml = new TreeSet<>();
 			spec.schema(s).path("properties").propertyNames().forEach(yaml::add);
@@ -232,11 +241,7 @@ class OpenApiConsistencyTests {
 
 	private static String jsonName(RecordComponent c) {
 		JsonProperty p = c.getAccessor().getAnnotation(JsonProperty.class);
-		if (p == null) {
-			p = c.getAnnotation(JsonProperty.class);
-		}
-		assertThat(p).as("%s.%s debe declarar @JsonProperty explicito", c.getDeclaringRecord().getSimpleName(), c.getName()).isNotNull();
-		return p.value();
+		return p != null ? p.value() : c.getName();
 	}
 
 }

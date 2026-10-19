@@ -13,17 +13,19 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pe.keptai.backend.contract.CommonDtos.PageResponse;
+import pe.keptai.backend.contract.OrderDtos.CreateOrderRequest;
 import pe.keptai.backend.contract.OrderDtos.DispatchRequest;
 import pe.keptai.backend.contract.OrderDtos.Order;
 import pe.keptai.backend.contract.ReceivableDtos.CreditAuthorization;
 import pe.keptai.backend.contract.ReceivableDtos.CreditDecisionRequest;
 import pe.keptai.backend.panel.CreditDecisionService;
+import pe.keptai.backend.panel.OrderCreationService;
 import pe.keptai.backend.panel.PageRequest;
 import pe.keptai.backend.panel.PanelQueries;
 import pe.keptai.backend.panel.PanelRequests;
 import pe.keptai.backend.panel.PaymentCommands;
 
-/** Pedidos, decisión de crédito y despacho (listOrders, getOrder, get/submitCreditDecision, registerDispatch). */
+/** Pedidos, creación, decisión de crédito y despacho (listOrders, getOrder, createOrder, get/submitCreditDecision, registerDispatch). */
 @RestController
 public class OrdersController {
 
@@ -35,12 +37,15 @@ public class OrdersController {
 
 	private final PaymentCommands commands;
 
+	private final OrderCreationService creation;
+
 	public OrdersController(PanelQueries queries, PanelRequests requests, CreditDecisionService credit,
-			PaymentCommands commands) {
+			PaymentCommands commands, OrderCreationService creation) {
 		this.queries = queries;
 		this.requests = requests;
 		this.credit = credit;
 		this.commands = commands;
+		this.creation = creation;
 	}
 
 	@GetMapping("/api/v1/orders")
@@ -56,6 +61,12 @@ public class OrdersController {
 	@GetMapping("/api/v1/orders/{order_id}")
 	public Order get(@PathVariable("order_id") String orderId) {
 		return queries.order(uuid(orderId, "order_id"));
+	}
+
+	@PostMapping(value = "/api/v1/orders", consumes = MediaType.APPLICATION_JSON_VALUE)
+	public Order create(@RequestBody String body) {
+		CreateOrderRequest req = requests.body(body, CreateOrderRequest.class);
+		return creation.createOrder(req);
 	}
 
 	@GetMapping("/api/v1/orders/{order_id}/credit-decision")

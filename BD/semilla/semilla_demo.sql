@@ -38,6 +38,15 @@ DELETE FROM transferencia_interna WHERE organizacion_id IN (SELECT id FROM semil
 DELETE FROM costo_orden           WHERE organizacion_id IN (SELECT id FROM semilla_org);
 DELETE FROM despacho              WHERE organizacion_id IN (SELECT id FROM semilla_org);
 DELETE FROM orden_etapa           WHERE organizacion_id IN (SELECT id FROM semilla_org);
+DO $$ BEGIN
+ IF to_regclass('keptai.ficha_tecnica') IS NOT NULL THEN DELETE FROM keptai.ficha_tecnica WHERE organizacion_id IN (SELECT id FROM semilla_org); END IF;
+ IF to_regclass('keptai.orden_avance') IS NOT NULL THEN DELETE FROM keptai.orden_avance WHERE organizacion_id IN (SELECT id FROM semilla_org); END IF;
+ IF to_regclass('keptai.orden_partida_tela') IS NOT NULL THEN DELETE FROM keptai.orden_partida_tela WHERE organizacion_id IN (SELECT id FROM semilla_org); END IF;
+ IF to_regclass('keptai.reserva_stock') IS NOT NULL THEN DELETE FROM keptai.reserva_stock WHERE organizacion_id IN (SELECT id FROM semilla_org); END IF;
+ IF to_regclass('keptai.orden_arte') IS NOT NULL THEN DELETE FROM keptai.orden_arte WHERE organizacion_id IN (SELECT id FROM semilla_org); END IF;
+ IF to_regclass('keptai.orden_personal') IS NOT NULL THEN DELETE FROM keptai.orden_personal WHERE organizacion_id IN (SELECT id FROM semilla_org); END IF;
+ IF to_regclass('keptai.cliente_historial') IS NOT NULL THEN DELETE FROM keptai.cliente_historial WHERE organizacion_id IN (SELECT id FROM semilla_org); END IF;
+END $$;
 DELETE FROM obligacion_cobro      WHERE organizacion_id IN (SELECT id FROM semilla_org);
 DELETE FROM aprobacion_credito    WHERE organizacion_id IN (SELECT id FROM semilla_org);
 DELETE FROM hoja_resumen          WHERE organizacion_id IN (SELECT id FROM semilla_org);

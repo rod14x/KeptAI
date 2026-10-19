@@ -72,7 +72,7 @@ export async function getJson<S extends z.ZodTypeAny>(schema: S, path: string, q
   return schema.parse(await res.json());
 }
 
-export async function sendJson<S extends z.ZodTypeAny>(schema: S, method: "POST" | "PATCH", path: string, body: unknown, idempotent = true): Promise<z.infer<S>> {
+export async function sendJson<S extends z.ZodTypeAny>(schema: S, method: "POST" | "PATCH" | "PUT", path: string, body: unknown, idempotent = true): Promise<z.infer<S>> {
   const res = await send(method, path, { body, idempotent });
   return schema.parse(await res.json());
 }

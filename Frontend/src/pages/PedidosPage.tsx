@@ -2,7 +2,7 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { CalendarBlank, ChatCircleText, CheckCircle, Factory, Hourglass, NotePencil, Truck, UploadSimple, WarningCircle } from "../components/ui/icons";
-import { capabilities, getOrderBoard, getOrders, type OrderBoardDTO, type OrderCard, type OrderColumnId, type OrderRow } from "../api/client";
+import { getOrderBoard, getOrders, type OrderBoardDTO, type OrderCard, type OrderColumnId, type OrderRow } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { SCOPE_LABEL, useScope } from "../context/ScopeContext";
 import { useMe } from "../context/AuthContext";
@@ -40,9 +40,9 @@ export function PedidosPage() {
         actions={
           <>
             {IS_MOCK && <DemoBadge />}
-            {can(me.role, "captura") && capabilities.manualOrderCapture && (
+            {(can(me.role, "captura") || me.role === "vendedor" || me.role === "administracion") && (
               <MotionLink to="/captura?tipo=orden" {...press} className="primary-link">
-                <UploadSimple size={16} weight="bold" /> Cargar pedido a mano
+                <UploadSimple size={16} weight="bold" /> Registrar pedido
               </MotionLink>
             )}
           </>

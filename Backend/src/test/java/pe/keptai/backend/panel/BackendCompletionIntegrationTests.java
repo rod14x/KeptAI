@@ -54,7 +54,7 @@ class BackendCompletionIntegrationTests {
  }
  @BeforeEach void reset()throws Exception {
   storage.calls=0;storage.puts=0;storage.deletes=0;storage.fail=false;storage.failPut=false;
-  sql("DELETE FROM keptai.aprobacion_credito;DELETE FROM keptai.evento_auditoria;DELETE FROM keptai.solicitud_idempotente;DELETE FROM keptai.aplicacion_pago;DELETE FROM keptai.despacho;DELETE FROM keptai.comprobante;DELETE FROM keptai.pago;DELETE FROM keptai.obligacion_cobro;DELETE FROM keptai.hoja_resumen;DELETE FROM keptai.orden_item;DELETE FROM keptai.orden");
+  sql("DELETE FROM keptai.aprobacion_credito;DELETE FROM keptai.evento_auditoria;DELETE FROM keptai.solicitud_idempotente;DELETE FROM keptai.aplicacion_pago;DELETE FROM keptai.despacho;DELETE FROM keptai.comprobante;DELETE FROM keptai.pago;DELETE FROM keptai.obligacion_cobro;DELETE FROM keptai.hoja_resumen;DELETE FROM keptai.ficha_tecnica;DELETE FROM keptai.orden_etapa;DELETE FROM keptai.orden_item;DELETE FROM keptai.orden");
  }
  KeptaiAuthentication auth(UUID id) {
   AccessRole role=id.equals(GERENTE)?AccessRole.GERENTE:id.equals(SELLER)?AccessRole.VENDEDOR:AccessRole.ADMIN;

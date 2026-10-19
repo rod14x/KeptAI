@@ -25,6 +25,34 @@ Para facilitar el despliegue en el VPS mediante **Portainer** sin requerir multi
   3. En la interfaz de Portainer, al hacer **Update the stack**, se debe mantener **desactivado (OFF)** el toggle de *"Re-pull image"*.
 
 ### 1.3 Cero Secretos en Git
+### 1.4 Variables de Compilacion (Build Args) en Frontend Vite
+- **Problema de variables en SPA:** Las variables de entorno de Vite (`VITE_*`) se incrustan en el código empaquetado del navegador durante el tiempo de compilación (`RUN npm run build`). Si solo se pasan como variables de entorno de runtime en el contenedor (`environment:`), Vite no las ve y usa sus valores por defecto.
+- **Configuración en compose.yaml:**
+  Se actualizaron `compose.yaml` y `docker-compose.yml` para suministrar los argumentos a la etapa de build:
+  ```yaml
+  build:
+    context: .
+    dockerfile: Dockerfile
+    args:
+      VITE_API_MODE: ${VITE_API_MODE:-mock}
+      VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY:-}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+  ```
+
+### 1.5 Modo Real (Supabase) vs Modo Demostración (Mock)
+- **¿Por qué salía "Datos Demo" todo el tiempo?**
+  1. Si `VITE_API_MODE=mock` (o si no se pasan build args), el frontend utiliza `src/api/mock/store.ts` (almacén simulado en `localStorage` del navegador), marcando todas las órdenes como `demo_fixture` con la insignia `[Demo]`.
+  2. Si `SPRING_PROFILES_ACTIVE=dev`, Spring Boot desactiva deliberadamente `DataSourceAutoConfiguration` para arrancar rápido en memoria sin exigir base de datos.
+- **¿Cómo activar el modo real conectado a Supabase?**
+  Para conectar Portainer a Supabase real se debe configurar en las variables del Stack:
+  - `VITE_API_MODE=api` (el frontend llamará a Spring Boot `/api/v1/*`).
+  - `SPRING_PROFILES_ACTIVE=prod` (Spring Boot exigirá y se conectará a PostgreSQL).
+  - `SPRING_DATASOURCE_URL=jdbc:postgresql://<host>:6543/postgres?sslmode=require`
+  - `SPRING_DATASOURCE_USERNAME=postgres.<project_ref>`
+  - `SPRING_DATASOURCE_PASSWORD=<contraseña_supabase>`
+  - `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`.
+
 - No se versionan archivos `.env` (bloqueados en `.gitignore`).
 - No se queman correos personales ni dominios privados en los archivos del repositorio.
 - Todas las variables se configuran en la interfaz de Portainer (seccion Environment variables del Stack).

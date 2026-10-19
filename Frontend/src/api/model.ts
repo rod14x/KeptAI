@@ -1,3 +1,7 @@
+/**
+ * Corpotex KeptAI - Modelo de Vista
+ * Versión: v1.0 | Fecha: 2026-10-19 | Autora: Isabelita
+ */
 import { z } from "zod";
 
 // Modelo de vista que consumen las pantallas. Lo producen dos fuentes intercambiables:
@@ -13,8 +17,8 @@ export const BrandSchema = z.enum(["corpotex", "unicrack"]);
 export type Brand = z.infer<typeof BrandSchema>;
 export type Scope = Brand | "consolidado";
 
-/** Roles de `usuario.rol`: VENDEDOR, ADMIN, GERENTE, JEFE_TALLER. */
-export const RoleSchema = z.enum(["gerencia", "administracion", "vendedor", "jefe_taller"]);
+/** Roles de `usuario.rol`: VENDEDOR, ADMIN, GERENTE, JEFE_TALLER, DISENO. */
+export const RoleSchema = z.enum(["gerencia", "administracion", "vendedor", "jefe_taller", "diseno"]);
 export type Role = z.infer<typeof RoleSchema>;
 
 /** Origen del dato (DataOrigin del contrato). `demo_fixture` muestra la etiqueta de demostración. */
@@ -41,8 +45,14 @@ export const CustomerSchema = z.object({
   /** RUC o DNI: no se inventa; null = por confirmar. */
   rucDni: z.string().nullable(),
   sellerId: z.string(),
+  assignedSellerId: z.string().nullable().optional(),
+  assignedSellerName: z.string().nullable().optional(),
   /** Metadato de canal_whatsapp, enmascarado. */
   contactoWhatsapp: z.string(),
+  emailContacto: z.string().nullable().optional(),
+  direccion: z.string().nullable().optional(),
+  activo: z.boolean().optional(),
+  fusionadoConId: z.string().nullable().optional(),
   since: isoDate,
   creditLimitCents: cents,
 });

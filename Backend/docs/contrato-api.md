@@ -1,14 +1,14 @@
 # Contrato API KeptAI — MIG-02 alineado
 
-Fecha inicial: 10/10/2026. Actualización vigente 11/10/2026: código y pruebas locales para las rutas marcadas implementadas, ingesta persistente idempotente, vouchers privados, revisión ADMIN y adaptadores financieros. Auth real previo y repetición con membresía acreditados. Los ejemplos siguen siendo ficticios; no hay backend desplegado ni aceptación real WF1/WF2. Restricciones y evidencia en [entrega vigente](entrega-backend-final-local.md). Las propuestas históricas posteriores no acreditan funcionalidades sin prueba ni sustituyen las restricciones vigentes.
+Fecha inicial: 10/10/2026. Actualización vigente 19/10/2026: código y pruebas locales para las rutas marcadas implementadas, ingesta persistente idempotente, vouchers privados, revisión ADMIN, adaptadores financieros y flujos de inventario/taller por rol. Versión: 2.0 | Autora: Isabelita.
 
 ## Matriz de operaciones
 
-Los cuatro roles son los de `usuario.rol`; `service_n8n` es una credencial técnica, no un rol de usuario. Cada operación requiere una sola forma de autenticación. Las filas fuera del MVP son antecedentes, no tareas habilitadas. El webhook de WF3 es saliente y figura aparte en OpenAPI.
+Los roles son los de `usuario.rol`; `service_n8n` es una credencial técnica, no un rol de usuario. Cada operación requiere una sola forma de autenticación. Las filas fuera del MVP son antecedentes, no tareas habilitadas. El webhook de WF3 es saliente y figura aparte en OpenAPI.
 
 | operationId | Método | Ruta | Dueño | Tarea | Roles propuestos | Estado |
 |---|---|---|---|---|---|---|
-| `getMyContext` | GET | `/api/v1/me` | `miguel` | MIG-03 | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | Implementado localmente; aceptación remota pendiente |
+| `getMyContext` | GET | `/api/v1/me` | `miguel` | MIG-03 | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER, DISENO | Implementado localmente; aceptación remota pendiente |
 | `createTextEvidence` | POST | `/api/v1/evidences/text` | `miguel` | MIG-04 | VENDEDOR, ADMIN | Propuesta, no implementado |
 | `uploadEvidenceFile` | POST | `/api/v1/evidences/files` | `miguel` | MIG-04 | ADMIN | Implementado localmente; aceptación remota pendiente |
 | `listEvidences` | GET | `/api/v1/evidences` | `miguel` | MIG-04 | ADMIN | Implementado localmente; aceptación remota pendiente |
@@ -21,8 +21,43 @@ Los cuatro roles son los de `usuario.rol`; `service_n8n` es una credencial técn
 | `correctDraft` | PATCH | `/api/v1/drafts/{draft_id}` | `miguel` | MIG-06 | ADMIN | Implementado localmente; aceptación remota pendiente |
 | `confirmDraft` | POST | `/api/v1/drafts/{draft_id}/confirmation` | `miguel_adapter_andres_engine` | MIG-06 | ADMIN | Implementado localmente; aceptación remota pendiente |
 | `discardDraft` | POST | `/api/v1/drafts/{draft_id}/discard` | `miguel` | MIG-06 | ADMIN | Implementado localmente; aceptación remota pendiente |
-| `listOrders` | GET | `/api/v1/orders` | `miguel_adapter_andres_engine` | MIG-06 | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | Implementado localmente; aceptación remota pendiente |
-| `getOrder` | GET | `/api/v1/orders/{order_id}` | `miguel_adapter_andres_engine` | MIG-06 | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER | Implementado localmente; aceptación remota pendiente |
+| `listCustomers` | GET | `/api/v1/customers` | `miguel` | Fase 1 | VENDEDOR, ADMIN, GERENTE | Implementado localmente |
+| `getCustomer` | GET | `/api/v1/customers/{customer_id}` | `miguel` | Fase 1 | VENDEDOR, ADMIN, GERENTE | Implementado localmente |
+| `createCustomer` | POST | `/api/v1/customers` | `miguel` | Fase 1 | VENDEDOR, ADMIN | Implementado localmente |
+| `updateCustomer` | PUT | `/api/v1/customers/{customer_id}` | `miguel` | Fase 4 | VENDEDOR, ADMIN | Implementado localmente |
+| `reassignCustomerPortfolio` | POST | `/api/v1/customers/{customer_id}/reassign-portfolio` | `miguel` | Fase 4 | ADMIN | Implementado localmente |
+| `mergeCustomers` | POST | `/api/v1/customers/{customer_id}/merge` | `miguel` | Fase 4 | ADMIN | Implementado localmente |
+| `getCustomerHistory` | GET | `/api/v1/customers/{customer_id}/history` | `miguel` | Fase 4 | VENDEDOR, ADMIN, GERENTE | Implementado localmente |
+| `createCustomerContact` | POST | `/api/v1/customers/{customer_id}/contacts` | `miguel` | Fase 1 | VENDEDOR, ADMIN | Implementado localmente |
+| `createOrder` | POST | `/api/v1/orders` | `miguel` | Fase 2 | VENDEDOR, ADMIN | Implementado localmente |
+| `listProductionOrders` | GET | `/api/v1/orders/production` | `miguel` | B-05 | JEFE_TALLER, ADMIN, GERENTE, DISENO | Implementado localmente |
+| `getProductionOrder` | GET | `/api/v1/orders/{order_id}/production` | `miguel` | B-05 | JEFE_TALLER, ADMIN, GERENTE, DISENO | Implementado localmente |
+| `listArts` | GET | `/api/v1/orders/{order_id}/arts` | `miguel` | B-06 | DISENO, VENDEDOR, ADMIN, JEFE_TALLER, GERENTE | Implementado localmente |
+| `createArt` | POST | `/api/v1/orders/{order_id}/arts` | `miguel` | B-06 | DISENO, ADMIN | Implementado localmente |
+| `approveArt` | POST | `/api/v1/orders/{order_id}/arts/{art_id}/approval` | `miguel` | B-06 | DISENO, ADMIN, VENDEDOR | Implementado localmente |
+| `importPersonnel` | POST | `/api/v1/orders/{order_id}/personnel` | `miguel` | B-03 | VENDEDOR, ADMIN | Implementado localmente |
+| `getFabricSemaphore` | GET | `/api/v1/orders/{order_id}/fabric-semaphore` | `miguel` | Fase 3 | ADMIN, JEFE_TALLER, VENDEDOR, GERENTE | Implementado localmente |
+| `getOrderFabricLots` | GET | `/api/v1/orders/{order_id}/fabric-lots` | `miguel` | Fase 3 | ADMIN, JEFE_TALLER, GERENTE | Implementado localmente |
+| `assignFabricLot` | POST | `/api/v1/orders/{order_id}/fabric-lots` | `miguel` | Fase 3 | ADMIN, JEFE_TALLER | Implementado localmente |
+| `listFabricRolls` | GET | `/api/v1/fabric/rolls` | `miguel` | Fase 3 | ADMIN, JEFE_TALLER, GERENTE | Implementado localmente |
+| `createFabricRoll` | POST | `/api/v1/fabric/rolls` | `miguel` | Fase 3 | ADMIN, JEFE_TALLER | Implementado localmente |
+| `listSupplies` | GET | `/api/v1/supplies` | `miguel` | Fase 3 | ADMIN, JEFE_TALLER, GERENTE | Implementado localmente |
+| `createSupply` | POST | `/api/v1/supplies` | `miguel` | Fase 3 | ADMIN | Implementado localmente |
+| `listRequisitions` | GET | `/api/v1/fabric/requisitions` | `miguel` | B-10 | ADMIN, JEFE_TALLER, GERENTE | Implementado localmente |
+| `createRequisition` | POST | `/api/v1/fabric/requisitions` | `miguel` | B-10 | ADMIN, JEFE_TALLER | Implementado localmente |
+| `approveRequisition` | POST | `/api/v1/fabric/requisitions/{requisition_id}/approve` | `miguel` | B-10 | ADMIN | Implementado localmente |
+| `receiveRequisition` | POST | `/api/v1/fabric/requisitions/{requisition_id}/receive` | `miguel` | B-10 | ADMIN, JEFE_TALLER | Implementado localmente |
+| `getOrderTechSheet` | GET | `/api/v1/orders/{order_id}/tech-sheet` | `miguel` | Fase 3 | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER, DISENO | Implementado localmente |
+| `updateOrderTechSheet` | PUT | `/api/v1/orders/{order_id}/tech-sheet` | `miguel` | Fase 3 | VENDEDOR, ADMIN | Implementado localmente |
+| `validateFabric` | POST | `/api/v1/orders/{order_id}/tech-sheet/validate-fabric` | `miguel` | Fase 3 | ADMIN, JEFE_TALLER | Implementado localmente |
+| `advanceStation` | POST | `/api/v1/orders/{order_id}/station-advance` | `miguel` | Fase 4 | ADMIN, JEFE_TALLER | Implementado localmente |
+| `getOrderStages` | GET | `/api/v1/orders/{order_id}/stages` | `miguel` | Fase 4 | VENDEDOR, ADMIN, GERENTE, JEFE_TALLER, DISENO | Implementado localmente |
+| `listProducts` | GET | `/api/v1/inventory/products` | `miguel` | Defecto 1 | ADMIN, VENDEDOR, GERENTE, JEFE_TALLER | Implementado localmente |
+| `createProduct` | POST | `/api/v1/inventory/products` | `miguel` | Defecto 1 | ADMIN | Implementado localmente |
+| `registerStockMatrix` | POST | `/api/v1/inventory/products/{productId}/stock-matrix` | `miguel` | Defecto 1 | ADMIN | Implementado localmente |
+| `listProductMovements` | GET | `/api/v1/inventory/products/{productId}/movements` | `miguel` | Defecto 1 | ADMIN, GERENTE | Implementado localmente |
+| `listOrders` | GET | `/api/v1/orders` | `miguel_adapter_andres_engine` | MIG-06 | VENDEDOR, ADMIN, GERENTE | Implementado localmente; aceptación remota pendiente |
+| `getOrder` | GET | `/api/v1/orders/{order_id}` | `miguel_adapter_andres_engine` | MIG-06 | VENDEDOR, ADMIN, GERENTE | Implementado localmente; aceptación remota pendiente |
 | `listPayments` | GET | `/api/v1/payments` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN, GERENTE | Implementado localmente; aceptación remota pendiente |
 | `getPayment` | GET | `/api/v1/payments/{payment_id}` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN, GERENTE | Implementado localmente; aceptación remota pendiente |
 | `getReconciliationCandidates` | GET | `/api/v1/payments/{payment_id}/reconciliation` | `miguel_adapter_andres_engine` | MIG-07 | ADMIN | Implementado localmente; aceptación remota pendiente |
@@ -48,25 +83,3 @@ Los cuatro roles son los de `usuario.rol`; `service_n8n` es una credencial técn
 | `n8nConfirmOrder` | POST | `/api/v1/ordenes/confirmar` | `miguel_adapter_andres_engine` | MIG-06 | service_n8n | Propuesta, no implementado |
 | `n8nReceiveVoucher` | POST | `/api/v1/pagos/voucher` | `miguel_adapter_andres_engine` | MIG-04-05 | service_n8n | Implementado localmente; aceptación remota pendiente |
 | `n8nReportMessageStatus` | POST | `/api/v1/mensajes/{id}/estado` | `miguel_adapter_andres_engine` | MIG-07 | service_n8n | Propuesta, no implementado |
-
-Matriz ruta → identidad → rol → alcance (coherente con V7) y configuración de seguridad externa: [matriz-acceso.md](matriz-acceso.md) (MIG-03-A, propuesta sin implementación de autenticación).
-
-## Convenciones vigentes
-
-Panel: UUID y etiquetas separadas, JSON snake_case, importes enteros en centavos PEN, dentro de ±9007199254740991. n8n: nombres españoles/camelCase que generan WF0–WF3, soles BigDecimal y conversión exacta con MoneyBridge. Más de dos decimales se rechaza; no se redondea dinero de OCR. Ausente es null, nunca cero. Fechas de negocio de Lima y timestamptz con desfase.
-
-JWT del panel se valida en MIG-03. n8n usa X-Api-Key; Spring resuelve servicio/instancia y vendedor activos, no confía en organización enviada. WF3 recibe X-Api-Secret separado. El transcript de WF1 se admite transitoriamente por compatibilidad, **nunca se persiste** (D-007). Captura de audio/texto persistente y cliente IA en Spring quedan fuera del MVP.
-
-Idempotencia panel: organización + operación/recurso + clave, hash del contenido por separado; n8n deriva clave porque no manda Idempotency-Key. V4 conserva únicamente hash y respuesta segura, sin cuerpo/transcript. Retención, reextracción de WF1 (generadoEn cambia) y garantías de envío pendientes de implementación: no prometer entrega exactly-once en WhatsApp.
-
-Voucher recibido no equivale a fondos verificados ni saldo aplicado. Crédito 15–30 días aprobado por ADMIN durante el MVP (D-014 sustituye exclusividad VENDEDOR), aviso de mora sin bloqueo automático; una obligación por orden, parciales en aplicaciones. Despacho inicia vencimiento; antes due_date null.
-
-Los DTOs y tests validan formas y ejemplos; **no sustituyen** controllers, servicios ni permisos runtime. ApiError existente permanece compatible.
-
-## Pendientes concretos de integración
-
-1. WF2 no transmite imagen, hash ni Storage path: incorporar upload seguro para registrar COMPROBANTE; no inventar evidencia.
-2. Resolver semilla de marcas/líneas y firmas reales del motor de Andrés; conciliación PARCIAL antes/después de aplicación debe acordarse con él.
-3. Credenciales fuera de Git: login JDBC miembro runtime, JWT issuer/JWKS/audiencia, claves n8n y bucket privado.
-4. Inspeccionar historial y permisos remotos Supabase antes de ejecutar V4/V5 y Storage. Si hay mensajes previos V4 aborta y exige procedimiento de revisión/purga autorizado.
-5. MIG-03-A entregó la matriz y las propiedades de configuración; pendientes 5.1–5.7 de [matriz-acceso.md](matriz-acceso.md). MIG-03: JWT real, contexto usuario/servicio por transacción, RLS con conexión reutilizada, CORS y pruebas integración. No bloquear el contrato por volver a aprobar nombres ya definidos en el SQL.

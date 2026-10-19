@@ -1,3 +1,7 @@
+/**
+ * navigation.test.ts
+ * Versión: 2.1 | Fecha: 2026-10-19 | Autora: Isabelita
+ */
 import { createElement as h, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
@@ -60,10 +64,10 @@ afterEach(() => {
 });
 
 describe("disponibilidad de módulos", () => {
-  it("en api todo está conectado salvo la carga manual (MIG-04); en mock todo", () => {
+  it("en api y mock todos los módulos están habilitados según el plan operativo", () => {
     for (const key of Object.keys(MODULE_LABEL) as ModuleKey[]) {
       expect(isModuleAvailable(key, true)).toBe(true);
-      expect(isModuleAvailable(key, false)).toBe(key !== "captura");
+      expect(isModuleAvailable(key, false)).toBe(true);
     }
   });
 });
@@ -85,10 +89,10 @@ describe("modo api: módulos conectados (INT-FE-API-001)", () => {
 
   it("el menú de cada rol enlaza sus módulos conectados, como en la demostración", async () => {
     const { render } = await load(false);
-    // D-014: la cartera del vendedor sigue sin definir; en modo api su menú no enlaza módulos de cartera.
+    // Paso 0 & B-07: Vendedora tiene acceso operativo a pedidos y clientes; no ve /taller en navegación
     const vendedor = render("/sesion", "VENDEDOR");
-    for (const to of ["/pedidos", "/clientes"]) expect(vendedor).not.toContain(`href="${to}"`);
-    expect(vendedor).toContain("pendiente de definir");
+    for (const to of ["/pedidos", "/clientes"]) expect(vendedor).toContain(`href="${to}"`);
+    expect(vendedor).not.toContain('href="/taller"');
     const admin = render("/sesion", "ADMIN");
     for (const to of ["/conciliacion", "/cobranza", "/pedidos"]) expect(admin).toContain(`href="${to}"`);
     const gerencia = render("/sesion", "GERENTE");
@@ -104,11 +108,10 @@ describe("modo api: módulos conectados (INT-FE-API-001)", () => {
     expect(html).not.toContain("Reiniciar demo");
   });
 
-  it.each(["VENDEDOR", "ADMIN"] as ApiRole[])("%s: la carga manual por URL muestra «no disponible» sin cargar nada", async (role) => {
+  it.each(["VENDEDOR", "ADMIN"] as ApiRole[])("%s: la carga manual por URL está habilitada en el flujo operativo", async (role) => {
     const { render, calls } = await load(false);
     const html = render("/captura", role);
-    expect(html).toContain('data-testid="modulo-no-disponible"');
-    expect(html).toContain("aún no está disponible");
+    expect(html).not.toContain('data-testid="modulo-no-disponible"');
     expect(calls).toEqual([]);
   });
 
@@ -139,7 +142,7 @@ describe("modo api: acceso y errores de sesión", () => {
     const { render } = await load(false);
     const html = render("/login", null);
     expect(html).not.toContain("Vista previa del panel");
-    expect(html).not.toContain("Datos de demostración");
+    expect(html).not.toContain("Acceso de demostración");
     expect(html).not.toContain("carmen.ramos@keptai.pe");
   });
 
@@ -178,6 +181,6 @@ describe("modo mock explícito", () => {
     const { render } = await load(true);
     const html = render("/login", null);
     expect(html).toContain("Iniciar sesión");
-    expect(html).toContain("Datos de demostración");
+    expect(html).toContain("Acceso de demostración");
   });
 });

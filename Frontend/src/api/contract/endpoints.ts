@@ -37,13 +37,31 @@ export const endpoints = {
   confirmDraft: (id: string, expectedRevision: number) => sendJson(S.ConfirmDraftResponse, "POST", `/api/v1/drafts/${id}/confirmation`, { expected_revision: expectedRevision }),
   discardDraft: (id: string, reason?: string | null) => sendJson(S.ExtractionDraft, "POST", `/api/v1/drafts/${id}/discard`, { reason: reason ?? null }),
 
+  /* Clientes y contactos (Fase 1) */
+  listCustomers: (q?: Paging) => getJson(S.CustomerPage, "/api/v1/customers", pg(q)),
+  createCustomer: (body: S.CreateCustomerRequest) => sendJson(S.Customer, "POST", "/api/v1/customers", body),
+  createContact: (customerId: string, body: S.CreateContactRequest) => sendJson(S.Contact, "POST", `/api/v1/customers/${customerId}/contacts`, body),
+  updateCustomer: (id: string, body: S.UpdateCustomerRequest) => sendJson(S.Customer, "PUT", `/api/v1/customers/${id}`, body),
+  reassignPortfolio: (id: string, body: S.ReassignPortfolioRequest) => sendJson(S.Customer, "POST", `/api/v1/customers/${id}/reassign-portfolio`, body),
+  mergeCustomers: (id: string, body: S.MergeCustomerRequest) => sendJson(S.Customer, "POST", `/api/v1/customers/${id}/merge`, body),
+  getCustomerHistory: (id: string) => getJson(S.CustomerHistoryList, `/api/v1/customers/${id}/history`),
+
   /* Órdenes */
   listOrders: (q?: Paging & { customer_id?: string; status?: z.infer<typeof S.OrderStatus>; receivable_status?: z.infer<typeof S.ReceivableStatus> }) =>
     getJson(S.OrderPage, "/api/v1/orders", { ...pg(q), customer_id: q?.customer_id, status: q?.status, receivable_status: q?.receivable_status }),
   getOrder: (id: string) => getJson(S.Order, `/api/v1/orders/${id}`),
+  createOrder: (body: S.CreateOrderRequest) => sendJson(S.Order, "POST", "/api/v1/orders", body),
   getCreditDecision: (orderId: string) => getJson(S.CreditAuthorization, `/api/v1/orders/${orderId}/credit-decision`),
   submitCreditDecision: (orderId: string, body: S.CreditDecisionRequest) => sendJson(S.CreditAuthorization, "POST", `/api/v1/orders/${orderId}/credit-decision`, body),
   registerDispatch: (orderId: string, body: S.DispatchRequest) => sendJson(S.Order, "POST", `/api/v1/orders/${orderId}/dispatch`, body),
+
+  /* Ficha Técnica Textil (Fase 3) */
+  getTechSheet: (orderId: string) => getJson(S.TechSheet, `/api/v1/orders/${orderId}/tech-sheet`),
+  saveTechSheet: (orderId: string, body: S.SaveTechSheetRequest) => sendJson(S.TechSheet, "PUT", `/api/v1/orders/${orderId}/tech-sheet`, body),
+  validateFabric: (orderId: string, body: S.ValidateFabricRequest) => sendJson(S.TechSheet, "POST", `/api/v1/orders/${orderId}/tech-sheet/validate-fabric`, body),
+
+  /* Manufactura y Taller (Fase 4) */
+  advanceStation: (orderId: string, body: S.StationAdvanceRequest) => sendJson(S.Order, "POST", `/api/v1/orders/${orderId}/station-advance`, body),
 
   /* Pagos (MIG-07) */
   listPayments: (q?: Paging & { phase?: z.infer<typeof S.PaymentPhase>; reconciliation_status?: z.infer<typeof S.ReconciliationStatus> }) =>
@@ -82,6 +100,7 @@ export const endpoints = {
 /** Variantes que recorren toda la paginación por cursor. */
 export const all = {
   orders: (q?: Parameters<typeof endpoints.listOrders>[0]) => getAll((cursor) => endpoints.listOrders({ ...q, cursor })),
+  customers: (q?: Parameters<typeof endpoints.listCustomers>[0]) => getAll((cursor) => endpoints.listCustomers({ ...q, cursor })),
   payments: (q?: Parameters<typeof endpoints.listPayments>[0]) => getAll((cursor) => endpoints.listPayments({ ...q, cursor })),
   receivables: (q?: Parameters<typeof endpoints.listReceivables>[0]) => getAll((cursor) => endpoints.listReceivables({ ...q, cursor })),
   alerts: (q?: Parameters<typeof endpoints.listCollectionAlerts>[0]) => getAll((cursor) => endpoints.listCollectionAlerts({ ...q, cursor })),

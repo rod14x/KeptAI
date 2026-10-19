@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -31,7 +32,7 @@ import pe.keptai.backend.contract.ContractEnums.ReceivableStatus;
 public final class OrderDtos {
 
 	/** Etiqueta legible de orden.ref (p. ej. ORD-123; la semilla ficticia usa P-001). No es identificador. */
-	public static final String LABEL_REGEX = "[A-Z]{1,5}-[0-9]{1,9}";
+	public static final String LABEL_REGEX = "[A-Z]{1,5}-[0-9A-Za-z-]{1,20}";
 
 	private OrderDtos() {
 	}
@@ -151,6 +152,23 @@ public final class OrderDtos {
 	public record DispatchRequest(
 			@JsonProperty("dispatch_date") @NotNull LocalDate dispatchDate,
 			@JsonProperty("note") @Size(max = 500) String note) {
+	}
+
+	public record CreateOrderItemRequest(
+			@JsonProperty("description") @JsonAlias("descripcion") @NotBlank @Size(max = 500) String description,
+			@JsonProperty("quantity") @JsonAlias("cantidad") @NotNull @Min(1) @Max(1_000_000) Integer quantity,
+			@JsonProperty("unit_price") @JsonAlias({"unit_price_cents", "precio_unitario", "precioUnitario"}) @NotNull @Valid NonNegativeMoney unitPrice) {
+	}
+
+	public record CreateOrderRequest(
+			@JsonProperty("customer_id") @JsonAlias({"cliente_id", "customerId", "clienteId"}) @NotNull UUID customerId,
+			@JsonProperty("requested_delivery_date") @JsonAlias({"fecha_entrega_solicitada", "requestedDeliveryDate", "fechaEntrega"}) LocalDate requestedDeliveryDate,
+			@JsonProperty("brand") @JsonAlias("marca") @Size(max = 100) String brand,
+			@JsonProperty("source_channel") @JsonAlias({"canal_origen", "canalOrigen", "canal"}) @Size(max = 50) String sourceChannel,
+			@JsonProperty("modality") @JsonAlias("modalidad") @Size(max = 50) String modality,
+			@JsonProperty("payment_condition") @JsonAlias({"condicion_pago", "condicionPago"}) PaymentCondition paymentCondition,
+			@JsonProperty("advance_required") @JsonAlias({"anticipo_requerido", "anticipoRequerido"}) @Valid NonNegativeMoney advanceRequired,
+			@JsonProperty("items") @JsonAlias({"articulos", "prendas"}) List<@Valid CreateOrderItemRequest> items) {
 	}
 
 }
