@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
@@ -23,10 +24,10 @@ public final class CustomerDtos {
 			@JsonProperty("id") @NotNull UUID id,
 			@JsonProperty("customer_id") @JsonAlias("cliente_id") @NotNull UUID customerId,
 			@JsonProperty("name") @JsonAlias("nombre") @NotBlank @Size(max = 200) String name,
-			@JsonProperty("whatsapp_jid") @Size(max = 100) String whatsappJid,
-			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("phone") @JsonAlias("telefono") @Size(max = 30) String phone,
-			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("email") @Size(max = 100) String email,
-			@JsonProperty("active") @JsonAlias("activo") @NotNull Boolean active,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("whatsapp_jid") String whatsappJid,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("phone") @JsonAlias("telefono") String phone,
+			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("email") String email,
+			@JsonProperty("active") @JsonAlias("activo") boolean active,
 			@JsonProperty("created_at") @JsonAlias("creado_en") @NotNull OffsetDateTime createdAt) {
 	}
 
@@ -55,6 +56,7 @@ public final class CustomerDtos {
 			@JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("merged_with_id") @JsonAlias("fusionado_con_id") UUID mergedWithId) {
 	}
 
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	public record CreateCustomerRequest(
 			@JsonProperty("name") @JsonAlias({"razon_social", "razonSocial"}) @NotBlank @Size(max = 200) String name,
 			@JsonProperty("customer_type") @JsonAlias({"tipo_persona", "tipoPersona", "tipo"}) String customerType,
@@ -63,9 +65,11 @@ public final class CustomerDtos {
 			@JsonProperty("source_channel") @JsonAlias({"canal_origen", "canalOrigen"}) String sourceChannel,
 			@JsonProperty("assigned_seller_id") @JsonAlias("vendedor_asignado_id") UUID assignedSellerId,
 			@JsonProperty("email_contact") @JsonAlias("email_contacto") String emailContact,
-			@JsonProperty("address") @JsonAlias("direccion") String address) {
+			@JsonProperty("address") @JsonAlias("direccion") String address,
+			@JsonProperty("credit_limit") @JsonAlias({"limite_credito", "limiteCredito", "limite_credito_cents", "limiteCreditoCents"}) Object creditLimit) {
 	}
 
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	public record UpdateCustomerRequest(
 			@JsonProperty("name") @JsonAlias({"razon_social", "razonSocial"}) String name,
 			@JsonProperty("customer_type") @JsonAlias({"tipo_persona", "tipoPersona", "tipo"}) String customerType,
@@ -77,11 +81,13 @@ public final class CustomerDtos {
 			@JsonProperty("reason") @JsonAlias("motivo") String reason) {
 	}
 
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	public record MergeCustomerRequest(
 			@JsonProperty("duplicate_customer_id") @JsonAlias("cliente_duplicado_id") @NotNull UUID duplicateCustomerId,
 			@JsonProperty("reason") @JsonAlias("motivo") @NotBlank String reason) {
 	}
 
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	public record ReassignPortfolioRequest(
 			@JsonProperty("assigned_seller_id") @JsonAlias("vendedor_asignado_id") @NotNull UUID assignedSellerId,
 			@JsonProperty("reason") @JsonAlias("motivo") String reason) {

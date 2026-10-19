@@ -7,10 +7,7 @@ import {
   Factory,
   Truck,
   HandCoins,
-  Wallet,
-  ChartLineUp,
   WarningCircle,
-  CalendarBlank,
 } from "../ui/icons";
 import { Chip, type Tone } from "../ui/Chip";
 import { cx, formatDate, formatMoney } from "../../lib/format";
@@ -246,6 +243,7 @@ export function OrderLifecycleBar({
       role="region"
       aria-label="Trazabilidad del ciclo de vida del pedido"
     >
+      {/* Cabecera de Trazabilidad */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
           <h2 className="text-xs font-bold uppercase tracking-wider text-muted">
@@ -255,11 +253,11 @@ export function OrderLifecycleBar({
             5 compuertas operativas: Comercial · Gatekeeper financiero · Taller · Despacho · Cobranza
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <span className="text-[11px] font-semibold text-muted tabular">
             {completedCount} de {steps.length} etapas completadas
           </span>
-          <div className="w-20 h-2 bg-line rounded-full overflow-hidden">
+          <div className="w-24 h-2 bg-line rounded-full overflow-hidden">
             <div
               className={cx(
                 "h-full rounded-full transition-all duration-500",
@@ -271,37 +269,42 @@ export function OrderLifecycleBar({
         </div>
       </div>
 
-      <div className="relative">
-        {/* Track horizontal continuo detrás de los nodos en pantallas grandes */}
-        <div
-          className="absolute top-7 left-8 right-8 h-1 bg-line hidden xl:block -z-0"
-          aria-hidden="true"
-        >
-          <div
-            className="h-full bg-ok transition-all duration-500"
-            style={{
-              width: `${Math.max(
-                0,
-                Math.min(
-                  100,
-                  (completedCount / Math.max(1, steps.length - 1)) * 100
-                )
-              )}%`,
-            }}
-          />
-        </div>
+      {/* Indicador de progreso segmentado para pantallas medianas/grandes */}
+      <div className="hidden xl:grid grid-cols-5 gap-2 mb-3" aria-hidden="true">
+        {steps.map((st) => {
+          const isDone = st.status === "completed";
+          const isAct = st.status === "current" || st.key === currentStepKey;
+          const isAlert = st.status === "alert";
+          return (
+            <div
+              key={`seg-${st.key}`}
+              className={cx(
+                "h-1.5 rounded-full transition-all duration-300",
+                isDone
+                  ? "bg-ok"
+                  : isAct
+                    ? "bg-brand-blue animate-pulse"
+                    : isAlert
+                      ? "bg-warn"
+                      : "bg-line"
+              )}
+            />
+          );
+        })}
+      </div>
 
-        {/* Lista de etapas con micro-tarjetas */}
+      <div>
+        {/* Lista de etapas con tarjetas tipo Stepper limpias */}
         <ol
-          className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 relative z-10 list-none p-0 m-0"
+          className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 relative list-none p-0 m-0"
           aria-label="Etapas del pedido"
         >
           {steps.map((step) => {
             const isCompleted = step.status === "completed";
             const isCurrent = step.status === "current" || step.key === currentStepKey;
             const isAlert = step.status === "alert";
-
             const isClickable = Boolean(onStepClick);
+            const cleanStageName = step.stageName.replace(/^\d+\.\s*/, "");
 
             return (
               <li key={step.key} className="flex">
@@ -312,64 +315,63 @@ export function OrderLifecycleBar({
                   className={cx(
                     "flex flex-col text-left w-full rounded-xl border p-3.5 transition-all outline-none",
                     isClickable
-                      ? "cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-blue"
+                      ? "cursor-pointer focus-visible:ring-2 focus-visible:ring-brand-blue hover:shadow-sm"
                       : "cursor-default",
                     isCurrent
-                      ? "border-brand-blue/60 bg-brand-blue/[0.04] shadow-sm ring-1 ring-brand-blue/30"
+                      ? "border-brand-blue/70 bg-brand-blue/[0.04] shadow-sm ring-1 ring-brand-blue/30"
                       : isAlert
-                        ? "border-warn/50 bg-warn/[0.04] ring-1 ring-warn/30"
+                        ? "border-warn/60 bg-warn/[0.04] ring-1 ring-warn/30"
                         : isCompleted
-                          ? "border-ok/30 bg-ok/[0.02] hover:border-ok/50"
-                          : "border-line bg-panel/60 opacity-80 hover:opacity-100"
+                          ? "border-ok/40 bg-ok/[0.02] hover:border-ok/60"
+                          : "border-line bg-panel/50 opacity-80 hover:opacity-100"
                   )}
                   aria-current={isCurrent ? "step" : undefined}
                 >
-                  {/* Encabezado del paso con icono de etapa */}
+                  {/* Fila superior: Icono de etapa y Chip de estado alineados */}
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={cx(
-                          "relative size-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 transition-transform",
-                          isCompleted
-                            ? "bg-ok text-inverse shadow-sm"
-                            : isCurrent
-                              ? "bg-brand-blue text-inverse shadow-md ring-4 ring-brand-blue/20"
-                              : isAlert
-                                ? "bg-warn text-inverse shadow-sm ring-4 ring-warn-tint"
-                                : "bg-panel text-muted border border-line"
-                        )}
-                        aria-hidden="true"
-                      >
-                        {step.icon}
-                        {isCompleted && (
-                          <span
-                            className="absolute -bottom-1 -right-1 size-3.5 rounded-full bg-ok text-inverse flex items-center justify-center ring-2 ring-card"
-                            title="Completado"
-                          >
-                            <Check size={9} weight="bold" />
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted truncate">
-                        {step.stageName}
-                      </span>
+                    <div
+                      className={cx(
+                        "relative size-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 transition-transform",
+                        isCompleted
+                          ? "bg-ok text-inverse shadow-xs"
+                          : isCurrent
+                            ? "bg-brand-blue text-inverse shadow-sm ring-2 ring-brand-blue/30"
+                            : isAlert
+                              ? "bg-warn text-inverse shadow-xs ring-2 ring-warn-tint"
+                              : "bg-panel text-muted border border-line"
+                      )}
+                      aria-hidden="true"
+                    >
+                      {step.icon}
+                      {isCompleted && (
+                        <span
+                          className="absolute -bottom-1 -right-1 size-3 rounded-full bg-ok text-inverse flex items-center justify-center ring-2 ring-card"
+                          title="Completado"
+                        >
+                          <Check size={8} weight="bold" />
+                        </span>
+                      )}
                     </div>
 
                     {step.badgeLabel && (
                       <Chip
                         tone={step.badgeTone ?? (isCompleted ? "ok" : isAlert ? "warn" : isCurrent ? "info" : "neutral")}
-                        className="text-[11px] px-1.5 py-0.5 shrink-0"
+                        className="text-[10px] px-1.5 py-0.5 shrink-0 font-bold"
                       >
                         {step.badgeLabel}
                       </Chip>
                     )}
                   </div>
 
-                  {/* Título de la etapa y subtítulo enriquecido */}
-                  <div className="mt-3 min-w-0">
+                  {/* Etiqueta de compuerta y título */}
+                  <div className="mt-2.5 min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted block truncate">
+                      Paso {step.stageNumber} · {cleanStageName}
+                    </span>
+
                     <h3
                       className={cx(
-                        "text-sm font-extrabold truncate",
+                        "text-sm font-extrabold truncate mt-0.5",
                         isCurrent
                           ? "text-brand-blue"
                           : isAlert
@@ -392,7 +394,7 @@ export function OrderLifecycleBar({
                   {/* Metadatos inferiores: actor y fecha */}
                   {(step.actor || step.date) && (
                     <div className="mt-auto pt-2.5 flex items-center justify-between text-[11px] text-faint tabular border-t border-line-soft">
-                      {step.actor && <span className="truncate">{step.actor}</span>}
+                      {step.actor && <span className="truncate pr-1">{step.actor}</span>}
                       {step.date && <span className="shrink-0">{formatDate(step.date)}</span>}
                     </div>
                   )}
@@ -434,209 +436,116 @@ export function OrderExecutiveStrip({ d, className, onNavigateTab }: OrderExecut
       color: "bg-warn text-inverse",
       ring: "ring-warn-tint",
       badgeTone: "warn" as Tone,
-      badgeText: "Detenido",
-      title: "Luz Ámbar: Taller Detenido",
-      desc: `Bloqueado por Gatekeeper: Requiere registrar anticipo de ${formatMoney(d.card.anticipoPendienteCents)} antes de corte.`,
+      badgeText: "Retenido",
+      title: "Luz Ámbar: Falta Anticipo",
+      desc: "Producción detenida hasta registrar y conciliar el anticipo requerido.",
       icon: <Hourglass size={18} weight="bold" />,
-    };
-  } else if (o.estado === "pendiente_aprobacion") {
-    semaforo = {
-      color: "bg-brand-blue text-inverse",
-      ring: "ring-brand-blue/20",
-      badgeTone: "info" as Tone,
-      badgeText: "En Validación",
-      title: "Luz Amarilla: En Revisión",
-      desc: "Esperando confirmación de cotización y condiciones comerciales.",
-      icon: <NotePencil size={18} weight="bold" />,
-    };
-  } else if (o.estado === "despachada") {
-    semaforo = {
-      color: "bg-brand-blue text-inverse",
-      ring: "ring-brand-blue/20",
-      badgeTone: "info" as Tone,
-      badgeText: "Completado",
-      title: "Luz Azul: Confección Lista",
-      desc: `Prendas terminadas y despachadas con acta (${o.despacho?.acta ?? "Acta registrada"}).`,
-      icon: <Truck size={18} weight="bold" />,
     };
   } else if (o.estado === "rechazada") {
     semaforo = {
       color: "bg-bad text-inverse",
       ring: "ring-bad-tint",
       badgeTone: "bad" as Tone,
-      badgeText: "Rechazada",
-      title: "Luz Roja: Rechazada",
-      desc: "Orden cancelada, no habilitada para compras ni corte.",
+      badgeText: "Rechazado",
+      title: "Luz Roja: Pedido Rechazado",
+      desc: "Crédito desaprobado o condiciones no cumplidas. Taller bloqueado.",
       icon: <WarningCircle size={18} weight="bold" />,
     };
   }
 
-  // Margen estimado
-  const marginPct =
-    d.marginCents != null && o.saleCents > 0
-      ? Math.round((d.marginCents / o.saleCents) * 100)
-      : null;
-
   return (
-    <div className={cx("grid grid-cols-1 md:grid-cols-3 gap-3.5", className)}>
-      {/* Tarjeta 1: Recaudación y Flujo de Cobro */}
-      <div
-        onClick={() => onNavigateTab?.("pagos")}
-        className={cx(
-          "rounded-2xl border border-line bg-card p-4 sm:p-5 shadow-soft flex flex-col justify-between transition-all",
-          onNavigateTab && "cursor-pointer hover:border-brand-blue/40"
-        )}
-      >
+    <div className={cx("grid grid-cols-1 md:grid-cols-3 gap-4", className)}>
+      {/* Tarjeta 1: Caja & Cobranza */}
+      <div className="rounded-xl border border-line bg-card p-4 flex flex-col justify-between">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-muted">Caja & Cobranza</span>
+          <Chip tone={isPaidFull ? "ok" : d.card.finance === "vencido" ? "bad" : "info"} className="text-xs">
+            {isPaidFull ? "100% Pagado" : `${paidPct}% Pagado`}
+          </Chip>
+        </div>
         <div>
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="size-8 rounded-lg bg-brand-blue/10 text-brand-blue flex items-center justify-center">
-                <Wallet size={16} weight="bold" />
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wider text-muted">
-                Cobranza & Caja
-              </span>
-            </div>
-            <Chip
-              tone={isPaidFull ? "ok" : d.card.finance === "vencido" ? "bad" : d.card.finance === "por_vencer" ? "warn" : "info"}
-            >
-              {isPaidFull ? "100% Cobrado" : d.card.finance === "vencido" ? "Vencido" : d.card.finance === "por_vencer" ? "Por vencer" : "Al día"}
-            </Chip>
+          <div className="flex items-baseline justify-between mb-1">
+            <span className="text-2xl font-black tabular text-ink">{formatMoney(d.paidCents)}</span>
+            <span className="text-xs text-muted tabular">de {formatMoney(o.saleCents)}</span>
           </div>
-
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="text-xl font-black text-ink tabular">
-              {paidPct}% <span className="text-xs font-semibold text-muted">cobrado</span>
-            </span>
-            <span className="text-xs font-bold text-muted tabular">
-              Total {formatMoney(o.saleCents)}
-            </span>
-          </div>
-
-          {/* Barra de progreso de recaudación */}
-          <div className="mt-2.5 h-2.5 w-full bg-line rounded-full overflow-hidden flex">
+          <div className="w-full h-2 bg-line rounded-full overflow-hidden mb-2">
             <div
+              className={cx("h-full rounded-full transition-all duration-500", isPaidFull ? "bg-ok" : "bg-brand-blue")}
               style={{ width: `${paidPct}%` }}
-              className="bg-ok h-full transition-all duration-500 rounded-l-full"
-            />
-            <div
-              style={{ width: `${100 - paidPct}%` }}
-              className={cx(
-                "h-full transition-all duration-500",
-                d.card.finance === "vencido" ? "bg-bad/40" : "bg-panel"
-              )}
             />
           </div>
-
-          <div className="mt-3 flex items-center justify-between text-xs tabular">
-            <span className="text-ok font-bold">
-              Cobrado: {formatMoney(d.paidCents)}
-            </span>
-            <span className={cx("font-bold", d.card.finance === "vencido" ? "text-bad" : "text-ink")}>
-              Saldo: {formatMoney(d.card.balanceCents)}
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-3 pt-2.5 border-t border-line-soft flex items-center justify-between text-[11px] text-muted">
-          <span>{termsLabel(o.condicionPago)}</span>
-          {d.card.dueDate && (
-            <span className="font-semibold text-ink">
-              Vence: {formatDate(d.card.dueDate)}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Tarjeta 2: Semáforo Operativo para el Taller */}
-      <div
-        onClick={() => onNavigateTab?.("pedido")}
-        className={cx(
-          "rounded-2xl border border-line bg-card p-4 sm:p-5 shadow-soft flex flex-col justify-between transition-all",
-          onNavigateTab && "cursor-pointer hover:border-brand-blue/40"
-        )}
-      >
-        <div>
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <div className="flex items-center gap-2">
-              <span className={cx("size-8 rounded-lg flex items-center justify-center", semaforo.color)}>
-                {semaforo.icon}
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wider text-muted">
-                Semáforo Taller
-              </span>
-            </div>
-            <Chip tone={semaforo.badgeTone}>{semaforo.badgeText}</Chip>
-          </div>
-
-          <h3 className="text-sm font-extrabold text-ink leading-tight flex items-center gap-2">
-            <span className={cx("size-2.5 rounded-full inline-block", semaforo.color)} />
-            {semaforo.title}
-          </h3>
-
-          <p className="mt-1.5 text-xs text-muted leading-relaxed line-clamp-2">
-            {semaforo.desc}
+          <p className="text-xs text-muted">
+            Saldo pendiente: <strong className="text-ink tabular">{formatMoney(d.card.balanceCents)}</strong>
           </p>
         </div>
+        {onNavigateTab && (
+          <button
+            type="button"
+            onClick={() => onNavigateTab("pagos")}
+            className="mt-3 text-xs font-bold text-brand-blue hover:underline text-left inline-flex items-center gap-1"
+          >
+            Ver comprobantes y aplicaciones &rarr;
+          </button>
+        )}
+      </div>
 
-        <div className="mt-3 pt-2.5 border-t border-line-soft flex items-center justify-between text-[11px] text-muted">
-          <span>{o.modality === "tercerizada" ? "Taller Externo" : "Planta Corpotex"}</span>
-          <span className="font-semibold text-ink">Línea: {o.line ?? "General"}</span>
+      {/* Tarjeta 2: Semáforo de Taller */}
+      <div className="rounded-xl border border-line bg-card p-4 flex flex-col justify-between">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-muted">Gatekeeper Taller</span>
+          <Chip tone={semaforo.badgeTone} className="text-xs">
+            {semaforo.badgeText}
+          </Chip>
+        </div>
+        <div className="flex items-start gap-3 my-1">
+          <div className={cx("p-2 rounded-lg shrink-0", semaforo.color)}>
+            {semaforo.icon}
+          </div>
+          <div>
+            <h4 className="text-sm font-extrabold text-ink">{semaforo.title}</h4>
+            <p className="text-xs text-muted mt-0.5 leading-snug">{semaforo.desc}</p>
+          </div>
+        </div>
+        <div className="mt-2 pt-2 border-t border-line-soft text-[11px] text-faint">
+          Modalidad: <span className="font-semibold text-ink">{o.modality === "tercerizada" ? "Taller Externo" : "Planta Propia Corpotex"}</span>
         </div>
       </div>
 
-      {/* Tarjeta 3: Rentabilidad & Compromiso de Entrega */}
-      <div
-        onClick={() => onNavigateTab?.("pagos")}
-        className={cx(
-          "rounded-2xl border border-line bg-card p-4 sm:p-5 shadow-soft flex flex-col justify-between transition-all",
-          onNavigateTab && "cursor-pointer hover:border-brand-blue/40"
-        )}
-      >
-        <div>
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="size-8 rounded-lg bg-ok/10 text-ok flex items-center justify-center">
-                <ChartLineUp size={16} weight="bold" />
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wider text-muted">
-                Margen & Entrega
-              </span>
-            </div>
-            {marginPct != null && (
-              <Chip tone={marginPct >= 30 ? "ok" : marginPct > 15 ? "warn" : "bad"}>
-                {marginPct}% Margen
-              </Chip>
-            )}
+      {/* Tarjeta 3: Términos & Plazos */}
+      <div className="rounded-xl border border-line bg-card p-4 flex flex-col justify-between">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-muted">Términos Comerciales</span>
+          <Chip tone={o.condicionPago?.tipo === "credito" ? "info" : "neutral"} className="text-xs">
+            {termsLabel(o.condicionPago)}
+          </Chip>
+        </div>
+        <div className="space-y-1.5 text-xs">
+          <div className="flex justify-between">
+            <span className="text-muted">Fecha Emisión:</span>
+            <span className="font-semibold text-ink tabular">{formatDate(o.issuedOn)}</span>
           </div>
-
-          <div className="flex items-baseline justify-between gap-2">
-            <div>
-              <span className="text-xl font-black text-ink tabular">
-                {d.marginCents != null ? formatMoney(d.marginCents) : "—"}
-              </span>
-              <span className="block text-[11px] text-muted">
-                {d.costCents != null ? `Costo: ${formatMoney(d.costCents)}` : "Costeo en curso"}
-              </span>
-            </div>
-
-            <div className="text-right">
-              <span className="text-xs font-bold text-ink flex items-center gap-1 justify-end">
-                <CalendarBlank size={13} weight="bold" />
-                {o.fechaEntregaSolicitada ? formatDate(o.fechaEntregaSolicitada) : "Sin fecha"}
-              </span>
-              <span className="text-[11px] text-muted">Fecha pactada</span>
-            </div>
+          <div className="flex justify-between">
+            <span className="text-muted">Entrega Solicitada:</span>
+            <span className="font-bold text-ink tabular">{o.fechaEntregaSolicitada ? formatDate(o.fechaEntregaSolicitada) : "Sin definir"}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted">Vencimiento Cobro:</span>
+            <span className={cx("font-bold tabular", d.card.finance === "vencido" ? "text-bad" : "text-ink")}>
+              {d.card.dueDate ? formatDate(d.card.dueDate) : "Al despacho / contado"}
+            </span>
           </div>
         </div>
-
-        <div className="mt-3 pt-2.5 border-t border-line-soft flex items-center justify-between text-[11px] text-muted">
-          <span>Marca: {d.card.brand === "corpotex" ? "Corpotex" : "Unicrack"}</span>
-          <span className="font-semibold text-ok">
-            {isPaidFull ? "Margen en caja asegurado" : "Margen proyectado"}
+        <div className="mt-2 pt-2 border-t border-line-soft text-[11px] text-faint flex items-center justify-between">
+          <span>Margen bruto est.:</span>
+          <span className="font-bold text-ok tabular">
+            {d.marginCents !== null && o.saleCents > 0
+              ? `${Math.round((d.marginCents / o.saleCents) * 100)}%`
+              : "N/D"}
           </span>
         </div>
       </div>
     </div>
   );
 }
+
+export default OrderLifecycleBar;

@@ -60,27 +60,18 @@ public class PanelContext {
 	}
 
 	public <T> T write(Supplier<T> work) {
-		return run(work, false, true);
+		return run(work, false);
 	}
 
-	/** Lectura de la propia identidad (/me): no depende de la cartera, así que el vendedor también la ve. */
+	/** Lectura de la propia identidad (/me): lectura en el contexto de la sesión. */
 	public <T> T readOwnIdentity(Supplier<T> work) {
-		return run(work, true, false);
+		return run(work, true);
 	}
 
 	private <T> T run(Supplier<T> work, boolean readOnly) {
-		return run(work, readOnly, true);
-	}
-
-	private <T> T run(Supplier<T> work, boolean readOnly, boolean portfolio) {
 		jdbc();
 		try {
-			Supplier<T> guarded = () -> {
-				if (portfolio && "VENDEDOR".equals(jdbc().queryForObject("SELECT keptai_private.actor_actual()", String.class)))
-					throw PanelException.forbidden("Cartera del vendedor pendiente de definir");
-				return work.get();
-			};
-			return readOnly ? tenant.executeReadOnly(guarded) : tenant.execute(guarded);
+			return readOnly ? tenant.executeReadOnly(work) : tenant.execute(work);
 		}
 		catch (TenantContextException e) {
 			throw PanelException.unavailable();

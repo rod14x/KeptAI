@@ -1,8 +1,9 @@
 /**
  * FichaTecnicaModal.tsx
- * Versión: 1.1 | Fecha: 2026-10-19 | Autora: Isabelita
+ * Versión: 1.2 | Fecha: 2026-10-19 | Autora: Isabelita
  *
  * Modal de Ficha Técnica Textil:
+ * - Modal espacioso (size="6xl", w-[94vw] max-w-6xl).
  * - Defecto 2: Bloqueo estricto cuando el pedido está ENTREGADO / DESPACHADO con badge "Ficha cerrada — pedido entregado".
  * - Defecto 3: Curva de tallas como matriz Talla x Cantidad con unidades explícitas ("prendas", "kg"), validación de suma de curva vs total de ítem y estimador 0.28 kg/prenda.
  * - Defecto 4: Botón Imprimir abre la vista de impresión dedicada A4 (FichaTecnicaPrint).
@@ -179,10 +180,11 @@ export function FichaTecnicaModal({
     <Modal
       open={open}
       onClose={onClose}
+      size="6xl"
       title={`Ficha Técnica Textil: ${sheet.orderRef}`}
       subtitle={`Orden de Fabricación · ${sheet.customer} · ${sheet.prendaTipo} (${totalItemUnidades} prendas)`}
     >
-      <div className="flex flex-col gap-6 max-h-[80vh] overflow-y-auto pr-1 w-full max-w-4xl">
+      <div className="flex flex-col gap-6 max-h-[85vh] overflow-y-auto pr-1.5 w-full">
         {/* Defecto 2: Banner de Bloqueo por Pedido Entregado */}
         {isOrderDelivered && (
           <div className="flex items-center justify-between rounded-xl border border-brand-blue/30 bg-brand-blue/10 p-3.5 text-xs text-brand-navy shadow-xs">
@@ -534,54 +536,54 @@ export function FichaTecnicaModal({
             </div>
           )}
 
-          {/* Tabla de Curva de Tallas */}
+          {/* Tabla de Curva de Tallas Amplia */}
           <div className="mt-3 overflow-x-auto rounded-lg border border-line-soft">
             <table className="w-full text-xs text-left">
               <thead className="bg-panel font-bold text-muted text-[11px] uppercase border-b border-line-soft">
                 <tr>
-                  <th className="py-2 px-3">Prenda / Modelo</th>
-                  <th className="py-2 px-2">Color</th>
-                  <th className="py-2 px-2">Tela</th>
-                  <th className="py-2 px-1 text-center">XS</th>
-                  <th className="py-2 px-1 text-center">S</th>
-                  <th className="py-2 px-1 text-center">M</th>
-                  <th className="py-2 px-1 text-center">L</th>
-                  <th className="py-2 px-1 text-center">XL</th>
-                  <th className="py-2 px-1 text-center">XXL</th>
-                  <th className="py-2 px-3 text-right">Total Fila</th>
-                  <th className="py-2 px-3 text-right">Consumo Tela</th>
+                  <th className="py-2.5 px-3">Prenda / Modelo</th>
+                  <th className="py-2.5 px-3">Color</th>
+                  <th className="py-2.5 px-3">Tela</th>
+                  <th className="py-2.5 px-2 text-center">XS</th>
+                  <th className="py-2.5 px-2 text-center">S</th>
+                  <th className="py-2.5 px-2 text-center">M</th>
+                  <th className="py-2.5 px-2 text-center">L</th>
+                  <th className="py-2.5 px-2 text-center">XL</th>
+                  <th className="py-2.5 px-2 text-center">XXL</th>
+                  <th className="py-2.5 px-4 text-right">Total Fila</th>
+                  <th className="py-2.5 px-4 text-right">Consumo Tela</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line-soft">
                 <tr className="hover:bg-panel/20">
-                  <td className="py-2.5 px-3 font-bold text-ink">{sheet.prendaTipo}</td>
-                  <td className="py-2.5 px-2 text-muted">{sheet.colorPrincipal}</td>
-                  <td className="py-2.5 px-2 text-muted">{sheet.tela.split(" ")[0]}</td>
+                  <td className="py-3 px-3 font-bold text-ink">{sheet.prendaTipo}</td>
+                  <td className="py-3 px-3 text-muted">{sheet.colorPrincipal}</td>
+                  <td className="py-3 px-3 text-muted">{sheet.tela.split(" ")[0]}</td>
                   {["XS", "S", "M", "L", "XL", "XXL"].map((sz) => {
                     const row = sheet.curvaTallas.find((c) => c.talla === sz);
                     return (
-                      <td key={sz} className="py-2.5 px-1 text-center tabular font-semibold text-ink">
+                      <td key={sz} className="py-3 px-2 text-center tabular font-semibold text-ink">
                         {row ? `${row.cantidad} uds` : "-"}
                       </td>
                     );
                   })}
-                  <td className="py-2.5 px-3 text-right font-extrabold tabular text-brand-blue">
+                  <td className="py-3 px-4 text-right font-extrabold tabular text-brand-blue">
                     {totalCurvaPrendas} prendas
                   </td>
-                  <td className="py-2.5 px-3 text-right font-extrabold tabular text-ink">
+                  <td className="py-3 px-4 text-right font-extrabold tabular text-ink">
                     {estimatedKg.toFixed(2)} kg
                   </td>
                 </tr>
               </tbody>
               <tfoot className="bg-panel/60 border-t border-line font-bold text-xs">
                 <tr>
-                  <td colSpan={9} className="py-2 px-3 text-right uppercase text-muted">
+                  <td colSpan={9} className="py-2.5 px-3 text-right uppercase text-muted">
                     Total General de Orden:
                   </td>
-                  <td className="py-2 px-3 text-right font-black tabular text-brand-blue">
+                  <td className="py-2.5 px-4 text-right font-black tabular text-brand-blue">
                     {totalCurvaPrendas} prendas
                   </td>
-                  <td className="py-2 px-3 text-right font-black tabular text-ink">
+                  <td className="py-2.5 px-4 text-right font-black tabular text-ink">
                     {estimatedKg.toFixed(2)} kg
                   </td>
                 </tr>
@@ -645,41 +647,47 @@ export function FichaTecnicaModal({
           </div>
         </div>
 
-        {/* 5. Instrucciones de Confección & Control de Calidad */}
-        <div className="rounded-xl border border-line bg-card p-4">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-ink border-b border-line-soft pb-2">
-            Instrucciones de Confección & Estándar de Calidad (AQL)
-          </h4>
-          <ul className="mt-2.5 space-y-1.5 text-xs text-muted">
-            {sheet.instruccionesCostura.map((inst, idx) => (
-              <li key={idx} className="flex items-start gap-2">
-                <span className="text-brand-blue font-bold">✓</span>
-                <span>{inst}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* 6. Historial de Estaciones */}
-        {sheet.stationHistory.length > 0 && (
-          <div className="rounded-xl border border-line-soft bg-panel/40 p-4 print:hidden">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-muted mb-2">
-              Trazabilidad en Línea de Planta
+        {/* 5. Instrucciones de Confección & Control de Calidad e Historial de Planta */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-xl border border-line bg-card p-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-ink border-b border-line-soft pb-2">
+              Instrucciones de Confección & Estándar de Calidad (AQL)
             </h4>
-            <ul className="space-y-1.5 text-xs">
-              {sheet.stationHistory.map((h, i) => (
-                <li key={i} className="flex items-center justify-between text-muted">
-                  <span>
-                    <strong className="text-ink">
-                      {STATION_METADATA[h.station]?.shortLabel ?? h.station}
-                    </strong>: {h.note}
-                  </span>
-                  <span className="tabular text-[11px]">{formatDateTime(h.timestamp)}</span>
+            <ul className="mt-2.5 space-y-1.5 text-xs text-muted">
+              {sheet.instruccionesCostura.map((inst, idx) => (
+                <li key={idx} className="flex items-start gap-2">
+                  <span className="text-brand-blue font-bold">✓</span>
+                  <span>{inst}</span>
                 </li>
               ))}
             </ul>
           </div>
-        )}
+
+          {sheet.stationHistory.length > 0 ? (
+            <div className="rounded-xl border border-line-soft bg-panel/40 p-4 print:hidden">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted mb-2">
+                Trazabilidad en Línea de Planta
+              </h4>
+              <ul className="space-y-1.5 text-xs">
+                {sheet.stationHistory.map((h, i) => (
+                  <li key={i} className="flex items-center justify-between text-muted">
+                    <span>
+                      <strong className="text-ink">
+                        {STATION_METADATA[h.station]?.shortLabel ?? h.station}
+                      </strong>: {h.note}
+                    </span>
+                    <span className="tabular text-[11px]">{formatDateTime(h.timestamp)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-line bg-panel/30 p-4 flex flex-col justify-center items-center text-center text-xs text-muted print:hidden">
+              <Clock size={20} className="mb-1 text-muted" />
+              <span>Sin transiciones de estación registradas aún</span>
+            </div>
+          )}
+        </div>
 
         {/* Botón de cierre */}
         <div className="flex justify-end gap-2 border-t border-line pt-3 print:hidden">
