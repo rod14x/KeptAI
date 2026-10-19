@@ -58,65 +58,47 @@ services:
         VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-}
         VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY:-}
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
-    pull_policy: build
-    restart: unless-stopped
-    ports:
-      - "${PORT:-8086}:80"
     environment:
+      - PORT=8080
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-dev}
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:-}
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-}
       - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-}
-      - VIRTUAL_HOST=${VIRTUAL_HOST:-}
-      - VIRTUAL_PORT=80
-      - LETSENCRYPT_HOST=${LETSENCRYPT_HOST:-}
-      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-}
       - SUPABASE_URL=${SUPABASE_URL:-}
-      - SUPABASE_STORAGE_BUCKET=${SUPABASE_STORAGE_BUCKET:-keptai-vouchers}
       - SUPABASE_SECRET_KEY=${SUPABASE_SECRET_KEY:-}
       - KEPTAI_JWT_ISSUER_URI=${KEPTAI_JWT_ISSUER_URI:-}
       - KEPTAI_JWT_JWK_SET_URI=${KEPTAI_JWT_JWK_SET_URI:-}
-      - KEPTAI_JWT_AUDIENCES=${KEPTAI_JWT_AUDIENCES:-authenticated}
-      - KEPTAI_CORS_ALLOWED_ORIGINS=${KEPTAI_CORS_ALLOWED_ORIGINS:-}
-    networks:
-      - default
-      - public
-
-networks:
-  public:
-    external: true
 ```
 
 ---
 
-## 4. Guía de Despliegue en Portainer
+## 4. Instrucciones para Actualizar en Portainer
 
-### Modo A: Conexión Real con Supabase (Sin Datos Demo)
+### Modo A: Conexión Real a Supabase y Producción
 
-1. **Ejecutar migraciones en Supabase:**
-   - En tu proyecto de Supabase, entra a **SQL Editor**.
-   - Pega el archivo `BD/migrations/ejecutar_en_supabase_v15_v16_v17.sql` y haz clic en **Run**.
-2. **Configurar el Stack en Portainer:**
-   En la sección *Environment variables* del Stack, define:
-   ```env
-   # Activar modo API real
+1. **Entrar a Portainer:**
+   - Abre la pila (Stack) del proyecto `keptai`.
+   - Dirígete a la pestaña **Editor**.
+2. **Configurar las Variables de Entorno en el Editor de la Pila:**
+   ```dotenv
    VITE_API_MODE=api
-   SPRING_PROFILES_ACTIVE=prod
+   VITE_SUPABASE_URL=https://mcgkkoqgsbrjbdlayyww.supabase.co
+   VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_HFaBZJFkFB5fRIt-Ffz-aA_CHKX8ScJ
+   VITE_API_BASE_URL=https://keptai.ejesxyz.com
 
-   # Base de datos Supabase (de Project Settings > Database > Connection string URI)
-   SPRING_DATASOURCE_URL=jdbc:postgresql://aws-0-sa-east-1.pooler.supabase.com:6543/postgres?sslmode=require
+   SPRING_PROFILES_ACTIVE=prod
+   SPRING_DATASOURCE_URL=jdbc:postgresql://aws-0-us-east-1.pooler.supabase.com:5432/postgres?currentSchema=keptai&sslmode=require
    SPRING_DATASOURCE_USERNAME=postgres.mcgkkoqgsbrjbdlayyww
    SPRING_DATASOURCE_PASSWORD=tu_contraseña_supabase
 
-   # Auth y Storage
-   SUPABASE_URL=https://mcgkkoqgsbrjbdlayyww.supabase.co
-   SUPABASE_SECRET_KEY=sb_secret_...
-   VITE_SUPABASE_URL=https://mcgkkoqgsbrjbdlayyww.supabase.co
-   VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+   KEPTAI_JWT_ISSUER_URI=https://mcgkkoqgsbrjbdlayyww.supabase.co/auth/v1
+   KEPTAI_JWT_JWK_SET_URI=https://mcgkkoqgsbrjbdlayyww.supabase.co/auth/v1/.well-known/jwks.json
+   KEPTAI_JWT_AUDIENCES=authenticated
+   KEPTAI_CORS_ALLOWED_ORIGINS=https://keptai.ejesxyz.com
 
-   # Dominio y SSL
-   VIRTUAL_HOST=app.tudominio.com
-   LETSENCRYPT_HOST=app.tudominio.com
+   VIRTUAL_HOST=keptai.ejesxyz.com
+   VIRTUAL_PORT=80
+   LETSENCRYPT_HOST=keptai.ejesxyz.com
    LETSENCRYPT_EMAIL=isa.pasco01@gmail.com
    ```
 3. **Desplegar:**
@@ -128,3 +110,20 @@ Si solo deseas mostrar las pantallas sin conectar credenciales de base de datos:
 - Deja `VITE_API_MODE=mock` y `SPRING_PROFILES_ACTIVE=dev`.
 - No necesitas configurar `SPRING_DATASOURCE_URL`.
 - El contenedor levantará en segundos usando el almacén simulado del navegador.
+
+---
+
+## 5. Cuentas de Acceso y Aprovisionamiento en Supabase Auth
+
+Para autenticarse contra Supabase Auth en modo `api`, los usuarios requieren:
+1. Contraseña hasheada con bcrypt a costo 10 (`$2a$10$`), por requisito de seguridad de GoTrue.
+2. Identidad registrada en `auth.identities` (`provider = 'email'`).
+3. Vínculo del UID en `keptai.usuario.auth_user_id`.
+
+### Credenciales activas:
+- **Contraseña:** `demo1234`
+- **Usuarios disponibles:**
+  - Administración: `admin.demo@keptai.invalid`
+  - Vendedora: `vendedora.demo@keptai.invalid`
+  - Gerencia: `gerencia.demo@keptai.invalid`
+  - Jefe de Taller: `taller.demo@keptai.invalid`
