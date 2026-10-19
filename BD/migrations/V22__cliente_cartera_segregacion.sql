@@ -82,20 +82,3 @@ BEGIN
         END IF;
     END LOOP;
 END $$;
-
-
--- 3. Asegurar ON DELETE CASCADE en relaciones dependientes de orden para consistencia de pruebas y borrado
-DO $$ BEGIN
-  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'orden_etapa_organizacion_id_orden_id_fkey') THEN
-    ALTER TABLE keptai.orden_etapa
-      DROP CONSTRAINT orden_etapa_organizacion_id_orden_id_fkey,
-      ADD CONSTRAINT orden_etapa_organizacion_id_orden_id_fkey
-      FOREIGN KEY (organizacion_id, orden_id) REFERENCES keptai.orden (organizacion_id, id) ON DELETE CASCADE;
-  END IF;
-  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_ficha_tecnica_orden') THEN
-    ALTER TABLE keptai.ficha_tecnica
-      DROP CONSTRAINT fk_ficha_tecnica_orden,
-      ADD CONSTRAINT fk_ficha_tecnica_orden
-      FOREIGN KEY (organizacion_id, orden_id) REFERENCES keptai.orden (organizacion_id, id) ON DELETE CASCADE;
-  END IF;
-END $$;
